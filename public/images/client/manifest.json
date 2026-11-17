@@ -1,0 +1,134 @@
+[
+  {
+    "category": "weddings",
+    "title": "Sacred Unions & Luxury Nigerian Weddings",
+    "session_type": "wedding",
+    "images": [
+      {
+        "id": "weddings-1",
+        "file_id": "1Yr2RXN9rPvFSuRMjkM-12-dDN--ZCd3k",
+        "url": "/images/client/weddings/weddings_1.jpg",
+        "category": "weddings",
+        "session_type": "wedding",
+        "title": "Sacred Unions & Luxury Nigerian Weddings #1"
+      },
+      {
+        "id": "weddings-2",
+        "file_id": "1oBCvj1RDmOaOILH_gR6ZgcjDplrZ6gE7",
+        "url": "/images/client/weddings/weddings_2.jpg",
+        "category": "weddings",
+        "session_type": "wedding",
+        "title": "Sacred Unions & Luxury Nigerian Weddings #2"
+      },
+      {
+        "id": "weddings-3",
+        "file_id": "1DcrJE9-cKggsJTU5eyDXdEzJUhQkt5hz",
+        "url": "/images/client/weddings/weddings_3.jpg",
+        "category": "weddings",
+        "session_type": "wedding",
+        "title": "Sacred Unions & Luxury Nigerian Weddings #3"
+      },
+      {
+        "id": "weddings-4",
+        "file_id": "1PKYMhgueAS1UzuGP2rGfqs55KuMJajsR",
+        "url": "/images/client/weddings/weddings_4.jpg",
+        "category": "weddings",
+        "session_type": "wedding",
+        "title": "Sacred Unions & Luxury Nigerian Weddings #4"
+      },
+      {
+        "id": "weddings-6",
+        "file_id": "10xZdvs2aHaRD2kek8IWJbeJZCAczL8jn",
+        "url": "/images/client/weddings/weddings_6.jpg",
+        "category": "weddings",
+        "session_type": "wedding",
+        "title": "Sacred Unions & Luxury Nigerian Weddings #6"
+      }
+    ]
+  },
+  {
+    "category": "corporate",
+    "title": "Executive Leadership & Bilateral MOU Ceremonies",
+    "session_type": "corporate",
+    "images": [
+      {
+        "id": "corporate-4",
+        "file_id": "1riGHlVi7GHzSPYfP3MvDauTR0AkIDC0t",
+        "url": "/images/client/corporate/corporate_4.jpg",
+        "category": "corporate",
+        "session_type": "corporate",
+        "title": "Executive Leadership & Bilateral MOU Ceremonies #4"
+      },
+      {
+        "id": "corporate-7",
+        "file_id": "1mu7OmoNyj_vWtcE8yqJJUJ8FkaGffd9k",
+        "url": "/images/client/corporate/corporate_7.jpg",
+        "category": "corporate",
+        "session_type": "corporate",
+        "title": "Executive Leadership & Bilateral MOU Ceremonies #7"
+      },
+      {
+        "id": "corporate-8",
+        "file_id": "1HKr5evY54sPx2QyRDX8sf9W04x1GvdP7",
+        "url": "/images/client/corporate/corporate_8.jpg",
+        "category": "corporate",
+        "session_type": "corporate",
+        "title": "Executive Leadership & Bilateral MOU Ceremonies #8"
+      },
+      {
+        "id": "corporate-12",
+        "file_id": "1q3JcbyvOufUgQtaucyywnrAtU53jnlRu",
+        "url": "/images/client/corporate/corporate_12.jpg",
+        "category": "corporate",
+        "session_type": "corporate",
+        "title": "Executive Leadership & Bilateral MOU Ceremonies #12"
+      },
+      {
+        "id": "corporate-13",
+        "file_id": "1pe2nDB3dRBVNRb_scqXWQXBukKblofuS",
+        "url": "/images/client/corporate/corporate_13.jpg",
+        "category": "corporate",
+        "session_type": "corporate",
+        "title": "Executive Leadership & Bilateral MOU Ceremonies #13"
+      },
+      {
+        "id": "corporate-14",
+        "file_id": "1lugORcg46kH1SzCQ7LLfKyAS7QEtRRD_",
+        "url": "/images/client/corporate/corporate_14.jpg",
+        "category": "corporate",
+        "session_type": "corporate",
+        "title": "Executive Leadership & Bilateral MOU Ceremonies #14"
+      }
+    ]
+  },
+  {
+    "category": "events",
+    "title": "Grand Galas, Banquets & Milestone Celebrations",
+    "session_type": "event",
+    "images": []
+  },
+  {
+    "category": "milestones",
+    "title": "Milestone Portraits & Academic Graduation",
+    "session_type": "portrait",
+    "images": []
+  },
+  {
+    "category": "cultural",
+    "title": "Cultural Heritage & Haute Couture",
+    "session_type": "cultural",
+    "images": []
+  },
+  {
+    "category": "commercial",
+    "title": "Atelier Architectural & Retail Spaces",
+    "session_type": "commercial",
+    "images": []
+  },
+  {
+    "category": "memorial",
+    "title": "Generational Legacy & Celebration of Life",
+    "session_type": "memorial",
+    "images": []
+  }
+]
