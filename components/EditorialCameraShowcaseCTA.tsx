@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ArrowUpRight, MessageCircle } from "lucide-react";
@@ -13,49 +13,37 @@ interface CameraPerspective {
   tag: string;
 }
 
-const CAMERA_PERSPECTIVES: CameraPerspective[] = [
-  {
-    id: "canon-50",
-    name: "Vintage Canon Rangefinder",
-    lensSpec: "50mm f/1.8 S.C. · Melanin Tonal Fidelity",
-    description:
-      "Upgrade your memories and see life through an unhurried, generational lens. Reserved for intimate portraits in Abuja.",
-    tag: "[Calculate Your Estimate ↗]",
-  },
-  {
-    id: "hasselblad-80",
-    name: "Medium Format Archival",
-    lensSpec: "80mm Planar · Generational Clarity",
-    description:
-      "Ample space for changes and quiet moments. Delivering handcrafted heirloom albums and museum-grade frame prints.",
-    tag: "[Reserve Your Session ↗]",
-  },
-  {
-    id: "leica-35",
-    name: "Atelier 35mm Prime",
-    lensSpec: "35mm Summicron · Candid Intimacy",
-    description:
-      "Giving quiet moments the reverence they deserve. No rushed schedules, no plastic smoothing, just authentic grace.",
-    tag: "[Our Atelier · Maitama]",
-  },
-];
-
 export function EditorialCameraShowcaseCTA() {
+  const [perspectives, setPerspectives] = useState<CameraPerspective[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [shutterFlash, setShutterFlash] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cameraRef = useRef<HTMLDivElement>(null);
 
-  const current = CAMERA_PERSPECTIVES[activeIdx];
+  // Fetch live camera perspectives from Neon DB
+  useEffect(() => {
+    fetch("/api/content?key=camera_perspectives")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.value) && data.value.length > 0) {
+          setPerspectives(data.value);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const current = perspectives[activeIdx] || perspectives[0];
 
   const handlePrev = useCallback(() => {
-    setActiveIdx((prev) => (prev - 1 + CAMERA_PERSPECTIVES.length) % CAMERA_PERSPECTIVES.length);
-  }, []);
+    setActiveIdx((prev) => (prev - 1 + perspectives.length) % perspectives.length);
+  }, [perspectives.length]);
 
   const handleNext = useCallback(() => {
-    setActiveIdx((prev) => (prev + 1) % CAMERA_PERSPECTIVES.length);
-  }, []);
+    setActiveIdx((prev) => (prev + 1) % perspectives.length);
+  }, [perspectives.length]);
 
   // Subtle 3D perspective mouse tracking
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -177,19 +165,30 @@ export function EditorialCameraShowcaseCTA() {
       </div>
 
       {/* Camera Model Badge Indicator */}
-      <div className="text-center mt-4">
-        <span className="font-body text-[11px] uppercase tracking-[0.2em] text-white/50">
-          {current.lensSpec}
-        </span>
+      <div className="text-center mt-4 h-5 flex items-center justify-center">
+        {loading || !current ? (
+          <div className="w-48 h-3.5 bg-white/20 rounded animate-pulse" />
+        ) : (
+          <span className="font-body text-[11px] uppercase tracking-[0.2em] text-white/50">
+            {current.lensSpec}
+          </span>
+        )}
       </div>
 
       {/* Bottom Editorial Bar: Subtext & Dual Action Hub */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 mt-10 sm:mt-14 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6">
         {/* Bottom Left Subtext */}
-        <div className="text-center sm:text-left max-w-xs">
-          <p className="font-body text-xs sm:text-[13px] text-stone-300/80 leading-relaxed">
-            {current.description}
-          </p>
+        <div className="text-center sm:text-left max-w-xs min-h-[3rem] flex items-center">
+          {loading || !current ? (
+            <div className="w-full space-y-2 animate-pulse">
+              <div className="w-full h-3 bg-white/20 rounded" />
+              <div className="w-4/5 h-3 bg-white/20 rounded" />
+            </div>
+          ) : (
+            <p className="font-body text-xs sm:text-[13px] text-stone-300/80 leading-relaxed">
+              {current.description}
+            </p>
+          )}
         </div>
 
         {/* Bottom Right Dual Action Hub: Online Estimate & Direct WhatsApp Concierge */}
@@ -198,7 +197,7 @@ export function EditorialCameraShowcaseCTA() {
             href="/book"
             className="font-body text-xs uppercase tracking-wider font-semibold text-[#FDFBF8] hover:text-deep bg-white/10 hover:bg-gold border border-white/25 hover:border-gold px-5 py-2.5 rounded-full transition-all duration-300 shadow-editorial backdrop-blur-sm inline-flex items-center gap-2 group"
           >
-            <span>{current.tag}</span>
+            <span>{current?.tag || "[Calculate Your Estimate ↗]"}</span>
           </Link>
 
           {/* WhatsApp Direct Concierge Deep Link */}

@@ -3,9 +3,12 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { neon } from "@neondatabase/serverless";
 
-export default function FAQPage() {
-  const faqs = [
+export const dynamic = "force-dynamic";
+
+export default async function FAQPage() {
+  let faqs = [
     {
       q: "Where is the LamSparks studio located?",
       a: "Our private portrait studio is based in Abuja, Nigeria. To preserve a peaceful, unhurried atmosphere for every client, studio visits are strictly by appointment. The exact address and directions are provided upon booking confirmation.",
@@ -40,6 +43,19 @@ export default function FAQPage() {
     },
   ];
 
+  try {
+    const sql = neon(process.env.DATABASE_URL!);
+    const row = await sql.query(
+      `SELECT value FROM settings WHERE key = 'site_faqs' LIMIT 1`
+    ).catch(() => []);
+
+    if (row.length > 0 && Array.isArray(row[0].value) && row[0].value.length > 0) {
+      faqs = row[0].value;
+    }
+  } catch (err) {
+    console.error("[FAQPage DB error]", err);
+  }
+
   return (
     <>
       <Nav />
@@ -60,34 +76,42 @@ export default function FAQPage() {
           {faqs.map((faq, idx) => (
             <div
               key={idx}
-              className="p-4 bg-warm-white rounded-photo border border-line shadow-editorial"
+              className="p-5 sm:p-6 rounded-2xl bg-warm-white/90 backdrop-blur-md border border-gold/30 shadow-editorial hover:shadow-floating transition-all flex flex-col justify-between"
             >
-              <h3 className="font-display text-sm sm:text-base text-deep font-medium mb-3">
-                {faq.q}
-              </h3>
-              <p className="font-body text-sm text-brown/85 leading-relaxed">
-                {faq.a}
-              </p>
+              <div>
+                <h3 className="font-display text-base sm:text-lg text-deep font-medium leading-snug">
+                  {faq.q}
+                </h3>
+                <p className="font-body text-xs sm:text-sm text-brown/85 mt-2.5 leading-relaxed">
+                  {faq.a}
+                </p>
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-16 text-center bg-deep text-warm-white p-8 rounded-photo">
-          <h3 className="font-display text-2xl font-normal text-warm-white mb-2">
-            Have a question not listed here?
+        <div className="mt-14 p-6 sm:p-8 rounded-photo bg-warm-white/95 border border-gold/40 shadow-editorial text-center max-w-xl mx-auto">
+          <h3 className="font-display text-xl sm:text-2xl text-deep font-normal">
+            Have a Specific Question?
           </h3>
-          <p className="font-body text-xs sm:text-sm text-cream/70 mb-6">
-            Osemene is always glad to discuss custom arrangements directly.
+          <p className="font-body text-xs sm:text-sm text-brown/80 mt-2">
+            Reach out directly to our Abuja studio concierge on WhatsApp or submit a private session inquiry.
           </p>
-          <a
-            href="https://wa.me/2348130847299?text=Hello%20LamSparks,%20I%20have%20a%20question%20about%20your%20sessions"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-gold hover:bg-gold-hover text-deep font-body text-xs uppercase tracking-wider font-semibold px-6 py-3 rounded-full transition-all"
-          >
-            <span>Message on WhatsApp</span>
-            <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
-          </a>
+          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/contact"
+              className="inline-flex items-center gap-2 bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-5 py-3 rounded-full transition-all shadow-editorial"
+            >
+              <span>Contact Concierge</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              href="/book"
+              className="inline-flex items-center gap-2 bg-cream hover:bg-gold-light/40 text-deep border border-line font-body text-xs uppercase tracking-wider font-semibold px-5 py-3 rounded-full transition-all"
+            >
+              <span>Build an Estimate</span>
+            </Link>
+          </div>
         </div>
       </main>
       <Footer />

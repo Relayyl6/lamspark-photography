@@ -139,9 +139,9 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#121110]">
+    <div className="min-h-screen flex flex-col bg-[#121110] overflow-y-auto">
       <Nav />
-      <main className="flex-1 text-warm-white px-4 sm:px-6 lg:px-8 relative overflow-hidden flex flex-col">
+      <main className="flex-1 text-warm-white px-4 sm:px-6 lg:px-8 relative py-6 sm:py-10">
         {/* Subtle Background Grain Texture */}
         <div
           className="absolute inset-0 opacity-[0.035] pointer-events-none"
@@ -151,10 +151,10 @@ export default function ContactPage() {
           }}
         />
 
-        <div className="max-w-7xl mx-auto relative z-10 flex flex-col flex-1 sm:pt-10 pt-7 overflow-hidden">          
+        <div className="max-w-7xl mx-auto relative z-10 flex flex-col flex-1">          
 
           {/* Main 2-Column Split Editorial Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-stretch flex-1 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start flex-1">
             {/* Left Column: Headline, Editorial Copy, Studio Concierge Details */}
             <div className="lg:col-span-6 space-y-5 sm:space-y-10">
               {/* Bold Editorial Headline with Red Accent Bar */}

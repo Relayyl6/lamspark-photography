@@ -5,7 +5,10 @@ import { ArrowUpRight, ArrowRight, Check, Clock, Calendar, ShieldCheck, Heart, S
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { SESSION_TYPES, PACKAGES, ADD_ONS } from "@/lib/catalog/seed";
+import { getLiveSessionTypes } from "@/lib/catalog/live";
 import { SessionTypeSlug } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 interface SessionPageProps {
   params: {
@@ -19,8 +22,9 @@ export function generateStaticParams() {
   }));
 }
 
-export default function SessionDetailPage({ params }: SessionPageProps) {
-  const session = SESSION_TYPES[params.type as SessionTypeSlug];
+export default async function SessionDetailPage({ params }: SessionPageProps) {
+  const liveSessions = await getLiveSessionTypes();
+  const session = liveSessions[params.type as SessionTypeSlug] || SESSION_TYPES[params.type as SessionTypeSlug];
   if (!session) {
     notFound();
   }

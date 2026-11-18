@@ -1,0 +1,208 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { neon } from "@neondatabase/serverless";
+
+const sql = neon(process.env.DATABASE_URL!);
+
+// GET: return all enquiries from DB with their pipeline stages
+export async function GET() {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const rawEnquiries = await sql.query(`
+      SELECT 
+        e.id,
+        e.reference_code,
+        e.client_id,
+        e.session_type,
+        e.package_id,
+        e.stage,
+        e.waiting_on,
+        e.stage_entered_at,
+        e.source,
+        e.source_detail,
+        e.custom_quote,
+        e.purpose_text,
+        e.feeling_text,
+        e.answers,
+        e.created_at,
+        e.updated_at,
+        c.name as client_name,
+        c.whatsapp_e164 as whatsapp,
+        c.email as client_email,
+        p.id as payment_id,
+        p.amount_expected,
+        p.amount_recorded,
+        p.status as payment_status,
+        p.screenshot_asset_id,
+        p.bank_reference,
+        p.recorded_by,
+        p.recorded_at,
+        p.ai_check
+      FROM enquiry e
+      LEFT JOIN client c ON e.client_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT id, amount_expected, amount_recorded, status, screenshot_asset_id, bank_reference, recorded_by, recorded_at, ai_check
+        FROM payment 
+        WHERE payment.enquiry_id = e.id AND payment.kind = 'deposit'
+        ORDER BY created_at DESC LIMIT 1
+      ) p ON true
+      ORDER BY e.created_at DESC
+    `);
+
+    const enquiries = rawEnquiries.map((e: any) => {
+      const answers = typeof e.answers === "string" ? JSON.parse(e.answers) : (e.answers || {});
+      const agreedPrice = answers.agreedPrice || (e.amount_expected ? Math.round(e.amount_expected / 0.7) : 0);
+
+      return {
+        id: e.id,
+        reference_code: e.reference_code,
+        client_id: e.client_id,
+        client_name: e.client_name,
+        whatsapp: e.whatsapp,
+        client_email: e.client_email,
+        session_type: e.session_type,
+        package_id: e.package_id,
+        stage: e.stage,
+        waiting_on: e.waiting_on,
+        stage_entered_at: e.stage_entered_at,
+        source: e.source,
+        source_detail: e.source_detail,
+        custom_quote: e.custom_quote,
+        purpose_text: e.purpose_text,
+        feeling_text: e.feeling_text,
+        answers: answers,
+        agreed_price: agreedPrice,
+        deposit_screenshot_url: e.screenshot_asset_id,
+        deposit_paid_at: e.recorded_at,
+        deposit_recorded_by: e.recorded_by,
+        bank_reference: e.bank_reference,
+        payment: e.payment_id ? {
+          id: e.payment_id,
+          amountExpected: e.amount_expected,
+          amountRecorded: e.amount_recorded,
+          status: e.payment_status,
+          bankReference: e.bank_reference,
+          aiCheck: e.ai_check,
+        } : undefined,
+        created_at: e.created_at,
+        updated_at: e.updated_at,
+      };
+    });
+
+    return NextResponse.json({ enquiries });
+  } catch (err: any) {
+    console.error("[kanban GET]", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// PUT: update enquiry stage { id, stage }
+export async function PUT(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { id, stage, waitingOn } = body;
+
+    if (!id || !stage) {
+      return NextResponse.json({ error: "id and stage are required" }, { status: 400 });
+    }
+
+    const result = await sql.query(
+      `UPDATE enquiry
+       SET 
+         stage = $1,
+         waiting_on = COALESCE($2, waiting_on),
+         stage_entered_at = NOW(),
+         updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [stage, waitingOn || null, id]
+    );
+
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Enquiry not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ enquiry: result[0] });
+  } catch (err: any) {
+    console.error("[kanban PUT]", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// POST: create new enquiry card
+export async function POST(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const {
+      clientName,
+      whatsapp,
+      email,
+      sessionType,
+      stage,
+      purposeText,
+      source,
+    } = body;
+
+    if (!clientName || !whatsapp) {
+      return NextResponse.json({ error: "clientName and whatsapp are required" }, { status: 400 });
+    }
+
+    // 1. Ensure client exists or create
+    let clientId: string;
+    const existingClient = await sql.query(
+      `SELECT id FROM client WHERE whatsapp_e164 = $1 LIMIT 1`,
+      [whatsapp]
+    );
+
+    if (existingClient.length > 0) {
+      clientId = existingClient[0].id;
+    } else {
+      const newClient = await sql.query(
+        `INSERT INTO client (id, name, whatsapp_e164, email, source_first, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW())
+         RETURNING id`,
+        [clientName, whatsapp, email || null, source || "Studio Admin"]
+      );
+      clientId = newClient[0].id;
+    }
+
+    // 2. Generate reference code
+    const randCode = "LS-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+
+    // 3. Insert enquiry
+    const newEnquiry = await sql.query(
+      `INSERT INTO enquiry (
+         id, client_id, session_type, stage, waiting_on, 
+         stage_entered_at, source, reference_code, purpose_text, 
+         created_at, updated_at
+       )
+       VALUES (
+         gen_random_uuid(), $1, $2, $3, 'us',
+         NOW(), $4, $5, $6,
+         NOW(), NOW()
+       )
+       RETURNING *`,
+      [
+        clientId,
+        sessionType || "toddler",
+        stage || "deposit_reported",
+        source || "Studio Admin",
+        randCode,
+        purposeText || "Studio Concierge Lead",
+      ]
+    );
+
+    return NextResponse.json({ enquiry: newEnquiry[0] }, { status: 201 });
+  } catch (err: any) {
+    console.error("[kanban POST]", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

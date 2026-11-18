@@ -47,178 +47,28 @@ interface StoryItem {
   vintageSign: string;
 }
 
-const STORIES: StoryItem[] = [
-  {
-    id: "story-1",
-    number: "01",
-    title: "The Al-Hassan Twins' First Birthday Wonder",
-    subtitle: "Unhurried Afternoon in Maitama",
-    sessionType: "Toddler Luxury Studio Session",
-    sessionSlug: "/sessions#toddler",
-    client: "Hadiza & Farouk Al-Hassan",
-    date: "September 2026",
-    location: "Private Studio Suite, Maitama, Abuja",
-    lightDetails: "Filtered North Window Daylight · 1.2m Silk Scrim",
-    excerpt:
-      "When one-year-old twins Kabeer and Zarah arrived at our Maitama studio, they were shy and clung tightly to their mother's traditional silk wrapper. Rather than rushing them onto a flash-lit backdrop, Osemene sat quietly on the Berber rug, rolling wooden blocks and humming soft northern lullabies. Within twenty minutes, the camera was completely forgotten. What followed was ninety unhurried minutes of toddler curiosity, infectious giggles, and spontaneous sibling affection.",
-    quote:
-      "The way Osemene captured our twins' quiet, genuine little glances made us both cry happy tears. There was zero stiff posing — just pure, unfiltered love.",
-    quoteAuthor: "Hadiza Al-Hassan",
-    studioMood: "Soft Northern Lullabies & Organic Wooden Blocks",
-    craft: {
-      lens: "85mm f/1.4 Art Prime (f/2.0 for painterly depth)",
-      lighting: "Unhurried soft North window daylight + gentle silk bounce (no jarring flash)",
-      pacing: "90 minutes · 0 stiff poses · snack, milk & nursing pauses honored",
-      keepsake: "30×40″ Museum Cotton Canvas & 24-page linen heirloom monograph",
-    },
-    image: "/images/client/events_4.jpg",
-    imageAlt: "Toddler laughing in soft natural window daylight in Abuja studio",
-    vintageSign: "01. Wonder in Maitama",
-  },
-  {
-    id: "story-2",
-    number: "02",
-    title: "Halima's Quiet Maternity at 34 Weeks",
-    subtitle: "Golden Hour Solarium Reverence",
-    sessionType: "Maternity Signature Collection",
-    sessionSlug: "/sessions#maternity",
-    client: "Dr. Halima & Dr. Usman Bello",
-    date: "August 2026",
-    location: "Asokoro Private Solarium, Abuja",
-    lightDetails: "5:15 PM Harmattan Directional Window Glare",
-    excerpt:
-      "At 34 weeks, Halima wanted portraits that celebrated the quiet power of motherhood without theatrical gowns, loud glitter, or synthetic studio backdrops. We styled her in raw, unbleached ivory silk and hand-knit cashmere. As the warm golden sun dipped behind Aso Rock, we spoke in gentle whispers about her pregnancy journey, the quiet moments of kicks in the night, and the anticipation of meeting her baby boy.",
-    quote:
-      "I have never felt more regal in my own skin. LamSparks gave me portraits that honor my body's strength rather than turning my pregnancy into an artificial spectacle.",
-    quoteAuthor: "Dr. Halima Bello",
-    studioMood: "Acoustic Oud, Hibiscus Mint Tea & Warm Solarium Glow",
-    craft: {
-      lens: "50mm f/1.2 S Prime at f/1.8",
-      lighting: "Warm 5 PM Harmattan directional sunlight softened by sheer Belgian linen",
-      pacing: "120 minutes · seated ergonomic posture rests · zero rush",
-      keepsake: "Handcrafted Tuscan leather presentation box with 15 matted fine-art prints",
-    },
-    image: "/images/client/weddings_3.jpg",
-    imageAlt: "Expectant mother in ivory silk bathed in soft golden window light",
-    vintageSign: "02. Grace in Anticipation",
-  },
-  {
-    id: "story-3",
-    number: "03",
-    title: "Three Generations of the Balogun Heritage",
-    subtitle: "Courtyard Tea & Weathered Oak Suite",
-    sessionType: "Family Legacy Collection",
-    sessionSlug: "/sessions#family",
-    client: "Chief & Mrs. Balogun Dynasty",
-    date: "July 2026",
-    location: "Studio Garden & Aged Oak Suite, Maitama",
-    lightDetails: "Ambient Overcast Daylight + Gentle Rim Glow",
-    excerpt:
-      "Grandmother Florence arrived from Lagos to celebrate her 75th milestone with nine grandchildren and three daughters gathered under one roof. Coordinating three generations can easily turn into chaotic shouting, but we arranged a slow, traditional afternoon tea in the studio courtyard. Osemene captured natural embraces, shared family jokes across the table, and Grandmother's weathered, loving hands cradling her newest grandson.",
-    quote:
-      "These portraits will hang in our family home long after I am gone. It is the greatest gift my children and grandchildren have ever prepared for me.",
-    quoteAuthor: "Grandmother Florence Balogun",
-    studioMood: "Afternoon Herbal Tea, Vintage Highlife Vinyl & Spontaneous Giggles",
-    craft: {
-      lens: "35mm & 85mm f/1.4 Dual Prime System",
-      lighting: "Diffused open garden daylight + subtle warm fill on grandmother's adire fabric",
-      pacing: "Unhurried multi-generational pacing · storytelling circle with zero pressure",
-      keepsake: "Triptych Framed Collection in hand-carved Nigerian walnut",
-    },
-    image: "/images/client/corporate_3.jpg",
-    imageAlt: "Three generations of family smiling together in natural garden courtyard",
-    vintageSign: "03. Heritage Unbroken",
-  },
-  {
-    id: "story-4",
-    number: "04",
-    title: "Tariq & Amina's Intimate Sunset Nikah",
-    subtitle: "Whispers on the Guzape Ridge",
-    sessionType: "Intimate Nuptials & Milestone",
-    sessionSlug: "/weddings-and-events",
-    client: "Amina Al-Mustapha & Tariq Umar",
-    date: "June 2026",
-    location: "Guzape Hills Private Terrace, Abuja",
-    lightDetails: "Post-Rain Sunset Glow over Abuja Ridge",
-    excerpt:
-      "Steering clear of 500-guest ballroom chaos, Amina and Tariq celebrated their Nikah with just 24 of their closest loved ones on a quiet cliff terrace in Guzape. After a brief afternoon shower, the skies cleared into deep violet and apricot tones. Osemene documented the quiet glance Tariq gave Amina during the prayer, and their private laughter as the evening lanterns were lit.",
-    quote:
-      "Osemene blended in like family. We didn't even notice her moving around us, yet she caught every tender glance and tear we thought nobody saw.",
-    quoteAuthor: "Amina Al-Mustapha",
-    studioMood: "Evening Lanterns, Rain-Scented Ridge Air & Quiet String Duet",
-    craft: {
-      lens: "50mm f/1.2 & 105mm f/1.4 Portrait Tele",
-      lighting: "Ambient dusk twilight balanced with warm candle and lantern glow",
-      pacing: "Documentary discretion · zero interruption of religious and family rites",
-      keepsake: "Handmade 30-spread Japanese silk wedding album with embossed gold calligraphy",
-    },
-    image: "/images/client/weddings_1.jpg",
-    imageAlt: "Intimate couple embrace under warm twilight sky in Abuja",
-    vintageSign: "04. Whispers on the Ridge",
-  },
-  {
-    id: "story-5",
-    number: "05",
-    title: "Baby Kamsi's First Fourteen Days",
-    subtitle: "Sanctuary at Jabi Lakeside",
-    sessionType: "In-Home Newborn Heirloom Session",
-    sessionSlug: "/sessions#newborn",
-    client: "Chidinma & Obinna Okafor",
-    date: "May 2026",
-    location: "Private Residence, Jabi Lake, Abuja",
-    lightDetails: "Soft Filtered Lake Daylight from Master Balcony",
-    excerpt:
-      "Newborn portraits should never feel like a clinical doctor's visit or uncomfortable gymnastics. We traveled to the Okafor residence in Jabi on day 11 of baby Kamsi's life. The nursery was warm, smelled of lavender and almond oil, and soft piano music drifted through the room. While Kamsi napped peacefully in her father's arms, we captured the tiny downy hair on her shoulders, the delicate curve of her fingers, and the tender awe on her parents' faces.",
-    quote:
-      "As new parents, leaving the house felt daunting. Having Osemene come to our home with such patience and warmth made the entire morning feel like a restful sanctuary.",
-    quoteAuthor: "Chidinma Okafor",
-    studioMood: "Lavender Mist, Warm Nursery Temperature & Gentle Heartbeat Ambient Audio",
-    craft: {
-      lens: "50mm f/1.2 & Macro 105mm f/2.8 for heirloom detail crops",
-      lighting: "Natural bedroom daylight filtered through organic white linen",
-      pacing: "3 full hours with infinite pauses for feeding, swaddling, and diaper changes",
-      keepsake: "Custom linen folio box with 10 fine-art deckled-edge cotton prints",
-    },
-    image: "/images/client/events_9.jpg",
-    imageAlt: "Peaceful newborn resting serenely wrapped in soft organic cotton",
-    vintageSign: "05. Quiet First Days",
-  },
-  {
-    id: "story-6",
-    number: "06",
-    title: "The Danjuma Sisters' Milestone Portrait",
-    subtitle: "Terracotta & Archival Pigment Study",
-    sessionType: "Fine Art Studio Portraiture",
-    sessionSlug: "/sessions#family",
-    client: "The Danjuma Sisters (Zainab, Fatima & Aisha)",
-    date: "April 2026",
-    location: "Maitama Studio Suite, Abuja",
-    lightDetails: "Chiaroscuro Studio Key Light + Warm Gold Foil Reflector",
-    excerpt:
-      "Three sisters separated across Abuja, London, and Toronto reunited for their mother's 60th milestone birthday. They wanted a regal portrait that celebrated their bond and individual journeys. Styling in coordinated earth tones and rich terracotta silks, we created a timeless painterly study reminiscent of classic oil portraiture, highlighting their striking sisterly resemblance and quiet confidence.",
-    quote:
-      "These are not just photographs; they are pieces of fine art. When our mother unwrapped the framed canvas, the entire room went silent with awe.",
-    quoteAuthor: "Zainab Danjuma",
-    studioMood: "Soulful 90s Afrobeats, Terracotta Silks & Spontaneous Laughter",
-    craft: {
-      lens: "85mm f/1.4 Art at f/2.8 for painterly depth",
-      lighting: "Sculpted single-source octabox feather with custom gold bead bounce",
-      pacing: "120 minutes · styling consultation · tea & music warm-up",
-      keepsake: "24×36″ Hand-embellished archival canvas in floating gold-leaf frame",
-    },
-    image: "/images/client/weddings_2.jpg",
-    imageAlt: "Three elegant sisters in rich warm earth-tone portraiture",
-    vintageSign: "06. Sisterhood in Terracotta",
-  },
-];
-
 export default function StoriesPage() {
+  const [stories, setStories] = useState<StoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeStoryIdx, setActiveStoryIdx] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isChanging, setIsChanging] = useState(false);
   const showcaseRef = useRef<HTMLDivElement>(null);
 
-  const current = STORIES[activeStoryIdx];
+  // Fetch live stories from Neon DB
+  useEffect(() => {
+    fetch("/api/stories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.stories) && data.stories.length > 0) {
+          setStories(data.stories);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const current = stories[activeStoryIdx] || stories[0];
 
   // Keyboard navigation for unhurried browsing
   useEffect(() => {
@@ -253,12 +103,12 @@ export default function StoriesPage() {
   }
 
   function goToPrevious() {
-    const nextIdx = activeStoryIdx > 0 ? activeStoryIdx - 1 : STORIES.length - 1;
+    const nextIdx = activeStoryIdx > 0 ? activeStoryIdx - 1 : stories.length - 1;
     switchStory(nextIdx);
   }
 
   function goToNext() {
-    const nextIdx = (activeStoryIdx + 1) % STORIES.length;
+    const nextIdx = (activeStoryIdx + 1) % stories.length;
     switchStory(nextIdx);
   }
 
@@ -282,7 +132,76 @@ export default function StoriesPage() {
           </div>
 
           {/* Interactive Story Showcase Stage */}
-          <div ref={showcaseRef} className="scroll-mt-24 mb-24">
+          {loading || !current ? (
+            <div className="scroll-mt-24 mb-24 animate-pulse">
+              {/* Story Narrative Player Bar Skeleton */}
+              <div className="bg-warm-white/80 rounded-photo p-4 sm:p-6 border border-line mb-8 shadow-editorial">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-8 bg-line/60 rounded" />
+                    <div className="h-7 w-[1px] bg-line" />
+                    <div className="space-y-2">
+                      <div className="w-24 h-3 bg-line/60 rounded" />
+                      <div className="w-48 h-5 bg-line/80 rounded" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-full bg-line/60" />
+                    <div className="w-9 h-9 rounded-full bg-line/60" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Stage Skeleton: Left Square Card + Right Details */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className="lg:col-span-8 flex flex-col items-center">
+                  <div className="w-full max-w-[380px] sm:max-w-[440px] aspect-square rounded-photo bg-[#EBE5DC] border border-gold/30 flex flex-col justify-between p-6 shadow-floating">
+                    <div className="flex justify-between items-center">
+                      <div className="w-28 h-5 rounded-full bg-white/60" />
+                      <div className="w-16 h-6 rounded-full bg-white/60" />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="w-32 h-3 bg-white/50 rounded" />
+                      <div className="w-3/4 h-6 bg-white/70 rounded" />
+                      <div className="w-1/2 h-4 bg-white/50 rounded" />
+                    </div>
+                  </div>
+
+                  {/* Thumbnail Deck Skeleton */}
+                  <div className="mt-8 w-full max-w-2xl">
+                    <div className="flex gap-3 overflow-hidden">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="w-48 h-16 rounded-xl bg-[#EBE5DC] border border-line/60 p-2.5 flex items-center gap-3 shrink-0">
+                          <div className="w-12 h-12 rounded-lg bg-white/60" />
+                          <div className="space-y-1.5 flex-1">
+                            <div className="w-16 h-2.5 bg-white/60 rounded" />
+                            <div className="w-24 h-3 bg-white/70 rounded" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-4 space-y-6">
+                  <div className="bg-warm-white/90 rounded-photo p-6 sm:p-8 border border-line shadow-editorial space-y-4">
+                    <div className="w-28 h-3 bg-line/60 rounded" />
+                    <div className="w-44 h-6 bg-line/80 rounded" />
+                    <div className="space-y-2 pt-2">
+                      <div className="w-full h-3 bg-line/40 rounded" />
+                      <div className="w-5/6 h-3 bg-line/40 rounded" />
+                      <div className="w-4/6 h-3 bg-line/40 rounded" />
+                    </div>
+                    <div className="space-y-3 pt-4 border-t border-line/60">
+                      <div className="w-32 h-3 bg-line/50 rounded" />
+                      <div className="w-48 h-4 bg-line/60 rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div ref={showcaseRef} className="scroll-mt-24 mb-24">
             {/* Story Narrative Player Bar */}
             <div className="bg-warm-white rounded-photo p-4 sm:p-6 border border-line mb-8 shadow-editorial">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -294,7 +213,7 @@ export default function StoriesPage() {
                   <div className="h-7 w-[1px] bg-line" />
                   <div>
                     <span className="font-body text-[11px] uppercase tracking-[0.2em] text-muted font-bold block">
-                      Chronicle {activeStoryIdx + 1} of {STORIES.length}
+                      Chronicle {activeStoryIdx + 1} of {stories.length}
                     </span>
                     <h2 className="font-display text-lg sm:text-xl text-deep font-normal leading-tight">
                       {current.subtitle}
@@ -306,7 +225,7 @@ export default function StoriesPage() {
                 <div className="flex items-center gap-4 sm:gap-6">
                   {/* Segmented Progress Pills */}
                   <div className="hidden sm:flex items-center gap-2">
-                    {STORIES.map((story, i) => (
+                    {stories.map((story, i) => (
                       <button
                         key={story.id}
                         type="button"
@@ -521,11 +440,11 @@ export default function StoriesPage() {
                       Chronicle Deck · Tap to Inspect
                     </span>
                     <span className="font-body text-[11px] text-muted">
-                      {activeStoryIdx + 1} of {STORIES.length} Chronicles
+                      {activeStoryIdx + 1} of {stories.length} Chronicles
                     </span>
                   </div>
                   <div className="flex flex-row gap-3 overflow-x-auto pb-4 pt-1 px-1 scrollbar-none snap-x">
-                    {STORIES.map((s, idx) => (
+                    {stories.map((s, idx) => (
                       <button
                         key={s.id}
                         type="button"
@@ -634,6 +553,7 @@ export default function StoriesPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Editorial Philosophy Statement */}
           <div className="mt-20 sm:mt-28 bg-deep text-warm-white rounded-photo p-8 sm:p-14 border border-gold/30 shadow-floating text-center relative overflow-hidden">

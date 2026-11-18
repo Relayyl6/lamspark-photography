@@ -75,26 +75,45 @@ export async function getSession(): Promise<SessionPayload | null> {
 
 export async function authenticateStaff(email: string, passwordPlain: string): Promise<SessionPayload | null> {
   const normalizedEmail = email.toLowerCase().trim();
-  const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, normalizedEmail))
-    .limit(1);
 
-  if (!user || user.length === 0) return null;
-  const staff = user[0];
-  if (!staff.active) return null;
+  // 1. Check single admin account from .env
+  const envOwnerEmail = process.env.STUDIO_OWNER_EMAIL?.toLowerCase().trim();
+  const envOwnerPassword = process.env.STUDIO_OWNER_PASSWORD;
+  if (envOwnerEmail && envOwnerPassword && normalizedEmail === envOwnerEmail && passwordPlain === envOwnerPassword) {
+    return {
+      userId: "admin-owner-env",
+      email: envOwnerEmail,
+      name: process.env.STUDIO_OWNER_NAME || "Osemene (Studio Owner)",
+      role: "owner" as UserRole,
+      exp: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
+    };
+  }
 
-  const inputHash = hashPassword(passwordPlain);
-  if (inputHash !== staff.passwordHash) return null;
+  // 2. Fallback to database user table
+  try {
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
 
-  const payload: SessionPayload = {
-    userId: staff.id,
-    email: staff.email,
-    name: staff.name,
-    role: staff.role as UserRole,
-    exp: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
-  };
+    if (!user || user.length === 0) return null;
+    const staff = user[0];
+    if (!staff.active) return null;
 
-  return payload;
+    const inputHash = hashPassword(passwordPlain);
+    if (inputHash !== staff.passwordHash) return null;
+
+    const payload: SessionPayload = {
+      userId: staff.id,
+      email: staff.email,
+      name: staff.name,
+      role: staff.role as UserRole,
+      exp: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
+    };
+
+    return payload;
+  } catch {
+    return null;
+  }
 }

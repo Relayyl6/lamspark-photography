@@ -4,46 +4,48 @@ import { ArrowUpRight } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { TestimonialCard } from "@/components/TestimonialCard";
+import { neon } from "@neondatabase/serverless";
 
-export default function LoveNotesPage() {
-  const testimonials = [
-    {
-      quote: "Osemene has an extraordinary gift with children. My two-year-old was fussy when we arrived, but within ten minutes she had him giggling without any pressure. The portraits on our living room wall bring me to tears every single day.",
-      clientFirstName: "Amina",
-      sessionType: "Toddler Luxury Session",
-      location: "Maitama, Abuja",
-    },
-    {
-      quote: "Carrying my first child was both exhilarating and vulnerable. Osemene made me feel so calm, dignified, and beautiful. There was zero awkwardness, just pure grace. I cannot recommend LamSparks enough to every expectant mother in Abuja.",
-      clientFirstName: "Chidinma",
-      sessionType: "Maternity Signature Grace",
-      location: "Guzape, Abuja",
-    },
-    {
-      quote: "We wanted professional headshots for our corporate advisory firm in Central Area. LamSparks delivered beyond expectations — crisp, authoritative, yet remarkably warm. The entire executive committee was thrilled.",
-      clientFirstName: "Tunde",
-      sessionType: "Executive & Official Portraits",
-      location: "Central Business District, Abuja",
-    },
-    {
-      quote: "The Motherhood Bundle was the best decision we made. Having the maternity session flow directly into the newborn portraits with the same colour grading made our baby album look like an editorial publication.",
-      clientFirstName: "Fatima",
-      sessionType: "Motherhood Legacy Bundle",
-      location: "Asokoro, Abuja",
-    },
-    {
-      quote: "Every detail was taken care of — the studio temperature was warm for my newborn, the gentle music in the background, and the unhurried tea breaks. It felt more like a spa day than a photoshoot.",
-      clientFirstName: "Ngozi",
-      sessionType: "Newborn Portraits",
-      location: "Jabi, Abuja",
-    },
-    {
-      quote: "Covered our daughter's 5th birthday celebration in Abuja. Osemene captured every tiny emotion, the giggles, the grandparents dancing. Truly unobtrusive and deeply gifted.",
-      clientFirstName: "Ibrahim",
-      sessionType: "Event Coverage",
-      location: "Wuse II, Abuja",
-    },
-  ];
+export const dynamic = "force-dynamic";
+
+export default async function LoveNotesPage() {
+  let testimonials: Array<{
+    quote: string;
+    clientFirstName: string;
+    sessionType: string;
+    location: string;
+  }> = [];
+
+  try {
+    const sql = neon(process.env.DATABASE_URL!);
+    const settingsRow = await sql.query(
+      `SELECT value FROM settings WHERE key = 'site_testimonials' LIMIT 1`
+    ).catch(() => []);
+
+    if (settingsRow.length > 0 && Array.isArray(settingsRow[0].value) && settingsRow[0].value.length > 0) {
+      testimonials = settingsRow[0].value.map((t: any) => ({
+        quote: t.quote,
+        clientFirstName: t.clientName || t.firstName || "Anonymous Client",
+        sessionType: t.headline || "Atelier Session",
+        location: t.roleOrLocation || "Abuja, Nigeria",
+      }));
+    } else {
+      const tableRows = await sql.query(
+        `SELECT id, first_name, session_type, quote, context FROM testimonial WHERE active = true ORDER BY created_at DESC`
+      ).catch(() => []);
+
+      if (tableRows.length > 0) {
+        testimonials = tableRows.map((t: any) => ({
+          quote: t.quote,
+          clientFirstName: t.first_name,
+          sessionType: t.session_type,
+          location: t.context || "Abuja",
+        }));
+      }
+    }
+  } catch (err) {
+    console.error("[LoveNotesPage error]", err);
+  }
 
   return (
     <>
@@ -61,7 +63,7 @@ export default function LoveNotesPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {testimonials.map((t, idx) => (
             <TestimonialCard
               key={idx}
@@ -73,20 +75,29 @@ export default function LoveNotesPage() {
           ))}
         </div>
 
-        <div className="mt-20 p-8 rounded-photo bg-warm-white border border-line text-center max-w-2xl mx-auto space-y-4">
-          <h3 className="font-display text-2xl text-deep font-normal">
-            Ready to Experience the LamSparks Rhythm?
+        <div className="mt-20 p-8 sm:p-10 rounded-photo bg-warm-white border border-line shadow-editorial max-w-3xl mx-auto text-center">
+          <span className="font-body text-xs uppercase tracking-[0.2em] text-gold font-semibold block mb-1">
+            Experience the Unhurried Studio
+          </span>
+          <h3 className="font-display text-2xl sm:text-3xl text-deep font-normal mt-1">
+            Ready to Create Your Own Family Heirlooms?
           </h3>
-          <p className="font-body text-xs sm:text-sm text-muted">
-            Plan your personal portrait session with unhurried care.
+          <p className="font-body text-xs sm:text-sm text-brown/80 mt-2 max-w-lg mx-auto">
+            Step into our serene Abuja studio. Reserve your date on our calendar or build your tailored estimate in minutes.
           </p>
-          <div className="pt-2">
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/book"
-              className="inline-flex items-center gap-2 bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-6 py-3 rounded-full transition-all"
+              className="inline-flex items-center gap-2 bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-6 py-3.5 rounded-full transition-all shadow-editorial"
             >
               <span>Build Your Estimate</span>
               <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+            </Link>
+            <Link
+              href="/sessions"
+              className="inline-flex items-center gap-2 bg-cream hover:bg-gold-light/40 text-deep border border-line font-body text-xs uppercase tracking-wider font-semibold px-6 py-3.5 rounded-full transition-all"
+            >
+              <span>View Collections</span>
             </Link>
           </div>
         </div>

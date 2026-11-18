@@ -4,10 +4,13 @@ import { ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { SessionCard } from "@/components/SessionCard";
-import { SESSION_TYPES } from "@/lib/catalog/seed";
+import { getLiveSessionTypes } from "@/lib/catalog/live";
 
-export default function SessionsIndexPage() {
-  const sessions = Object.values(SESSION_TYPES);
+export const dynamic = "force-dynamic";
+
+export default async function SessionsIndexPage() {
+  const sessionTypes = await getLiveSessionTypes();
+  const sessions = Object.values(sessionTypes);
 
   return (
     <>

@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { assets, payments } from "@/db/schema";
 import { analyzeReceiptWithGemini } from "@/lib/ai/service";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,14 +25,27 @@ export async function POST(req: NextRequest) {
     const safeFilename = `${uniqueId}.${ext}`;
 
     if (partition === "private") {
-      // Store in private bucket (e.g. transfer screenshot)
-      const storageKey = `receipts/${safeFilename}`;
-      await uploadObject({
-        bucket: PRIVATE_BUCKET,
-        key: storageKey,
-        body: buffer,
-        contentType: file.type || "image/png",
-      });
+      let storageKey = `receipts/${safeFilename}`;
+      let signedUrl = "";
+
+      try {
+        await uploadObject({
+          bucket: PRIVATE_BUCKET,
+          key: storageKey,
+          body: buffer,
+          contentType: file.type || "image/png",
+        });
+        signedUrl = await getPrivateObjectUrl(storageKey, 3600);
+      } catch (s3Err) {
+        console.warn("Private S3 upload fallback to local storage:", s3Err);
+        const uploadsDir = path.join(process.cwd(), "public", "uploads");
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(uploadsDir, safeFilename), buffer);
+        storageKey = `/uploads/${safeFilename}`;
+        signedUrl = storageKey;
+      }
 
       // Save asset record
       const [newAsset] = await db
@@ -45,8 +60,13 @@ export async function POST(req: NextRequest) {
         .returning();
 
       // Analyze receipt image with Gemini Vision OCR
-      const base64Image = buffer.toString("base64");
-      const aiResult = await analyzeReceiptWithGemini(base64Image, file.type || "image/png");
+      let aiResult: any = { extractedAmount: null, reference: null, confidence: "low" };
+      try {
+        const base64Image = buffer.toString("base64");
+        aiResult = await analyzeReceiptWithGemini(base64Image, file.type || "image/png");
+      } catch (aiErr) {
+        console.warn("AI receipt analysis skipped:", aiErr);
+      }
 
       // If enquiryId is provided, record reported payment
       if (enquiryId) {
@@ -54,38 +74,50 @@ export async function POST(req: NextRequest) {
           enquiryId,
           kind: "deposit",
           amountExpected: aiResult.extractedAmount || 0,
-          status: "reported", // HARD RULE: assistant never auto-confirms deposit
+          status: "reported",
           screenshotAssetId: newAsset.id,
           aiCheck: aiResult,
-          bankReference: aiResult.reference || null, // null unless clearly extracted
+          bankReference: aiResult.reference || null,
         });
       }
-
-      const signedUrl = await getPrivateObjectUrl(storageKey, 3600);
 
       return NextResponse.json({
         success: true,
         assetId: newAsset.id,
         storageKey,
         privateUrl: signedUrl,
+        url: signedUrl,
         aiCheck: aiResult,
-        message: "Receipt uploaded to secure storage. Pending human studio verification.",
+        message: "Receipt uploaded successfully.",
       });
     }
 
-    // Public bucket
-    const storageKey = `portfolio/${safeFilename}`;
-    const publicUrl = await uploadObject({
-      bucket: PUBLIC_BUCKET,
-      key: storageKey,
-      body: buffer,
-      contentType: file.type || "image/jpeg",
-    });
+    // Public asset
+    let storageKey = `portfolio/${safeFilename}`;
+    let publicUrl = "";
+
+    try {
+      publicUrl = await uploadObject({
+        bucket: PUBLIC_BUCKET,
+        key: storageKey,
+        body: buffer,
+        contentType: file.type || "image/jpeg",
+      });
+    } catch (s3Err) {
+      console.warn("Public S3 upload fallback to local storage:", s3Err);
+      const uploadsDir = path.join(process.cwd(), "public", "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(uploadsDir, safeFilename), buffer);
+      storageKey = `/uploads/${safeFilename}`;
+      publicUrl = storageKey;
+    }
 
     const [newAsset] = await db
       .insert(assets)
       .values({
-        storageKey,
+        storageKey: publicUrl,
         storageBucket: PUBLIC_BUCKET,
         kind: "image",
         sessionType: sessionType || "general",
@@ -98,6 +130,7 @@ export async function POST(req: NextRequest) {
       success: true,
       assetId: newAsset.id,
       url: publicUrl,
+      storageKey: publicUrl,
     });
   } catch (err: unknown) {
     console.error("Upload handler error:", err);

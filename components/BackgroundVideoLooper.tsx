@@ -24,7 +24,7 @@ export function BackgroundVideoLooper() {
       activeVideo.muted = true;
       activeVideo.defaultMuted = true;
       activeVideo.play().catch(() => {
-        // Autoplay policy may require first user interaction
+        // Autoplay policy fallback
       });
     }
   }, [activeSlot]);
@@ -68,7 +68,6 @@ export function BackgroundVideoLooper() {
       isTransitioning.current = true;
 
       if (currentSlot === 0) {
-        // Prepare next video for slot 0 after slot 1 starts playing
         const nextIdxFor0 = (index1 + 1) % VIDEOS.length;
         if (videoRef1.current) {
           videoRef1.current.currentTime = 0;
@@ -80,7 +79,6 @@ export function BackgroundVideoLooper() {
           isTransitioning.current = false;
         }, 1100);
       } else {
-        // Prepare next video for slot 1 after slot 0 starts playing
         const nextIdxFor1 = (index0 + 1) % VIDEOS.length;
         if (videoRef0.current) {
           videoRef0.current.currentTime = 0;
@@ -98,10 +96,10 @@ export function BackgroundVideoLooper() {
 
   return (
     <div
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-cream/20"
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#181411]"
       aria-hidden="true"
     >
-      {/* Video Slot 0 */}
+      {/* Video Slot 0 - Ultra Sharp & Hardware Accelerated */}
       <video
         ref={videoRef0}
         src={VIDEOS[index0]}
@@ -117,12 +115,17 @@ export function BackgroundVideoLooper() {
             transitionToNextSlot(0);
           }
         }}
-        className={`absolute inset-0 w-full h-full object-cover filter contrast-[1.08] brightness-[1.02] saturate-[1.05] transition-opacity duration-1000 ease-in-out ${
-          activeSlot === 0 ? "opacity-[0.92]" : "opacity-0"
+        style={{
+          imageRendering: "-webkit-optimize-contrast",
+          transform: "translate3d(0, 0, 0)",
+          willChange: "opacity, transform",
+        }}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+          activeSlot === 0 ? "opacity-100" : "opacity-0"
         }`}
       />
 
-      {/* Video Slot 1 (Seamless Cross-fade Buffer) */}
+      {/* Video Slot 1 - Seamless Cross-fade Buffer */}
       <video
         ref={videoRef1}
         src={VIDEOS[index1]}
@@ -137,30 +140,18 @@ export function BackgroundVideoLooper() {
             transitionToNextSlot(1);
           }
         }}
-        className={`absolute inset-0 w-full h-full object-cover filter contrast-[1.08] brightness-[1.02] saturate-[1.05] transition-opacity duration-1000 ease-in-out ${
-          activeSlot === 1 ? "opacity-[0.92]" : "opacity-0"
+        style={{
+          imageRendering: "-webkit-optimize-contrast",
+          transform: "translate3d(0, 0, 0)",
+          willChange: "opacity, transform",
+        }}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+          activeSlot === 1 ? "opacity-100" : "opacity-0"
         }`}
       />
 
-      {/* Atmospheric Luminous Veil */}
-      <div className="absolute inset-0 bg-gradient-to-b from-cream/15 via-transparent to-cream/20 pointer-events-none" />
-
-      {/* Subtle Warm Radial Vignette */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-20"
-        style={{
-          background: "radial-gradient(circle at center, transparent 50%, rgba(26, 20, 16, 0.22) 100%)",
-        }}
-      />
-
-      {/* Delicate Film Grain Texture */}
-      <div
-        className="absolute inset-0 opacity-[0.02] pointer-events-none"
-        style={{
-          backgroundImage: `radial-gradient(rgba(0,0,0,0.8) 1px, transparent 0)`,
-          backgroundSize: "28px 28px",
-        }}
-      />
+      {/* Crisp Atmospheric Tint (Minimal overlay for legibility without blurring the video) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/35 pointer-events-none" />
     </div>
   );
 }

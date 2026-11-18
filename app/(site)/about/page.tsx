@@ -1,39 +1,68 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Heart, Sparkles, ShieldCheck, Clock, Award, Users, Camera } from "lucide-react";
+import { ArrowUpRight, Heart, Sparkles, Clock, Award } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { LiquidGlassCard } from "@/components/LiquidGlassCard";
+import { neon } from "@neondatabase/serverless";
 
-export default function AboutPage() {
-  const stats = [
+export const dynamic = "force-dynamic";
+
+const ICON_MAP: Record<string, any> = {
+  Clock,
+  Award,
+  Heart,
+  Sparkles,
+};
+
+export default async function AboutPage() {
+  let stats = [
     {
       value: "10+",
       label: "Years of Empathy",
       desc: "Capturing Nigeria's most tender family and milestone stories.",
-      icon: Clock,
+      iconName: "Clock",
     },
     {
       value: "1,200+",
       label: "Heirloom Keepsakes",
       desc: "Museum-grade Italian leather albums & archival wooden frames delivered.",
-      icon: Award,
+      iconName: "Award",
     },
     {
       value: "100%",
       label: "Unhurried Pace",
       desc: "Only one family per half-day in our Maitama studio. Zero time pressure.",
-      icon: Heart,
+      iconName: "Heart",
     },
     {
       value: "4.98★",
       label: "Client Reverence",
       desc: "Abuja's premier word-of-mouth studio for families and dignitaries.",
-      icon: Sparkles,
+      iconName: "Sparkles",
     },
   ];
+
+  let aboutQuote = "I believe the most extraordinary moments are usually the quietest ones.";
+
+  try {
+    const sql = neon(process.env.DATABASE_URL!);
+    const statsRow = await sql.query(
+      `SELECT value FROM settings WHERE key = 'about_stats' LIMIT 1`
+    ).catch(() => []);
+    if (statsRow.length > 0 && Array.isArray(statsRow[0].value) && statsRow[0].value.length > 0) {
+      stats = statsRow[0].value;
+    }
+
+    const quoteRow = await sql.query(
+      `SELECT value FROM settings WHERE key = 'about_quote' LIMIT 1`
+    ).catch(() => []);
+    if (quoteRow.length > 0 && typeof quoteRow[0].value === "string") {
+      aboutQuote = quoteRow[0].value;
+    }
+  } catch (err) {
+    console.error("[AboutPage DB error]", err);
+  }
 
   return (
     <>
@@ -50,7 +79,7 @@ export default function AboutPage() {
                 Honouring Lametu. Sparkling Lives.
               </h1>
               <p className="font-serif italic text-xl sm:text-2xl text-brown pl-4 border-l-2 border-gold/70 my-4">
-                &ldquo;I believe the most extraordinary moments are usually the quietest ones.&rdquo;
+                &ldquo;{aboutQuote}&rdquo;
               </p>
               <div className="space-y-4 font-body text-sm sm:text-base text-brown/90 leading-relaxed">
                 <p>
@@ -117,12 +146,12 @@ export default function AboutPage() {
             {/* Responsive: 2 columns on mobile, 4 columns on desktop */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               {stats.map((s, idx) => {
-                const Icon = s.icon;
+                const IconComponent = ICON_MAP[s.iconName || "Sparkles"] || Sparkles;
                 return (
                   <LiquidGlassCard key={idx} className="p-5 sm:p-7 flex flex-col justify-between">
                     <div>
                       <div className="w-9 h-9 rounded-full bg-gold/15 flex items-center justify-center text-gold mb-4 border border-gold/30">
-                        <Icon className="w-4 h-4" />
+                        <IconComponent className="w-4 h-4" />
                       </div>
                       <span className="font-display text-3xl sm:text-5xl text-deep font-light tracking-tight block">
                         {s.value}
@@ -139,6 +168,7 @@ export default function AboutPage() {
               })}
             </div>
           </div>
+        </div>
       </main>
       <Footer />
     </>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
-import { ATELIER_TESTIMONIALS, type EditorialTestimonial } from "@/lib/testimonials-data";
+import type { EditorialTestimonial } from "@/lib/testimonials-data";
 
 interface EditorialTestimonialSectionProps {
   autoAdvanceInterval?: number; // ms, default 7500
@@ -12,13 +12,28 @@ interface EditorialTestimonialSectionProps {
 export function EditorialTestimonialSection({
   autoAdvanceInterval = 7500,
 }: EditorialTestimonialSectionProps) {
+  const [testimonials, setTestimonials] = useState<EditorialTestimonial[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const testimonials = ATELIER_TESTIMONIALS;
-  const current = testimonials[currentIndex];
+  // Fetch live testimonials from Neon DB
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/testimonials")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.testimonials) && data.testimonials.length > 0) {
+          setTestimonials(data.testimonials);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const current = testimonials[currentIndex] || null;
   const totalFormatted = testimonials.length.toString().padStart(2, "0");
 
   const goToNext = useCallback(() => {
@@ -86,6 +101,41 @@ export function EditorialTestimonialSection({
       </div>
 
       {/* Grid Content Stage */}
+      {loading || !current ? (
+        <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 min-h-[440px] lg:min-h-[500px] items-stretch">
+          <div className="md:col-span-3 flex flex-col justify-between pr-2 sm:pr-4 border-b md:border-b-0 border-deep/10 pb-6 md:pb-0">
+            <div>
+              <div className="h-16 w-24 bg-deep/10 rounded animate-pulse mb-8" />
+              <div className="h-4 w-32 bg-deep/15 rounded animate-pulse mb-2" />
+              <div className="h-3 w-40 bg-muted/20 rounded animate-pulse" />
+            </div>
+            <div className="flex items-center gap-4 mt-8 md:mt-auto pt-6">
+              <div className="w-11 h-11 rounded-full bg-deep/10 animate-pulse" />
+              <div className="flex -space-x-2">
+                <div className="w-8 h-8 rounded-full bg-gold/20 animate-pulse" />
+                <div className="w-8 h-8 rounded-full bg-gold/15 animate-pulse" />
+                <div className="w-8 h-8 rounded-full bg-gold/10 animate-pulse" />
+              </div>
+            </div>
+          </div>
+          <div className="md:col-span-9 flex flex-col justify-between pl-0 md:pl-6 lg:pl-10">
+            <div className="flex items-center justify-between pb-4 sm:pb-6">
+              <div className="h-3 w-24 bg-deep/15 rounded animate-pulse" />
+              <div className="w-10 h-10 rounded-full bg-deep/10 animate-pulse" />
+            </div>
+            <div className="my-auto py-4 sm:py-6 space-y-4 max-w-4xl">
+              <div className="h-10 sm:h-12 w-3/4 bg-gold/20 rounded animate-pulse" />
+              <div className="h-6 w-full bg-deep/10 rounded animate-pulse" />
+              <div className="h-6 w-5/6 bg-deep/10 rounded animate-pulse" />
+              <div className="h-6 w-2/3 bg-deep/10 rounded animate-pulse" />
+            </div>
+            <div className="pt-6 border-t border-deep/10 flex items-center justify-between">
+              <div className="h-3.5 w-48 bg-muted/20 rounded animate-pulse" />
+              <div className="h-3.5 w-16 bg-gold/25 rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 min-h-[440px] lg:min-h-[500px] items-stretch">
         
         {/* LEFT COLUMN: Numeric Index, Author Details, Navigation Trigger, Avatars (md:col-span-3) */}
@@ -218,6 +268,7 @@ export function EditorialTestimonialSection({
         </div>
 
       </div>
+      )}
     </section>
   );
 }

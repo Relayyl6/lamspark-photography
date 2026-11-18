@@ -23,103 +23,22 @@ import {
   Smartphone,
   ChevronRight,
   Filter,
+  Tag,
+  FileText,
+  UploadCloud,
+  Menu,
+  LogOut,
+  Loader2,
 } from "lucide-react";
 import { PACKAGES, SESSION_TYPES } from "@/lib/catalog/seed";
 import { EnquiryRecord, PipelineStage } from "@/lib/types";
 import { transitionEnquiry } from "@/lib/pipeline/transition";
 import { triageInboundMessage, checkDepositScreenshot } from "@/lib/ai/service";
 import { KanbanBoard } from "@/components/studio/KanbanBoard";
-
-// Initial seed enquiries across stages
-const INITIAL_ENQUIRIES: EnquiryRecord[] = [
-  {
-    id: "enq-101",
-    reference_code: "LS-9B2K",
-    client_id: "cli-1",
-    session_type: "toddler",
-    package_id: "toddler-luxury",
-    stage: "deposit_reported",
-    waiting_on: "us",
-    stage_entered_at: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
-    source: "Instagram",
-    custom_quote: false,
-    purpose_text: "1st Birthday Milestone for baby Kamsi",
-    feeling_text: "Pure joy, unhurried, warm neutral backdrops",
-    answers: {
-      purpose: "1st Birthday Milestone",
-      packageId: "toddler-luxury",
-      childName: "Kamsi",
-      childAge: "1",
-      additionalFamilyCount: 1,
-    },
-    agreed_price: 680000,
-    deposit_reported_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    deposit_screenshot_url: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=600&q=80",
-    created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: "enq-102",
-    reference_code: "LS-4M7L",
-    client_id: "cli-2",
-    session_type: "maternity",
-    package_id: "maternity-signature-grace",
-    stage: "deposit_paid",
-    waiting_on: "us",
-    stage_entered_at: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
-    source: "WhatsApp",
-    custom_quote: false,
-    purpose_text: "First pregnancy at 32 weeks",
-    feeling_text: "Serene, regal, soft drapery",
-    answers: {
-      purpose: "First pregnancy",
-      packageId: "maternity-signature-grace",
-      weeksPregnant: "32 weeks",
-    },
-    agreed_price: 255000,
-    deposit_paid_at: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
-    deposit_recorded_by: "Osemene",
-    bank_reference: "GTB-TXN-88492019",
-    created_at: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: "enq-103",
-    reference_code: "LS-7T3Q",
-    client_id: "cli-3",
-    session_type: "event",
-    package_id: "event-4h",
-    stage: "editing",
-    waiting_on: "us",
-    stage_entered_at: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
-    source: "Referral",
-    custom_quote: false,
-    purpose_text: "50th Birthday Dinner Celebration in Maitama",
-    answers: {
-      purpose: "50th Birthday Celebration",
-      packageId: "event-4h",
-      reelsAddon: true,
-    },
-    agreed_price: 400000,
-    deposit_paid_at: new Date(Date.now() - 120 * 3600 * 1000).toISOString(),
-    deposit_recorded_by: "Osemene",
-    created_at: new Date(Date.now() - 140 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: "enq-104",
-    reference_code: "LS-3P8X",
-    client_id: "cli-4",
-    session_type: "wedding",
-    stage: "enquiry",
-    waiting_on: "us",
-    stage_entered_at: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-    source: "Website",
-    custom_quote: true,
-    purpose_text: "Two-day traditional & church wedding in Abuja",
-    answers: {
-      purpose: "Two-day traditional & church wedding",
-    },
-    created_at: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-  },
-];
+import { GalleryManager } from "@/components/studio/GalleryManager";
+import { ServicesEditor } from "@/components/studio/ServicesEditor";
+import { SiteContentEditor } from "@/components/studio/SiteContentEditor";
+import { SettingsManager } from "@/components/studio/SettingsManager";
 
 const STAGES_LIST: { id: PipelineStage; label: string }[] = [
   { id: "enquiry", label: "Enquiry" },
@@ -137,6 +56,9 @@ const STAGES_LIST: { id: PipelineStage; label: string }[] = [
 
 export default function StudioDashboard() {
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string; role: string } | null>(null);
+  const [loadingEnquiries, setLoadingEnquiries] = useState(true);
+  const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
+  const [selectedEnquiry, setSelectedEnquiry] = useState<EnquiryRecord | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -147,6 +69,17 @@ export default function StudioDashboard() {
         }
       })
       .catch(() => {});
+
+    setLoadingEnquiries(true);
+    fetch("/api/admin/kanban")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.enquiries) {
+          setEnquiries(data.enquiries);
+        }
+      })
+      .catch((err) => console.error("[kanban fetch]", err))
+      .finally(() => setLoadingEnquiries(false));
   }, []);
 
   async function handleLogout() {
@@ -155,11 +88,59 @@ export default function StudioDashboard() {
   }
 
   const [activeTab, setActiveTab] = useState<
-    "today" | "pipeline" | "deposits" | "inbox" | "content" | "assets" | "settings"
+    "today" | "pipeline" | "deposits" | "services" | "gallery" | "inbox" | "content" | "settings"
   >("pipeline");
 
-  const [enquiries, setEnquiries] = useState<EnquiryRecord[]>(INITIAL_ENQUIRIES);
-  const [selectedEnquiry, setSelectedEnquiry] = useState<EnquiryRecord | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [uploadingDepositId, setUploadingDepositId] = useState<string | null>(null);
+
+  // Upload or replace deposit screenshot
+  async function handleUploadDepositReceipt(e: React.ChangeEvent<HTMLInputElement>, enq: EnquiryRecord) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingDepositId(enq.id);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("partition", "private");
+      formData.append("enquiryId", enq.id);
+      formData.append("sessionType", enq.session_type || "general");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      const uploadedUrl = data.url || data.privateUrl || data.storageKey;
+
+      if (uploadedUrl) {
+        setEnquiries((prev) =>
+          prev.map((item) =>
+            item.id === enq.id
+              ? {
+                  ...item,
+                  deposit_screenshot_url: uploadedUrl,
+                  payment: item.payment
+                    ? { ...item.payment, screenshotAssetId: uploadedUrl }
+                    : { id: "new-p", status: "pending", amountExpected: Math.round((item.agreed_price || 0) * 0.7) },
+                }
+              : item
+          )
+        );
+        alert("Receipt uploaded and attached successfully!");
+      } else {
+        alert(data.error || "Upload failed");
+      }
+    } catch (err: any) {
+      console.error("Receipt upload error:", err);
+      alert("Failed to upload receipt: " + err.message);
+    } finally {
+      setUploadingDepositId(null);
+    }
+  }
+
+
 
   // Deposit review form state & receipt lightbox
   const [bankRefInput, setBankRefInput] = useState("");
@@ -305,40 +286,136 @@ export default function StudioDashboard() {
   return (
     <div className="min-h-screen bg-cream text-deep flex flex-col">
       {/* Studio Top Navigation Bar */}
-      <header className="bg-deep text-warm-white border-b border-warm-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="font-display text-xl font-semibold text-warm-white">
-            LamSparks
+      <header className="bg-deep text-warm-white border-b border-warm-white/10 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
+        {/* Left: Mobile Drawer Trigger + Brand */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-1.5 -ml-1 rounded-xl text-gold hover:bg-white/10 transition-colors"
+            aria-label="Toggle navigation drawer"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          <Link href="/" className="font-display text-lg sm:text-xl font-semibold text-warm-white tracking-tight flex items-center gap-1.5">
+            <span>LamSparks</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block"></span>
           </Link>
-          <span className="font-body text-[10px] uppercase tracking-wider text-gold bg-gold/15 px-2.5 py-0.5 rounded-full border border-gold/30">
+
+          <span className="font-body text-[10px] uppercase tracking-wider text-gold bg-gold/15 px-2.5 py-0.5 rounded-full border border-gold/30 hidden lg:inline-block">
             Studio Operating System
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right: Authenticated User & Actions */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <span className="font-body text-xs text-cream/70 hidden sm:inline">
             Logged in as <strong>{currentUser?.name || "Osemene"}</strong> ({currentUser?.role || "Owner"})
           </span>
-          <button
-            onClick={handleLogout}
-            className="font-body text-[11px] text-red-300 hover:text-red-100 border border-red-500/30 bg-red-950/20 px-2.5 py-1 rounded-full transition-colors"
-          >
-            Sign Out
-          </button>
+
           <Link
             href="/"
-            className="font-body text-xs text-gold hover:text-warm-white border border-gold/40 px-3 py-1.5 rounded-full transition-colors"
+            className="font-body text-xs text-gold hover:text-warm-white border border-gold/40 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0"
           >
             Public Site ↗
           </Link>
+
+          <button
+            onClick={handleLogout}
+            className="font-body text-xs text-red-300 hover:text-red-100 border border-red-500/30 bg-red-950/20 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5"
+          >
+            <LogOut className="w-3.5 h-3.5 sm:hidden text-red-300" />
+            <span className="whitespace-nowrap">Sign Out</span>
+          </button>
         </div>
       </header>
 
+      {/* Mobile Slide-Out Sidebar Drawer */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <aside className="relative w-72 max-w-[80vw] bg-[#181411] text-warm-white h-full shadow-2xl flex flex-col justify-between p-5 z-10 animate-in slide-in-from-left duration-200">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <div>
+                  <span className="font-display text-lg font-semibold text-warm-white">LamSparks Studio</span>
+                  <span className="text-[10px] text-gold font-body block uppercase tracking-wider">Navigation Menu</span>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-cream/70"
+                >
+                  <X className="w-5 h-5 text-warm-white" />
+                </button>
+              </div>
+
+              <nav className="space-y-1">
+                {[
+                  { id: "today", label: "Today Overview", icon: Clock },
+                  { id: "pipeline", label: "Pipeline Board", icon: BarChart3 },
+                  {
+                    id: "deposits",
+                    label: "Deposit Queue",
+                    icon: CheckCircle,
+                    badge: depositsQueue.length > 0 ? depositsQueue.length : 1,
+                  },
+                  { id: "services", label: "Services & Pricing", icon: Tag },
+                  { id: "gallery", label: "Gallery Manager", icon: ImageIcon },
+                  { id: "inbox", label: "Human Inbox", icon: Inbox },
+                  { id: "content", label: "Site Content CMS", icon: FileText },
+                  { id: "settings", label: "Studio Settings", icon: Settings },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id as any);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-body text-xs uppercase tracking-wider font-semibold transition-all ${
+                        isActive
+                          ? "bg-gold text-deep font-bold shadow-md"
+                          : "text-cream/80 hover:bg-white/5 hover:text-warm-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-deep" : "text-gold"}`} />
+                        <span>{tab.label}</span>
+                      </div>
+                      {tab.badge && (
+                        <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${
+                          isActive ? "bg-deep text-gold" : "bg-gold text-deep"
+                        }`}>
+                          {tab.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 text-[11px] font-body text-cream/50">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Abuja Studio Active</span>
+              </div>
+              <span>LamSparks Studio OS v2.4</span>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Main Studio Workspace */}
       <div className="flex-1 flex flex-col md:flex-row">
-        {/* Sidebar Nav - Horizontally Scrollable on Mobile, Sticky Column on Tablet & Desktop */}
-        <aside className="w-full md:w-64 bg-[#FAF8F5] border-b md:border-b-0 md:border-r border-[#EFE9E1] p-2 sm:p-3 md:p-4 shrink-0 md:sticky md:top-[61px] md:h-[calc(100vh-61px)] flex md:flex-col md:justify-between select-none z-30">
-          <div className="w-full flex md:flex-col gap-1.5 md:space-y-1.5 overflow-x-auto md:overflow-y-auto no-scrollbar py-1 md:py-0 scroll-smooth">
+        {/* Desktop Sidebar Nav (md:flex, hidden on mobile) */}
+        <aside className="hidden md:flex w-64 bg-[#FAF8F5] border-r border-[#EFE9E1] p-4 shrink-0 sticky top-[57px] h-[calc(100vh-57px)] flex-col justify-between select-none z-30">
+          <nav className="w-full space-y-1.5 overflow-y-auto no-scrollbar">
             {[
               { id: "today", label: "TODAY OVERVIEW", icon: Clock },
               { id: "pipeline", label: "PIPELINE BOARD", icon: BarChart3 },
@@ -348,9 +425,10 @@ export default function StudioDashboard() {
                 icon: CheckCircle,
                 badge: depositsQueue.length > 0 ? depositsQueue.length : 1,
               },
+              { id: "services", label: "SERVICES & PRICING", icon: Tag },
+              { id: "gallery", label: "GALLERY MANAGER", icon: ImageIcon },
               { id: "inbox", label: "HUMAN INBOX", icon: Inbox },
-              { id: "content", label: "CONTENT CALENDAR", icon: Calendar },
-              { id: "assets", label: "ASSET LIBRARY", icon: ImageIcon },
+              { id: "content", label: "SITE CONTENT CMS", icon: FileText },
               { id: "settings", label: "STUDIO SETTINGS", icon: Settings },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -359,7 +437,7 @@ export default function StudioDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`shrink-0 md:w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-body text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap text-left ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-body text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap text-left ${
                     isActive
                       ? "bg-[#181411] text-warm-white shadow-md"
                       : "text-[#736253] hover:bg-[#F2ECE3] hover:text-[#181411]"
@@ -377,9 +455,9 @@ export default function StudioDashboard() {
                 </button>
               );
             })}
-          </div>
+          </nav>
 
-          <div className="hidden md:block pt-3 border-t border-[#EFE9E1]">
+          <div className="pt-3 border-t border-[#EFE9E1]">
             <div className="flex items-center gap-2 text-[11px] text-muted font-body">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Abuja Studio Active</span>
@@ -405,9 +483,9 @@ export default function StudioDashboard() {
                 </p>
               </div>
 
-              {/* Status Alert Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 bg-warm-white rounded-photo border border-line shadow-editorial">
+              {/* Status Alert Cards - 2x2 on Mobile, 4-col on Desktop */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="p-3.5 sm:p-5 bg-warm-white rounded-photo border border-line shadow-editorial">
                   <span className="font-body text-[10px] uppercase tracking-wider text-muted block mb-1">
                     Deposits to Check
                   </span>
@@ -424,7 +502,7 @@ export default function StudioDashboard() {
                   </div>
                 </div>
 
-                <div className="p-5 bg-warm-white rounded-photo border border-line shadow-editorial">
+                <div className="p-3.5 sm:p-5 bg-warm-white rounded-photo border border-line shadow-editorial">
                   <span className="font-body text-[10px] uppercase tracking-wider text-muted block mb-1">
                     Shoots Today &amp; Tomorrow
                   </span>
@@ -438,7 +516,7 @@ export default function StudioDashboard() {
                   </div>
                 </div>
 
-                <div className="p-5 bg-warm-white rounded-photo border border-line shadow-editorial">
+                <div className="p-3.5 sm:p-5 bg-warm-white rounded-photo border border-line shadow-editorial">
                   <span className="font-body text-[10px] uppercase tracking-wider text-muted block mb-1">
                     Edits Due This Week
                   </span>
@@ -452,7 +530,7 @@ export default function StudioDashboard() {
                   </div>
                 </div>
 
-                <div className="p-5 bg-warm-white rounded-photo border border-line shadow-editorial">
+                <div className="p-3.5 sm:p-5 bg-warm-white rounded-photo border border-line shadow-editorial">
                   <span className="font-body text-[10px] uppercase tracking-wider text-muted block mb-1">
                     Human Inbox Unread
                   </span>
@@ -523,12 +601,24 @@ export default function StudioDashboard() {
                 </div>
               </div>
 
-              <KanbanBoard
-                enquiries={enquiries}
-                onSelectEnquiry={setSelectedEnquiry}
-                onUpdateEnquiries={setEnquiries}
-                onOpenDepositsQueue={() => setActiveTab("deposits")}
-              />
+              {loadingEnquiries ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-72 rounded-2xl bg-warm-white/70 animate-pulse border border-line p-4 space-y-3">
+                      <div className="h-4 bg-line rounded w-1/3" />
+                      <div className="h-20 bg-line/50 rounded-xl" />
+                      <div className="h-4 bg-line/70 rounded w-2/3" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <KanbanBoard
+                  enquiries={enquiries}
+                  onSelectEnquiry={setSelectedEnquiry}
+                  onUpdateEnquiries={setEnquiries}
+                  onOpenDepositsQueue={() => setActiveTab("deposits")}
+                />
+              )}
             </div>
           )}
 
@@ -612,6 +702,26 @@ export default function StudioDashboard() {
                             <Eye className="w-3 h-3 text-gold" />
                             <span>Click to Zoom Receipt</span>
                           </div>
+                        </div>
+
+                        {/* Upload / Replace Receipt button */}
+                        <div className="flex items-center justify-between text-xs font-body">
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cream hover:bg-white border border-line text-xs font-body font-semibold text-deep transition-all shadow-2xs hover:border-gold">
+                            {uploadingDepositId === enq.id ? (
+                              <Loader2 className="w-3.5 h-3.5 text-gold animate-spin" />
+                            ) : (
+                              <UploadCloud className="w-3.5 h-3.5 text-gold" />
+                            )}
+                            <span>{enq.deposit_screenshot_url ? "Replace Receipt" : "Upload Receipt"}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingDepositId === enq.id}
+                              className="hidden"
+                              onChange={(e) => handleUploadDepositReceipt(e, enq)}
+                            />
+                          </label>
+                          <span className="text-[11px] text-muted">Supports JPG, PNG</span>
                         </div>
 
                         {/* Background AI Analysis Readout */}
@@ -814,378 +924,17 @@ export default function StudioDashboard() {
             );
           })()}
 
-          {/* TAB 5: CONTENT CALENDAR & CAPTION BANK */}
-          {activeTab === "content" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <span className="font-body text-xs uppercase tracking-label text-gold font-semibold block mb-1">
-                    Social Publishing OS
-                  </span>
-                  <h1 className="font-display text-3xl sm:text-4xl text-deep font-normal">
-                    Content Calendar &amp; Caption Bank
-                  </h1>
-                  <p className="font-body text-xs sm:text-sm text-brown/80 mt-1">
-                    Plan posts across Instagram, Facebook, LinkedIn and Journal. <strong>Hard rule: posting is always a human action; the system only reminds.</strong>
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAddingContent(!isAddingContent)}
-                  className="self-start sm:self-auto bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-full transition-all flex items-center gap-2 shrink-0 shadow-sm"
-                >
-                  <span>{isAddingContent ? "✕ Close Form" : "+ Schedule New Post"}</span>
-                </button>
-              </div>
+          {/* TAB 4: SERVICES & PRICING CRUD */}
+          {activeTab === "services" && <ServicesEditor />}
 
-              {/* Add New Post Form */}
-              {isAddingContent && (
-                <div className="p-5 bg-warm-white rounded-2xl border border-gold/40 shadow-editorial space-y-4 animate-in fade-in duration-200">
-                  <h3 className="font-display text-lg text-deep font-semibold border-b border-line pb-2">
-                    Draft New Scheduled Content
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block font-body text-[11px] uppercase tracking-wider text-deep font-semibold mb-1">
-                        Platform
-                      </label>
-                      <select
-                        value={newContentForm.platform}
-                        onChange={(e) => setNewContentForm((prev) => ({ ...prev, platform: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg border border-line font-body text-xs text-deep bg-cream/30"
-                      >
-                        <option value="Instagram">Instagram</option>
-                        <option value="LinkedIn">LinkedIn</option>
-                        <option value="Facebook">Facebook</option>
-                        <option value="Journal">Journal</option>
-                      </select>
-                    </div>
+          {/* TAB 5: GALLERY & ASSETS MANAGER */}
+          {activeTab === "gallery" && <GalleryManager />}
 
-                    <div>
-                      <label className="block font-body text-[11px] uppercase tracking-wider text-deep font-semibold mb-1">
-                        Format
-                      </label>
-                      <select
-                        value={newContentForm.format}
-                        onChange={(e) => setNewContentForm((prev) => ({ ...prev, format: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg border border-line font-body text-xs text-deep bg-cream/30"
-                      >
-                        <option value="Carousel">Carousel</option>
-                        <option value="Single Photo">Single Photo</option>
-                        <option value="Reel / Video">Reel / Video</option>
-                        <option value="Article">Editorial Article</option>
-                      </select>
-                    </div>
+          {/* TAB 6: SITE CONTENT CMS */}
+          {activeTab === "content" && <SiteContentEditor />}
 
-                    <div>
-                      <label className="block font-body text-[11px] uppercase tracking-wider text-deep font-semibold mb-1">
-                        Pillar
-                      </label>
-                      <select
-                        value={newContentForm.pillar}
-                        onChange={(e) => setNewContentForm((prev) => ({ ...prev, pillar: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg border border-line font-body text-xs text-deep bg-cream/30"
-                      >
-                        <option value="Craft & Light">Craft &amp; Light</option>
-                        <option value="Executive Presence">Executive Presence</option>
-                        <option value="Family Legacy">Family Legacy</option>
-                        <option value="Studio Notes">Studio Notes</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-body text-[11px] uppercase tracking-wider text-deep font-semibold mb-1">
-                        Topic / Editorial Focus *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. The importance of quiet pauses during toddler portraits"
-                        value={newContentForm.topic}
-                        onChange={(e) => setNewContentForm((prev) => ({ ...prev, topic: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg border border-line font-body text-xs sm:text-sm text-deep bg-cream/30"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-body text-[11px] uppercase tracking-wider text-deep font-semibold mb-1">
-                        Publish Date &amp; Time
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Next Monday, 11:00 AM"
-                        value={newContentForm.date}
-                        onChange={(e) => setNewContentForm((prev) => ({ ...prev, date: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg border border-line font-body text-xs sm:text-sm text-deep bg-cream/30"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2.5 pt-2 border-t border-line">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingContent(false)}
-                      className="px-4 py-2 border border-line rounded-full font-body text-xs text-brown hover:text-deep"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!newContentForm.topic.trim()) {
-                          alert("Please enter a topic or caption focus.");
-                          return;
-                        }
-                        setContentItems((prev) => [
-                          {
-                            id: `c-${Date.now()}`,
-                            platform: newContentForm.platform,
-                            format: newContentForm.format,
-                            pillar: newContentForm.pillar,
-                            topic: newContentForm.topic,
-                            status: "Scheduled",
-                            date: newContentForm.date || "Next Monday, 11:00 AM",
-                            hasConsent: true,
-                          },
-                          ...prev,
-                        ]);
-                        setIsAddingContent(false);
-                        setNewContentForm({
-                          platform: "Instagram",
-                          format: "Carousel",
-                          pillar: "Craft & Light",
-                          topic: "",
-                          date: "Next Monday, 11:00 AM",
-                        });
-                      }}
-                      className="bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-5 py-2 rounded-full"
-                    >
-                      Save to Calendar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Weekly Targets & Gap Warning */}
-              <div className="p-4 bg-gold/15 rounded-photo border border-gold/40 flex items-center justify-between">
-                <div>
-                  <h4 className="font-body text-xs font-semibold text-deep uppercase tracking-wider">
-                    Weekly Posting Targets
-                  </h4>
-                  <p className="font-body text-xs text-muted mt-0.5">
-                    Target: 3 Instagram, 1 LinkedIn. Current: {contentItems.length} scheduled.
-                  </p>
-                </div>
-                <span className="font-body text-xs uppercase tracking-wider text-deep font-semibold bg-gold/30 px-3 py-1 rounded-full">
-                  {contentItems.length >= 4 ? "Target Met" : `${4 - contentItems.length} Post(s) Below Target`}
-                </span>
-              </div>
-
-              {/* Scheduled Items List */}
-              <div className="space-y-4">
-                {contentItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-6 bg-warm-white rounded-photo border border-line shadow-editorial flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-                  >
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="font-body text-xs uppercase tracking-wider text-gold font-semibold">
-                          {item.platform} · {item.format}
-                        </span>
-                        <span className="text-[10px] bg-cream px-2 py-0.5 rounded text-muted font-body">
-                          Pillar: {item.pillar}
-                        </span>
-                      </div>
-                      <h4 className="font-display text-xl text-deep font-medium">
-                        {item.topic}
-                      </h4>
-                      <span className="font-body text-xs text-muted mt-1 block">
-                        Scheduled: {item.date}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="font-body text-[11px] text-green-700 bg-green-100 px-3 py-1 rounded-full font-medium">
-                        Consent Verified
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => alert(`WhatsApp reminder dispatched to staff for "${item.topic}".`)}
-                        className="bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-4 py-2 rounded-full transition-all"
-                      >
-                        Send Post Reminder
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 6: ASSET LIBRARY & STRICT CONSENT ENFORCEMENT */}
-          {activeTab === "assets" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <span className="font-body text-xs uppercase tracking-label text-gold font-semibold block mb-1">
-                    NDPA 2023 Compliance
-                  </span>
-                  <h1 className="font-display text-3xl sm:text-4xl text-deep font-normal">
-                    Asset Library
-                  </h1>
-                  <p className="font-body text-xs sm:text-sm text-brown/80 mt-1">
-                    <strong>Strict Consent Enforcement:</strong> An asset without explicit marketing consent cannot be attached to social posts or scheduled.
-                  </p>
-                </div>
-
-                {/* Filter Pills */}
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                  {["all", "Toddler", "Family", "Maternity"].map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setAssetFilter(cat.toLowerCase())}
-                      className={`px-3 py-1.5 rounded-full text-xs font-body font-semibold uppercase tracking-wider transition-all whitespace-nowrap ${
-                        assetFilter === cat.toLowerCase()
-                          ? "bg-deep text-warm-white shadow-sm"
-                          : "bg-warm-white text-brown border border-line hover:border-gold/60"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {assets
-                  .filter((asset) =>
-                    assetFilter === "all" ? true : asset.sessionType.toLowerCase() === assetFilter
-                  )
-                  .map((asset) => (
-                    <div
-                      key={asset.id}
-                      className="bg-warm-white rounded-photo border border-line overflow-hidden shadow-editorial"
-                    >
-                      <div className="aspect-[4/3] bg-cream relative">
-                        <img
-                          src={asset.preview}
-                          alt={asset.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <span
-                          className={`absolute top-3 right-3 text-[10px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full ${
-                            asset.consentStatus === "both" || asset.consentStatus === "marketing"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {asset.consentStatus === "both"
-                            ? "✓ Marketing Consented"
-                            : "✕ No Marketing Consent"}
-                        </span>
-                      </div>
-
-                      <div className="p-4 space-y-2">
-                        <h4 className="font-display text-lg text-deep font-medium">
-                          {asset.title}
-                        </h4>
-                        <p className="font-body text-xs text-muted">
-                          Session: {asset.sessionType} · Alt text {asset.altApproved ? "Approved" : "Pending review"}
-                        </p>
-                        <div className="pt-2">
-                          {asset.consentStatus === "none" ? (
-                            <span className="text-[11px] text-red-600 block font-body font-medium">
-                              Blocked from public marketing per client wishes (NDPA protected).
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => alert(`Asset "${asset.title}" attached to next draft post.`)}
-                              className="font-body text-xs uppercase tracking-wider text-deep hover:text-gold font-semibold"
-                            >
-                              + Use in Content Item
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-
-          {/* TAB 8: SETTINGS */}
-          {activeTab === "settings" && (
-            <div className="space-y-6 animate-in fade-in duration-200 max-w-3xl">
-              <div>
-                <span className="font-body text-xs uppercase tracking-label text-gold font-semibold block mb-1">
-                  Global Configuration
-                </span>
-                <h1 className="font-display text-3xl sm:text-4xl text-deep font-normal">
-                  Studio Settings
-                </h1>
-              </div>
-
-              {settingsSavedStatus && (
-                <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg font-body text-sm flex items-center justify-between">
-                  <span>✓ {settingsSavedStatus}</span>
-                  <button onClick={() => setSettingsSavedStatus(null)} className="text-emerald-700 hover:text-emerald-900 font-bold">✕</button>
-                </div>
-              )}
-
-              <div className="bg-warm-white p-6 sm:p-8 rounded-photo border border-line shadow-editorial space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-body text-xs uppercase tracking-wider text-deep font-semibold mb-1">
-                      Official WhatsApp Number
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="+234 813 084 7299"
-                      className="w-full px-4 py-2 rounded-lg border border-line font-body text-sm text-deep"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-body text-xs uppercase tracking-wider text-deep font-semibold mb-1">
-                      Sending Hours (Lagos Time)
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue="09:00 – 19:00"
-                      className="w-full px-4 py-2 rounded-lg border border-line font-body text-sm text-deep"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-body text-xs uppercase tracking-wider text-deep font-semibold mb-1">
-                    Bank Account Details for Transfers
-                  </label>
-                  <textarea
-                    rows={3}
-                    defaultValue="Bank: PalmPay&#10;Account Number: 9064982841&#10;Account Name: LEONARD OSEGHALE OSELUMHENSE"
-                    className="w-full px-4 py-2 rounded-lg border border-line font-body text-sm text-deep"
-                  />
-                </div>
-
-                <div className="pt-4 border-t border-line flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSettingsSavedStatus("Studio settings and official bank details saved successfully!");
-                      setTimeout(() => setSettingsSavedStatus(null), 4000);
-                    }}
-                    className="bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-6 py-3 rounded-full transition-all shadow-sm"
-                  >
-                    Save Settings
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* TAB 7: STUDIO SETTINGS */}
+          {activeTab === "settings" && <SettingsManager />}
         </section>
       </div>
 

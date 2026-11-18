@@ -82,8 +82,8 @@ export function Footer() {
               </span>
             </Link>
 
-            <p className="font-body text-xs sm:text-sm text-brown/85 leading-relaxed max-w-sm">
-              Unhurried, personal portraiture and landmark celebrations in Abuja, Nigeria. Giving quiet moments the reverence and timeless space they deserve.
+            <p className="font-body text-xs text-brown/85 leading-relaxed max-w-sm">
+              Unhurried portraiture & landmark celebrations in Abuja, Nigeria.
             </p>
 
             {/* Social Media Pill Buttons */}
@@ -381,10 +381,14 @@ export function Footer() {
           <div className="text-center sm:text-left">
             © 2026 LamSparks Photography, Inc. All rights reserved.
           </div>
-          <div className="flex items-center justify-center gap-1.5 text-[11px] text-warm-white/60">
-            <span>Made with</span>
-            <span className="text-gold animate-pulse">♥</span>
-            <span>by LamSparks Abuja</span>
+          <div className="flex items-center justify-center gap-1 text-xs text-warm-white/80 font-medium">
+            <span>Made by Yemuel -</span>
+            <a
+              href="tel:09064982841"
+              className="text-gold hover:underline hover:text-warm-white transition-colors font-mono"
+            >
+              09064982841
+            </a>
           </div>
         </div>
       </div>
