@@ -12,7 +12,7 @@ interface Nikon3DCameraProps {
 
 export function Nikon3DCamera({ className = "", showBadges = false }: Nikon3DCameraProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState(0);
   const [shutterFlash, setShutterFlash] = useState(false);
 
@@ -228,7 +228,62 @@ export function Nikon3DCamera({ className = "", showBadges = false }: Nikon3DCam
     goldRingMesh.position.set(0, 0, 73.0);
     cameraGroup.add(goldRingMesh);
 
-    // --- Load Animated CAD Parts ---
+    // --- Instant Procedural Camera (Zero-latency 0ms fallback so camera is never empty) ---
+    const proceduralParts: { [key: string]: THREE.Mesh } = {};
+
+    // 1. Camera Body: Basalt magnesium alloy box
+    const bodyGeo = new THREE.BoxGeometry(82, 64, 46);
+    const bodyMesh = new THREE.Mesh(bodyGeo, bodyMaterial);
+    bodyMesh.position.set(0, 0, 0);
+    cameraGroup.add(bodyMesh);
+    proceduralParts["body"] = bodyMesh;
+
+    // Viewfinder Top Housing (attached to body)
+    const prismGeo = new THREE.CylinderGeometry(18, 24, 16, 4);
+    prismGeo.rotateY(Math.PI / 4);
+    const prismMesh = new THREE.Mesh(prismGeo, bodyMaterial);
+    prismMesh.position.set(0, 38, -4);
+    bodyMesh.add(prismMesh);
+
+    // 2. Film Back Body
+    const filmBackBodyGeo = new THREE.BoxGeometry(80, 60, 24);
+    const filmBackBodyMesh = new THREE.Mesh(filmBackBodyGeo, bodyMaterial);
+    filmBackBodyMesh.position.set(0, 0, -32);
+    cameraGroup.add(filmBackBodyMesh);
+    proceduralParts["filmBackBody"] = filmBackBodyMesh;
+
+    // 3. Film Back Front Plate
+    const filmBackFrontGeo = new THREE.BoxGeometry(80, 60, 6);
+    const filmBackFrontMesh = new THREE.Mesh(filmBackFrontGeo, bodyMaterial);
+    filmBackFrontMesh.position.set(0, 0, -18);
+    cameraGroup.add(filmBackFrontMesh);
+    proceduralParts["filmBackFront"] = filmBackFrontMesh;
+
+    // 4. Lens Outer Helicoid Barrel
+    const lensOuterGeo = new THREE.CylinderGeometry(33, 34, 26, 32);
+    lensOuterGeo.rotateX(Math.PI / 2);
+    const lensOuterMesh = new THREE.Mesh(lensOuterGeo, lensGoldMaterial);
+    lensOuterMesh.position.set(0, 0, 28);
+    cameraGroup.add(lensOuterMesh);
+    proceduralParts["lensOuter"] = lensOuterMesh;
+
+    // 5. Lens Mid Barrel
+    const lensMidGeo = new THREE.CylinderGeometry(30, 31, 24, 32);
+    lensMidGeo.rotateX(Math.PI / 2);
+    const lensMidMesh = new THREE.Mesh(lensMidGeo, lensGoldMaterial);
+    lensMidMesh.position.set(0, 0, 48);
+    cameraGroup.add(lensMidMesh);
+    proceduralParts["lensMid"] = lensMidMesh;
+
+    // 6. Lens Cap Bezel
+    const lensCapGeo = new THREE.CylinderGeometry(34, 34, 6, 32);
+    lensCapGeo.rotateX(Math.PI / 2);
+    const lensCapMesh = new THREE.Mesh(lensCapGeo, lensCapMaterial);
+    lensCapMesh.position.set(0, 0, 66);
+    cameraGroup.add(lensCapMesh);
+    proceduralParts["lensCap"] = lensCapMesh;
+
+    // --- Background Load High-Precision Animated CAD Parts ---
     const stlLoader = new STLLoader();
     const loadedParts: { [key: string]: THREE.Mesh } = {};
 
@@ -244,26 +299,37 @@ export function Nikon3DCamera({ className = "", showBadges = false }: Nikon3DCam
     ];
 
     let partsCount = 0;
-    partsToLoad.forEach((p) => {
-      stlLoader.load(
-        `/models/falcon-camera/anim/${p.file}`,
-        (geo) => {
-          if (isDisposed) return;
-          geo.computeVertexNormals();
-          const mesh = new THREE.Mesh(geo, p.mat);
-          cameraGroup.add(mesh);
-          loadedParts[p.key] = mesh;
-          partsCount++;
-          setLoadProgress(Math.round((partsCount / partsToLoad.length) * 100));
-          if (partsCount >= partsToLoad.length) {
-            setIsLoading(false);
-            setIsLoading(false);
-          }
-        },
-        undefined,
-        (err) => console.warn(`Could not load ${p.file}`, err)
-      );
-    });
+    // Defer STL streaming by 1200ms so hero images and page fonts receive 100% initial bandwidth
+    const loadTimer = setTimeout(() => {
+      if (isDisposed) return;
+      partsToLoad.forEach((p) => {
+        stlLoader.load(
+          `/models/falcon-camera/anim/${p.file}`,
+          (geo) => {
+            if (isDisposed) return;
+            geo.computeVertexNormals();
+            const mesh = new THREE.Mesh(geo, p.mat);
+
+            // Swap out the procedural geometry smoothly
+            if (proceduralParts[p.key]) {
+              cameraGroup.remove(proceduralParts[p.key]);
+              proceduralParts[p.key].geometry.dispose();
+              delete proceduralParts[p.key];
+            }
+
+            cameraGroup.add(mesh);
+            loadedParts[p.key] = mesh;
+            partsCount++;
+            setLoadProgress(Math.round((partsCount / partsToLoad.length) * 100));
+            if (partsCount >= partsToLoad.length) {
+              setIsLoading(false);
+            }
+          },
+          undefined,
+          (err) => console.warn(`Could not load ${p.file}`, err)
+        );
+      });
+    }, 1200);
 
     // --- Resize Handler ---
     const handleResize = () => {
@@ -357,20 +423,28 @@ export function Nikon3DCamera({ className = "", showBadges = false }: Nikon3DCam
       const factor = getExplodeFactor(time);
 
       // 2. Animate exploded positions along optical Z axis with balanced spacing
-      if (loadedParts.lensOuter) loadedParts.lensOuter.position.z = 28 * factor;
-      if (loadedParts.lensMid) loadedParts.lensMid.position.z = 58 * factor;
-      if (loadedParts.lensInner) loadedParts.lensInner.position.z = 88 * factor;
-      if (loadedParts.lensCap) loadedParts.lensCap.position.z = 118 * factor;
+      const partLensOuter = loadedParts.lensOuter || proceduralParts.lensOuter;
+      const partLensMid = loadedParts.lensMid || proceduralParts.lensMid;
+      const partLensInner = loadedParts.lensInner || proceduralParts.lensInner;
+      const partLensCap = loadedParts.lensCap || proceduralParts.lensCap;
+      const partFilmBackFront = loadedParts.filmBackFront || proceduralParts.filmBackFront;
+      const partFilmBackBody = loadedParts.filmBackBody || proceduralParts.filmBackBody;
+      const partFilmBackSlide = loadedParts.filmBackSlide || proceduralParts.filmBackSlide;
+
+      if (partLensOuter) partLensOuter.position.z = 28 * factor;
+      if (partLensMid) partLensMid.position.z = 58 * factor;
+      if (partLensInner) partLensInner.position.z = 88 * factor;
+      if (partLensCap) partLensCap.position.z = 118 * factor;
 
       glassMesh.position.z = 72.0 + 118 * factor;
       goldRingMesh.position.z = 73.0 + 118 * factor;
       irisMesh.position.z = 54.0 + 74 * factor;
 
-      if (loadedParts.filmBackFront) loadedParts.filmBackFront.position.z = -36 * factor;
-      if (loadedParts.filmBackBody) loadedParts.filmBackBody.position.z = -72 * factor;
-      if (loadedParts.filmBackSlide) {
-        loadedParts.filmBackSlide.position.z = -22 * factor;
-        loadedParts.filmBackSlide.position.y = 18 * factor;
+      if (partFilmBackFront) partFilmBackFront.position.z = -36 * factor;
+      if (partFilmBackBody) partFilmBackBody.position.z = -72 * factor;
+      if (partFilmBackSlide) {
+        partFilmBackSlide.position.z = -22 * factor;
+        partFilmBackSlide.position.y = 18 * factor;
       }
 
       // Dynamic camera depth expansion during exploded inspection
@@ -408,6 +482,7 @@ export function Nikon3DCamera({ className = "", showBadges = false }: Nikon3DCam
 
     return () => {
       isDisposed = true;
+      clearTimeout(loadTimer);
       cancelAnimationFrame(animId);
       resizeObserver.disconnect();
 
@@ -435,6 +510,11 @@ export function Nikon3DCamera({ className = "", showBadges = false }: Nikon3DCam
       shadowGeo.dispose();
       shadowMat.dispose();
       shadowTexture.dispose();
+
+      // Clean up procedural geometries
+      Object.values(proceduralParts).forEach((mesh) => {
+        if (mesh && mesh.geometry) mesh.geometry.dispose();
+      });
     };
   }, []);
 
@@ -453,20 +533,10 @@ export function Nikon3DCamera({ className = "", showBadges = false }: Nikon3DCam
       {/* Three.js Canvas Container */}
       <div ref={mountRef} className="w-full h-full" />
 
-      {/* Loading State Overlay */}
+      {/* Subtle CAD Element Sync Indicator (Only shown if loading CAD details in background) */}
       {isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 transition-opacity duration-500 z-10 pointer-events-none">
-          <div className="w-10 h-10 rounded-full border-2 border-gold/30 border-t-gold animate-spin flex items-center justify-center">
-            <Camera className="w-4 h-4 text-gold/70" />
-          </div>
-          <div className="text-center">
-            <span className="font-body text-[10px] uppercase tracking-[0.22em] text-gold font-bold block">
-              Falcon P-35 Optics
-            </span>
-            <span className="font-body text-[11px] text-muted">
-              Loading 3D CAD Elements... {loadProgress}%
-            </span>
-          </div>
+        <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[8px] font-mono text-gold/80 pointer-events-none">
+          CAD {loadProgress}%
         </div>
       )}
 

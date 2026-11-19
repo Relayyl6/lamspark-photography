@@ -14,14 +14,73 @@ interface WheelCard {
   href: string;
 }
 
+const DEFAULT_CARDS: WheelCard[] = [
+  {
+    id: "weddings",
+    category: "WEDDINGS",
+    label: "Sacred Unions",
+    subtitle: "Unhurried wedding ceremonies in Abuja",
+    image: "/images/client/weddings_1.webp",
+    href: "/sessions",
+  },
+  {
+    id: "traditional",
+    category: "TRADITIONAL",
+    label: "Cultural Heritage",
+    subtitle: "Vibrant Aso-Oke & generational grace",
+    image: "/images/client/weddings_2.webp",
+    href: "/sessions",
+  },
+  {
+    id: "events",
+    category: "EVENTS",
+    label: "Milestone Galas",
+    subtitle: "Unscripted warmth & celebrations",
+    image: "/images/client/events_1.webp",
+    href: "/sessions",
+  },
+  {
+    id: "executive",
+    category: "EXECUTIVE",
+    label: "Executive Leadership",
+    subtitle: "Commanding visual presence",
+    image: "/images/client/corporate_1.webp",
+    href: "/portfolio",
+  },
+  {
+    id: "lifestyle",
+    category: "LIFESTYLE",
+    label: "Authentic Moments",
+    subtitle: "Honouring unscripted warmth & life",
+    image: "/images/client/events_3.webp",
+    href: "/sessions",
+  },
+  {
+    id: "legacy",
+    category: "LEGACY",
+    label: "Generational Craft",
+    subtitle: "Heirloom memories for decades",
+    image: "/images/client/corporate_3.webp",
+    href: "/sessions",
+  },
+  {
+    id: "atelier",
+    category: "ATELIER",
+    label: "Studio Dignity",
+    subtitle: "Quiet authority and elegance",
+    image: "/images/client/corporate_6.webp",
+    href: "/sessions",
+  },
+];
+
 export function HeroOverhaulSection() {
   const [viewportWidth, setViewportWidth] = useState(1440);
   const [wheelH, setWheelH] = useState(320);
   const [viewportHeight, setViewportHeight] = useState(900);
   const [navH, setNavH] = useState(80);
   const [rotationAngle, setRotationAngle] = useState(0); // rendering only
-  const [cards, setCards] = useState<WheelCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [cards, setCards] = useState<WheelCard[]>(DEFAULT_CARDS);
+  const [loading, setLoading] = useState(false);
   const [heroCopy, setHeroCopy] = useState({
     kicker: "I CAPTURE · YOU REMEMBER",
     headline: "REAL MOMENTS. BEAUTIFUL MEMORIES",
@@ -321,7 +380,7 @@ export function HeroOverhaulSection() {
                 }}
               >
                 <div
-                  className={`w-full h-full rounded-[18px] sm:rounded-[24px] overflow-hidden shadow-[0_16px_36px_rgba(24,20,17,0.28)] border transition-all duration-300 relative group ${
+                  className={`w-full h-full rounded-[18px] sm:rounded-[24px] overflow-hidden shadow-[0_16px_36px_rgba(24,20,17,0.28)] border transition-all duration-300 relative group bg-[#181411] ${
                     isCenterFocus
                       ? "border-[#D93829] ring-2 ring-[#D93829]/50 shadow-[0_22px_45px_rgba(217,56,41,0.35)]"
                       : "border-white/60 hover:border-gold/80"
@@ -332,10 +391,17 @@ export function HeroOverhaulSection() {
                     alt={card.label}
                     className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-out pointer-events-none"
                     loading="eager"
+                    decoding="async"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src.endsWith(".webp")) {
+                        target.src = target.src.replace(".webp", ".jpg");
+                      }
+                    }}
                   />
 
                   {/* Gradient Overlay for Editorial Depth */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#181411]/90 via-[#181411]/15 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#181411]/95 via-[#181411]/25 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
 
                   {/* Card Info at Bottom */}
                   <div className="absolute bottom-2.5 sm:bottom-3 left-2.5 sm:left-3 right-2.5 sm:right-3 text-left">
