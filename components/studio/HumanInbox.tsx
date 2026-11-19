@@ -531,56 +531,66 @@ export function HumanInbox() {
             </div>
 
             <div className="space-y-1.5 max-h-[520px] overflow-y-auto">
-              {conversations
-                .filter((c) => channelFilter === "all" || c.channel?.toLowerCase() === channelFilter)
-                .map((conv) => {
-                  const isSelected = conv.id === activeConv?.id;
-                  const isInstagram = conv.channel?.toLowerCase() === "instagram";
-                  const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+              {conversations.length === 0 ? (
+                <div className="p-8 text-center text-xs font-body text-muted space-y-2">
+                  <MessageCircle className="w-8 h-8 text-gold/40 mx-auto" />
+                  <p className="font-semibold text-deep">No conversations yet</p>
+                  <p className="text-[11px] text-brown/70 leading-relaxed">
+                    Live client inquiries sent to WhatsApp (+234 813 084 7299) or Instagram Direct will appear here instantly.
+                  </p>
+                </div>
+              ) : (
+                conversations
+                  .filter((c) => channelFilter === "all" || c.channel?.toLowerCase() === channelFilter)
+                  .map((conv) => {
+                    const isSelected = conv.id === activeConv?.id;
+                    const isInstagram = conv.channel?.toLowerCase() === "instagram";
+                    const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
 
-                  return (
-                    <button
-                      key={conv.id}
-                      onClick={() => setSelectedConvId(conv.id)}
-                      className={`w-full text-left p-3 rounded-xl transition-all border ${
-                        isSelected
-                          ? "bg-cream/80 border-gold shadow-xs"
-                          : "bg-warm-white hover:bg-cream/40 border-line/60"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1.5 truncate">
-                          {isInstagram ? (
-                            <Instagram className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                          ) : (
-                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          )}
-                          <h4 className="font-display text-sm font-semibold text-deep truncate">
-                            {conv.clientName}
-                          </h4>
+                    return (
+                      <button
+                        key={conv.id}
+                        onClick={() => setSelectedConvId(conv.id)}
+                        className={`w-full text-left p-3 rounded-xl transition-all border ${
+                          isSelected
+                            ? "bg-cream/80 border-gold shadow-xs"
+                            : "bg-warm-white hover:bg-cream/40 border-line/60"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5 truncate">
+                            {isInstagram ? (
+                              <Instagram className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                            ) : (
+                              <MessageCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            )}
+                            <h4 className="font-display text-sm font-semibold text-deep truncate">
+                              {conv.clientName}
+                            </h4>
+                          </div>
+                          <span
+                            className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full font-bold ${
+                              conv.state === "human"
+                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            }`}
+                          >
+                            {conv.state === "human" ? "Human" : "AI Mode"}
+                          </span>
                         </div>
-                        <span
-                          className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full font-bold ${
-                            conv.state === "human"
-                              ? "bg-amber-100 text-amber-900 border border-amber-300"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          }`}
-                        >
-                          {conv.state === "human" ? "Human" : "AI Mode"}
-                        </span>
-                      </div>
 
-                      <p className="font-body text-xs text-brown/80 line-clamp-1 mb-1">
-                        {lastMsg ? lastMsg.body : "No messages yet"}
-                      </p>
+                        <p className="font-body text-xs text-brown/80 line-clamp-1 mb-1">
+                          {lastMsg ? lastMsg.body : "No messages yet"}
+                        </p>
 
-                      <div className="flex items-center justify-between text-[10px] text-muted font-mono">
-                        <span>{conv.whatsapp}</span>
-                        <span className="capitalize">{conv.channel}</span>
-                      </div>
-                    </button>
-                  );
-                })}
+                        <div className="flex items-center justify-between text-[10px] text-muted font-mono">
+                          <span>{conv.whatsapp}</span>
+                          <span className="capitalize">{conv.channel}</span>
+                        </div>
+                      </button>
+                    );
+                  })
+              )}
             </div>
           </div>
 
@@ -714,6 +724,18 @@ export function HumanInbox() {
                   </button>
                 </div>
               </form>
+            </div>
+          ) : (
+            <div className="lg:col-span-2 p-12 flex flex-col items-center justify-center text-center space-y-3 bg-warm-white/40 min-h-[380px]">
+              <div className="w-12 h-12 rounded-full bg-gold/15 text-gold flex items-center justify-center">
+                <MessageCircle className="w-6 h-6" />
+              </div>
+              <h3 className="font-display text-xl text-deep font-semibold">
+                Studio Concierge Inbox Ready
+              </h3>
+              <p className="font-body text-xs text-brown/80 max-w-sm leading-relaxed">
+                Zero test clutter. All live channels are connected. Incoming client messages from WhatsApp (+234 813 084 7299) and Instagram Direct will arrive here in real time with AI triage drafts.
+              </p>
             </div>
           )}
         </div>
