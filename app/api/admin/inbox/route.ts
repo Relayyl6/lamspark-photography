@@ -131,13 +131,13 @@ export async function POST(req: NextRequest) {
       let label = intent_tag;
       let draft = "";
       try {
-        const triage = await triageInboundMessage(message.trim(), "Maitama Abuja Photography");
+        const triage = triageInboundMessage(message.trim());
         if (triage) {
-          label = label || triage.primaryIntent || "General Inquiry";
-          draft = triage.suggestedReply || "";
+          label = label || triage.label;
+          draft = triage.suggestedAction || "";
         }
       } catch {
-        label = label || "General Inquiry";
+        label = label || "session_inquiry";
       }
 
       // Insert inbound message

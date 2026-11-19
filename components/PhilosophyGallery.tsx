@@ -23,7 +23,7 @@ const PAN_EASE = "cubic-bezier(.22,1,.36,1)";
 const SCROLL_VH_PER_STEP = 70; // how much page scroll each photo takes
 
 // Design canvases. 1 design unit = 1px at these widths, scaled by `u`.
-const DESKTOP = { W: 1132, H: 560, TRACK: 3100 };
+const DESKTOP = { W: 1132, H: 560, TRACK: 2790 };
 const MOBILE = { W: 390, TEXT_H: 270, PHOTO_H: 340, TRACK: 1170 };
 
 type Pose = { x: number; y: number; w: number; rot: number };
@@ -42,32 +42,32 @@ type Photo = {
 type TextBlock = { lead: string; body: string; x: number; cta?: boolean };
 type Note = { text: string; x: number; y: number; arrow?: "up" | "down" };
 
-// One text block per cluster. Shifted with ample clearance so photos never overlap text on any screen width
+// One text block per cluster. Reverted to exact canonical positions alternating with photo clusters
 const TEXTS: TextBlock[] = [
   {
     lead: "Capturing moments.",
     body: "The name LamSparks is born from love, honouring my mother, Lametu. She taught me that life’s most profound treasures are the fleeting, tender glances between loved ones that often go unseen.",
-    x: 60,
+    x: 610,
   },
   {
     lead: "Preserving memories.",
     body: "We never rush a child, force a pose, or crowd an intimate space. In our Abuja studio and on location, we create portraits that stay with families for generations.",
-    x: 1180,
+    x: 1480,
   },
   {
     lead: "Sparkling lives.",
     body: "From unhurried wedding ceremonies to heirloom family portraits, every frame is made to be kept.",
-    x: 2120,
+    x: 2300,
     cta: true,
   },
 ];
 
-// Handwritten annotations (desktop only), absolute on the track without colliding with photos.
+// Handwritten annotations (desktop only), absolute on the track
 const NOTES: Note[] = [
-  { text: "Unhurried, unscripted", x: 440, y: 58 },
-  { text: "Aso-Oke & grace", x: 670, y: 468, arrow: "up" },
-  { text: "Golden hour, Abuja", x: 1560, y: 50, arrow: "down" },
-  { text: "Quiet authority", x: 2460, y: 50 },
+  { text: "Unhurried, unscripted", x: 170, y: 58 },
+  { text: "Aso-Oke & grace", x: 265, y: 468, arrow: "up" },
+  { text: "Golden hour, Abuja", x: 1020, y: 60, arrow: "down" },
+  { text: "Quiet authority", x: 1860, y: 60 },
 ];
 
 const HAND = "var(--font-hand), 'Segoe Print', 'Bradley Hand', cursive";
