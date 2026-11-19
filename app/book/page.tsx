@@ -68,6 +68,19 @@ function BookingWizard() {
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [depositReportedSuccess, setDepositReportedSuccess] = useState(false);
+  const [livePackages, setLivePackages] = useState(PACKAGES);
+
+  // Load live packages configured in Studio
+  useEffect(() => {
+    fetch("/api/sessions")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.packages) && data.packages.length > 0) {
+          setLivePackages(data.packages);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Generate reference code on mount
@@ -82,13 +95,13 @@ function BookingWizard() {
 
   // Update default package when sessionType changes
   useEffect(() => {
-    const available = PACKAGES.filter((p) => p.sessionType === sessionType);
+    const available = livePackages.filter((p) => p.sessionType === sessionType);
     if (available.length > 0 && (!packageId || !available.some((p) => p.id === packageId))) {
       setPackageId(available[0].id);
     }
     // Hard rule: clear price agreement if session changes
     setPriceAgreed(false);
-  }, [sessionType]);
+  }, [sessionType, livePackages]);
 
   // Compute estimate live using the pure engine
   const answers: BookingAnswers = useMemo(
@@ -411,7 +424,7 @@ function BookingWizard() {
                 Available Collections for {SESSION_TYPES[sessionType]?.title}
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {PACKAGES.filter((p) => p.sessionType === sessionType).map((pkg) => (
+                {livePackages.filter((p) => p.sessionType === sessionType).map((pkg) => (
                   <div
                     key={pkg.id}
                     onClick={() => handleAnswerChange(setPackageId, pkg.id)}

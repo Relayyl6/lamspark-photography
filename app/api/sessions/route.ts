@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
-import { SESSION_TYPES } from "@/lib/catalog/seed";
+import { SESSION_TYPES, PACKAGES } from "@/lib/catalog/seed";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +16,36 @@ export async function GET() {
         ...st,
         heroImage: ov?.cover_image_url || st.heroImage,
         fromPrice: ov?.price_override ?? st.fromPrice,
+        promoPrice: ov?.promo_price ?? null,
+        depositPercent: ov?.deposit_percent ?? st.defaultDepositPercent,
         standardDeliveryDays: ov?.delivery_days || st.standardDeliveryDays,
       };
     });
 
-    return NextResponse.json({ sessions });
+    // Merge live packages from package_tiers
+    let livePackages = [...PACKAGES];
+    for (const ov of overrides) {
+      if (Array.isArray(ov.package_tiers) && ov.package_tiers.length > 0) {
+        // Replace packages for this session type
+        livePackages = livePackages.filter((p) => p.sessionType !== ov.slug);
+        livePackages.push(
+          ...ov.package_tiers.map((t: any) => ({
+            id: t.id || `${ov.slug}-${t.name.toLowerCase().replace(/\s+/g, "-")}`,
+            sessionType: ov.slug,
+            name: t.name,
+            price: t.promoPrice ? t.promoPrice : t.price,
+            originalPrice: t.promoPrice ? t.price : null,
+            badge: t.badge || undefined,
+            sort: t.sort || 1,
+            deliveryDaysText: t.deliveryDaysText || "7 to 10 working days",
+            inclusions: Array.isArray(t.inclusions) ? t.inclusions : [],
+          }))
+        );
+      }
+    }
+
+    return NextResponse.json({ sessions, packages: livePackages });
   } catch (err) {
-    return NextResponse.json({ sessions: Object.values(SESSION_TYPES) });
+    return NextResponse.json({ sessions: Object.values(SESSION_TYPES), packages: PACKAGES });
   }
 }

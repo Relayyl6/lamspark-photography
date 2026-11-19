@@ -36,51 +36,6 @@ export async function GET() {
       ORDER BY cv.updated_at DESC
     `);
 
-    // If none seeded yet, return initial studio conversations
-    if (rawConvs.length === 0) {
-      const defaultConversations = [
-        {
-          id: "conv-1",
-          clientId: "c-101",
-          clientName: "Hadiza Mohammed",
-          whatsapp: "+234 803 123 4567",
-          channel: "WhatsApp",
-          state: "bot",
-          lastInboundAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-          messages: [
-            {
-              id: "m-1",
-              direction: "inbound",
-              body: "Good morning! Can we bring three outfits for our twin girls' 1st birthday shoot in Maitama?",
-              created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-              ai_label: "Wardrobe & Pacing Inquiry",
-              ai_draft: "Hello Hadiza! Absolutely, your Luxury collection comfortably accommodates 3 to 4 outfit changes for both girls with calm breaks.",
-            },
-          ],
-        },
-        {
-          id: "conv-2",
-          clientId: "c-102",
-          clientName: "Dr. David O.",
-          whatsapp: "+234 812 987 6543",
-          channel: "WhatsApp",
-          state: "human",
-          lastInboundAt: new Date(Date.now() - 1000 * 60 * 48).toISOString(),
-          messages: [
-            {
-              id: "m-2",
-              direction: "inbound",
-              body: "I need to reschedule our executive headshots from Thursday to Friday afternoon if possible.",
-              created_at: new Date(Date.now() - 1000 * 60 * 48).toISOString(),
-              ai_label: "Reschedule Request",
-              ai_draft: "Hello Dr. David! We have Friday at 2:30 PM open in our Maitama studio. Let us know if that works smoothly for your schedule.",
-            },
-          ],
-        },
-      ];
-      return NextResponse.json({ conversations: defaultConversations });
-    }
-
     const conversations = rawConvs.map((cv: any) => ({
       id: cv.id,
       clientId: cv.client_id,
@@ -132,6 +87,39 @@ export async function POST(req: NextRequest) {
        WHERE id = $1`,
       [conversationId]
     );
+
+    // If Meta WhatsApp Cloud API is configured, forward message directly to client's phone
+    const token = process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+    if (token && phoneId) {
+      try {
+        const clientRow = await sql.query(
+          `SELECT c.phone FROM client c
+           JOIN conversation conv ON conv.client_id = c.id
+           WHERE conv.id = $1`,
+          [conversationId]
+        );
+        const recipientPhone = clientRow[0]?.phone?.replace(/[^0-9]/g, "");
+        if (recipientPhone) {
+          await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to: recipientPhone,
+              type: "text",
+              text: { body: text.trim() },
+            }),
+          });
+        }
+      } catch (waErr) {
+        console.warn("[Meta WhatsApp Dispatch Warning]", waErr);
+      }
+    }
 
     return NextResponse.json({ success: true, message: inserted[0] });
   } catch (err: any) {

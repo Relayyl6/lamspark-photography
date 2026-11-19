@@ -112,10 +112,13 @@ export function KanbanBoard({
   const [dragOverPillar, setDragOverPillar] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
 
-  // Mobile Touch Drag Tracking
+  // Mobile Touch Drag Tracking: Long-press threshold distinguishes card move from horizontal scroll
   const touchStartY = useRef<number>(0);
   const touchStartX = useRef<number>(0);
   const touchCardId = useRef<string | null>(null);
+  const touchHoldTimer = useRef<NodeJS.Timeout | null>(null);
+  const isTouchDragging = useRef<boolean>(false);
+  const [touchLiftedCardId, setTouchLiftedCardId] = useState<string | null>(null);
 
   // Quick Lead Modal
   const [showAddLead, setShowAddLead] = useState(false);
@@ -178,37 +181,75 @@ export function KanbanBoard({
     }
   }
 
-  // Mobile Touch handlers
+  // Mobile Touch handlers: 220ms hold threshold isolates card dragging from horizontal board scrolling
   function handleTouchStart(e: React.TouchEvent, cardId: string) {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
+    if (touchHoldTimer.current) clearTimeout(touchHoldTimer.current);
+    const touch = e.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
     touchCardId.current = cardId;
-    setDraggedCardId(cardId);
+    isTouchDragging.current = false;
+
+    // 220ms hold threshold: if finger is held still, activate card move mode
+    touchHoldTimer.current = setTimeout(() => {
+      isTouchDragging.current = true;
+      setTouchLiftedCardId(cardId);
+      setDraggedCardId(cardId);
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try { navigator.vibrate(40); } catch (_) {}
+      }
+    }, 220);
   }
 
   function handleTouchMove(e: React.TouchEvent) {
-    if (!touchCardId.current) return;
-    const clientX = e.touches[0].clientX;
-    const clientY = e.touches[0].clientY;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartX.current);
+    const dy = Math.abs(touch.clientY - touchStartY.current);
 
-    const el = document.elementFromPoint(clientX, clientY);
+    // If finger moved before hold threshold was reached, user is scrolling horizontally!
+    if (!isTouchDragging.current) {
+      if (dx > 8 || dy > 8) {
+        if (touchHoldTimer.current) {
+          clearTimeout(touchHoldTimer.current);
+          touchHoldTimer.current = null;
+        }
+        touchCardId.current = null;
+      }
+      return; // Do NOT preventDefault! Let horizontal scroll happen naturally.
+    }
+
+    // Card is lifted: lock board scroll and track target column under finger
+    e.stopPropagation();
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
     if (!el) return;
 
     const stageEl = el.closest("[data-stage-id]");
     if (stageEl) {
       const stageId = stageEl.getAttribute("data-stage-id") as PipelineStage;
       setDragOverStage(stageId);
+      setDragOverPillar(null);
     }
 
     const pillarEl = el.closest("[data-pillar-id]");
     if (pillarEl) {
       const pillarId = pillarEl.getAttribute("data-pillar-id");
       setDragOverPillar(pillarId);
+      setDragOverStage(null);
     }
   }
 
-  function handleTouchEnd() {
-    if (touchCardId.current) {
+  function handleTouchEnd(e?: React.TouchEvent) {
+    if (touchHoldTimer.current) {
+      clearTimeout(touchHoldTimer.current);
+      touchHoldTimer.current = null;
+    }
+
+    if (isTouchDragging.current && touchCardId.current) {
+      if (e) e.stopPropagation();
       if (dragOverStage) {
         handleDropCard(touchCardId.current, dragOverStage);
       } else if (dragOverPillar) {
@@ -216,7 +257,10 @@ export function KanbanBoard({
         if (pillar) handleDropCard(touchCardId.current, pillar.stages[0]);
       }
     }
+
+    isTouchDragging.current = false;
     touchCardId.current = null;
+    setTouchLiftedCardId(null);
     setDraggedCardId(null);
     setDragOverPillar(null);
     setDragOverStage(null);
@@ -366,9 +410,20 @@ export function KanbanBoard({
 
           <div className="flex items-center gap-1.5 text-[11px] font-body text-gold/90 shrink-0">
             <GripVertical className="w-3.5 h-3.5" />
-            <span>Drag cards or tap &rarr; to advance stage</span>
+            <span className="hidden sm:inline">Drag cards or tap &rarr; to advance stage</span>
+            <span className="sm:hidden">Hold card 0.2s to move · Swipe to scroll columns</span>
           </div>
         </div>
+
+        {touchLiftedCardId && (
+          <div className="py-2 px-4 rounded-xl bg-gold/15 border border-gold/40 text-deep text-xs font-semibold flex items-center justify-between animate-pulse sm:hidden">
+            <span className="flex items-center gap-2">
+              <GripVertical className="w-4 h-4 text-gold" />
+              Holding card · Drag and release over target column
+            </span>
+            <span className="font-mono text-[10px] text-muted">Hold Active</span>
+          </div>
+        )}
       </div>
 
       {/* Add New Lead Modal */}
@@ -536,7 +591,11 @@ export function KanbanBoard({
                           onTouchEnd={handleTouchEnd}
                           onClick={() => onSelectEnquiry(card)}
                           className={`group relative p-3.5 rounded-xl bg-warm-white hover:bg-white border border-line hover:border-gold shadow-xs hover:shadow-editorial cursor-grab active:cursor-grabbing transition-all space-y-2.5 ${
-                            draggedCardId === card.id ? "opacity-40 scale-95" : ""
+                            draggedCardId === card.id ? "opacity-50 scale-95" : ""
+                          } ${
+                            touchLiftedCardId === card.id
+                              ? "scale-[1.03] ring-2 ring-gold border-gold shadow-2xl z-40 bg-amber-50/95"
+                              : ""
                           }`}
                         >
                           {/* Top Bar with Reference & WhatsApp Link */}
@@ -699,8 +758,12 @@ export function KanbanBoard({
                           onTouchMove={handleTouchMove}
                           onTouchEnd={handleTouchEnd}
                           onClick={() => onSelectEnquiry(card)}
-                          className={`p-3 rounded-lg bg-warm-white border border-line hover:border-gold shadow-2xs cursor-grab active:cursor-grabbing text-xs space-y-2 ${
-                            draggedCardId === card.id ? "opacity-40" : ""
+                          className={`p-3 rounded-lg bg-warm-white border border-line hover:border-gold shadow-2xs cursor-grab active:cursor-grabbing text-xs space-y-2 transition-all ${
+                            draggedCardId === card.id ? "opacity-50" : ""
+                          } ${
+                            touchLiftedCardId === card.id
+                              ? "scale-[1.03] ring-2 ring-gold border-gold shadow-2xl z-40 bg-amber-50/95"
+                              : ""
                           }`}
                         >
                           <div className="flex items-center justify-between font-mono text-[10px]">

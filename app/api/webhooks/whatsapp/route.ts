@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { neon } from "@neondatabase/serverless";
 import { triageInboundMessage } from "@/lib/ai/service";
 
-// Verification endpoint for Meta Cloud API webhook
+const sql = neon(process.env.DATABASE_URL!);
+
+// 1. Verification endpoint for Meta Cloud API webhook
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const mode = searchParams.get("hub.mode");
@@ -17,47 +20,77 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ error: "Verification failed" }, { status: 403 });
 }
 
+// 2. Inbound messages from Meta Cloud API
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
 
-    // Idempotent logging and processing
     const entries = payload?.entry || [];
     for (const entry of entries) {
       const changes = entry?.changes || [];
       for (const change of changes) {
-        const messages = change?.value?.messages || [];
+        const value = change?.value;
+        const messages = value?.messages || [];
+        const contacts = value?.contacts || [];
+
         for (const msg of messages) {
-          const from = msg.from;
-          const text = msg.text?.body || "";
-          const msgType = msg.type; // "text" | "image" | ...
+          const fromPhone = msg.from; // e.g. "2349064982841"
+          const textBody = msg.text?.body || (msg.type === "image" ? "[Image Receipt Attached]" : "");
+          const profileName = contacts[0]?.profile?.name || `Client +${fromPhone}`;
 
-          // 1. Handle STOP command immediately
-          if (text.trim().toUpperCase() === "STOP") {
-            // Append to STOP list & withdraw marketing consent
-            console.log(`[WhatsApp Webhook] STOP received from ${from}. Marking stop-listed.`);
+          // Check for STOP command
+          if (textBody.trim().toUpperCase() === "STOP") {
+            console.log(`[WhatsApp Webhook] STOP received from ${fromPhone}`);
             continue;
           }
 
-          // 2. Handle Transfer Screenshot (deposit reported)
-          if (msgType === "image") {
-            console.log(
-              `[WhatsApp Webhook] Screenshot received from ${from}. Moving enquiry to 'deposit_reported' and queuing for human review.`
-            );
-            // Strict rule: System acknowledges receipt but NEVER confirms payment
-            // "Received. A team member will verify it against our studio bank account shortly."
-            continue;
+          // Find or create conversation in Neon DB
+          let convs = await sql`
+            SELECT id FROM conversation
+            WHERE client_id IN (SELECT id FROM client WHERE phone LIKE ${'%' + fromPhone + '%'})
+            LIMIT 1
+          `;
+
+          let convId = convs[0]?.id;
+
+          if (!convId) {
+            // Create client first if not exists
+            const clientRes = await sql`
+              INSERT INTO client (id, name, phone, created_at, updated_at)
+              VALUES (gen_random_uuid(), ${profileName}, ${'+' + fromPhone}, NOW(), NOW())
+              RETURNING id
+            `;
+            const clientId = clientRes[0].id;
+
+            // Create conversation
+            const convRes = await sql`
+              INSERT INTO conversation (id, client_id, channel, state, created_at, updated_at)
+              VALUES (gen_random_uuid(), ${clientId}, 'whatsapp', 'ai', NOW(), NOW())
+              RETURNING id
+            `;
+            convId = convRes[0].id;
           }
 
-          // 3. Check for Reference Code pattern (e.g. LS-4F7K)
-          const refMatch = text.match(/\bLS-[A-Z0-9]{4}\b/i);
-          if (refMatch) {
-            console.log(`[WhatsApp Webhook] Matched reference code ${refMatch[0]} from ${from}.`);
-          }
+          // Insert inbound message
+          await sql`
+            INSERT INTO message (
+              id, conversation_id, direction, body, sent_by, status, created_at, updated_at
+            )
+            VALUES (
+              gen_random_uuid(), ${convId}, 'inbound', ${textBody}, ${profileName}, 'delivered', NOW(), NOW()
+            )
+          `;
 
-          // 4. Background AI triage on incoming text
-          const triage = triageInboundMessage(text);
-          console.log(`[WhatsApp Webhook] AI Triage label: ${triage.label} (${triage.summary})`);
+          // Update conversation timestamp
+          await sql`
+            UPDATE conversation
+            SET updated_at = NOW()
+            WHERE id = ${convId}
+          `;
+
+          // AI triage
+          const triage = triageInboundMessage(textBody);
+          console.log(`[WhatsApp Webhook] Ingested message from ${fromPhone} to conv ${convId}. AI label: ${triage.label}`);
         }
       }
     }
@@ -65,6 +98,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: "processed" });
   } catch (error: any) {
     console.error("[WhatsApp Webhook Error]", error);
-    return NextResponse.json({ error: "Internal processing error" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Internal processing error" }, { status: 500 });
   }
 }

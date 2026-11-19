@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowUpRight, ArrowRight, Check, Clock, Calendar, ShieldCheck, Heart, Sparkles } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { SESSION_TYPES, PACKAGES, ADD_ONS } from "@/lib/catalog/seed";
-import { getLiveSessionTypes } from "@/lib/catalog/live";
+import { SESSION_TYPES, ADD_ONS } from "@/lib/catalog/seed";
+import { getLiveSessionTypes, getLivePackages } from "@/lib/catalog/live";
 import { SessionTypeSlug } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
     notFound();
   }
 
-  const packages = PACKAGES.filter((p) => p.sessionType === session.slug);
+  const packages = await getLivePackages(session.slug);
   const addOns = ADD_ONS.filter((a) => a.sessionType === session.slug || a.sessionType === "all");
 
   return (
@@ -119,11 +119,18 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                         <h3 className="font-display text-2xl text-deep font-medium mb-1">
                           {pkg.name}
                         </h3>
-                        <p className="font-body text-lg font-semibold text-deep mb-4">
-                          {pkg.price ? `₦${pkg.price.toLocaleString()}` : "Bespoke Quote"}
-                        </p>
+                        <div className="flex items-baseline gap-2 mb-4">
+                          <p className="font-body text-lg font-semibold text-deep">
+                            {pkg.price ? `₦${pkg.price.toLocaleString()}` : "Bespoke Quote"}
+                          </p>
+                          {(pkg as any).originalPrice && (
+                            <span className="font-body text-xs text-muted line-through">
+                              ₦{(pkg as any).originalPrice.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
                         <ul className="space-y-2.5 font-body text-xs text-brown/90 mb-6">
-                          {pkg.inclusions.map((inc, i) => (
+                          {(pkg.inclusions || []).map((inc: string, i: number) => (
                             <li key={i} className="flex items-start gap-2.5">
                               <Check className="w-4 h-4 text-gold shrink-0 mt-0.5" />
                               <span>{inc}</span>
