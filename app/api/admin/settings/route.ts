@@ -25,7 +25,7 @@ export async function GET() {
     return NextResponse.json({
       bankDetails: {
         bankName: process.env.BANK_NAME || "PalmPay",
-        accountNumber: process.env.BANK_ACCOUNT_NUMBER || "9064982841",
+        accountNumber: process.env.BANK_ACCOUNT_NUMBER || "08130847299",
         accountName: process.env.BANK_ACCOUNT_NAME || "LEONARD OSEGHALE OSELUMHENSE",
       },
       adminEmail: process.env.STUDIO_OWNER_EMAIL || "osemene@lamsparks.com",

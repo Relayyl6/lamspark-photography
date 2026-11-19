@@ -183,12 +183,6 @@ export default function ContactPage() {
                       +234 813 084 7299
                     </a>
                     <a
-                      href="tel:+2349064982841"
-                      className="block font-medium hover:text-gold transition-colors"
-                    >
-                      +234 906 498 2841
-                    </a>
-                    <a
                       href="mailto:concierge@lamsparks.com"
                       className="block text-warm-white/60 hover:text-gold text-xs pt-1 transition-colors"
                     >

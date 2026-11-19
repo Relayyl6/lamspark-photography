@@ -82,7 +82,7 @@ export function SettingsManager() {
     user: null,
   });
   const [waLoading, setWaLoading] = useState(false);
-  const [pairPhone, setPairPhone] = useState("+234 906 498 2841");
+  const [pairPhone, setPairPhone] = useState("+234 813 084 7299");
   const [waMode, setWaMode] = useState<"qr" | "pair">("qr");
 
   // Instagram Direct State
@@ -357,7 +357,7 @@ export function SettingsManager() {
                 </span>
               </div>
               <p className="font-body text-xs text-muted mt-0.5">
-                Connects directly to WhatsApp Web. Scan QR code or enter pairing code to link <strong>+234 906 498 2841</strong> directly.
+                Connects directly to WhatsApp Web. Scan QR code or enter pairing code to link <strong>+234 813 084 7299</strong> directly.
               </p>
             </div>
           </div>
@@ -366,7 +366,7 @@ export function SettingsManager() {
             {waStatus.state === "connected" ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300">
                 <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                <span>Connected: {waStatus.user?.phone || "+234 906 498 2841"}</span>
+                <span>Connected: {waStatus.user?.phone || "+234 813 084 7299"}</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
@@ -454,7 +454,7 @@ export function SettingsManager() {
                     How to Link your Phone in 10 Seconds:
                   </h4>
                   <ol className="list-decimal pl-4 space-y-1.5 text-muted leading-relaxed">
-                    <li>Open WhatsApp on your phone (<strong>+234 906 498 2841</strong>).</li>
+                    <li>Open WhatsApp on your phone (<strong>+234 813 084 7299</strong>).</li>
                     <li>Tap <strong>Settings &rarr; Linked Devices &rarr; Link a Device</strong>.</li>
                     <li>Point your camera at this QR code on the screen.</li>
                   </ol>
@@ -485,7 +485,7 @@ export function SettingsManager() {
                       type="text"
                       value={pairPhone}
                       onChange={(e) => setPairPhone(e.target.value)}
-                      placeholder="+234 906 498 2841"
+                      placeholder="+234 813 084 7299"
                       className="w-full px-3 py-2 rounded-lg border border-line bg-white text-xs font-mono text-deep"
                     />
                   </div>
@@ -740,11 +740,11 @@ export function SettingsManager() {
             </span>
             <div className="flex items-center justify-between">
               <span className="font-mono text-base font-bold text-deep tracking-wider">
-                {data?.bankDetails.accountNumber || "9064982841"}
+                {data?.bankDetails.accountNumber || "08130847299"}
               </span>
               <button
                 type="button"
-                onClick={() => handleCopy(data?.bankDetails.accountNumber || "9064982841", "account")}
+                onClick={() => handleCopy(data?.bankDetails.accountNumber || "08130847299", "account")}
                 className="text-muted hover:text-deep p-1 rounded hover:bg-cream transition-colors"
                 title="Copy Account Number"
               >

@@ -635,7 +635,7 @@ export function KanbanBoard({
                                 {card.source || "Website"}
                               </span>
                               <a
-                                href={`https://wa.me/2349064982841?text=Hello%20regarding%20your%20LamSparks%20commission%20${card.reference_code}`}
+                                href={`https://wa.me/2348130847299?text=Hello%20regarding%20your%20LamSparks%20commission%20${card.reference_code}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}

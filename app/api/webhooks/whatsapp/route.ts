@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         const contacts = value?.contacts || [];
 
         for (const msg of messages) {
-          const fromPhone = msg.from; // e.g. "2349064982841"
+          const fromPhone = msg.from; // e.g. "2348130847299"
           const textBody = msg.text?.body || (msg.type === "image" ? "[Image Receipt Attached]" : "");
           const profileName = contacts[0]?.profile?.name || `Client +${fromPhone}`;
 

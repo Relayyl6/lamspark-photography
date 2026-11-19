@@ -92,7 +92,7 @@ export function HumanInbox() {
     user: null,
   });
   const [waLoading, setWaLoading] = useState(false);
-  const [pairPhone, setPairPhone] = useState("+234 906 498 2841");
+  const [pairPhone, setPairPhone] = useState("+234 813 084 7299");
   const [waMode, setWaMode] = useState<"qr" | "pair">("qr");
 
   // Instagram Direct State
@@ -367,7 +367,7 @@ export function HumanInbox() {
             Human Inbox
           </h1>
           <p className="font-body text-xs sm:text-sm text-brown/80 mt-1">
-            Zero-API stress WhatsApp Web (Baileys) and direct Instagram integration for <strong>+234 906 498 2841</strong>.
+            Zero-API stress WhatsApp Web (Baileys) and direct Instagram integration for <strong>+234 813 084 7299</strong>.
           </p>
         </div>
 
@@ -418,7 +418,7 @@ export function HumanInbox() {
             <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
             <span>
               {waStatus.state === "connected"
-                ? `WhatsApp Web Linked (${waStatus.user?.phone || "+234 906 498 2841"})`
+                ? `WhatsApp Web Linked (${waStatus.user?.phone || "+234 813 084 7299"})`
                 : "WhatsApp Web Not Linked (Click to Scan QR)"}
             </span>
           </button>
@@ -754,7 +754,7 @@ export function HumanInbox() {
                         WhatsApp Web Connected
                       </h4>
                       <p className="font-body text-xs text-muted">
-                        Operating on {waStatus.user?.phone || "+234 906 498 2841"}.
+                        Operating on {waStatus.user?.phone || "+234 813 084 7299"}.
                       </p>
                     </div>
                     <button
@@ -805,7 +805,7 @@ export function HumanInbox() {
                           </div>
                         )}
                         <ol className="text-left font-body text-xs text-muted space-y-1 list-decimal pl-4 max-w-xs">
-                          <li>Open WhatsApp on <strong>+234 906 498 2841</strong></li>
+                          <li>Open WhatsApp on <strong>+234 813 084 7299</strong></li>
                           <li>Tap <strong>Linked Devices &rarr; Link a Device</strong></li>
                           <li>Scan this QR code</li>
                         </ol>
@@ -830,7 +830,7 @@ export function HumanInbox() {
                             type="text"
                             value={pairPhone}
                             onChange={(e) => setPairPhone(e.target.value)}
-                            placeholder="+234 906 498 2841"
+                            placeholder="+234 813 084 7299"
                             className="flex-1 px-3 py-1.5 rounded-lg border border-line bg-white text-xs font-mono"
                           />
                           <button

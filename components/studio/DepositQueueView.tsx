@@ -199,7 +199,7 @@ export function DepositQueueView() {
               Official Receiving Bank Account:
             </span>
             <div className="text-sm font-semibold text-deep">
-              PalmPay · Account: <strong className="font-mono tracking-wider">9064982841</strong> · Name: <strong>LEONARD OSEGHALE OSELUMHENSE</strong>
+              PalmPay · Account: <strong className="font-mono tracking-wider">08130847299</strong> · Name: <strong>LEONARD OSEGHALE OSELUMHENSE</strong>
             </div>
           </div>
           <span className="self-start sm:self-auto text-[10px] uppercase tracking-wider bg-gold text-deep font-bold px-3 py-1 rounded-full shadow-xs">

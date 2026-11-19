@@ -89,7 +89,7 @@ export async function initWhatsApp(options: { phoneNumber?: string } = {}): Prom
 
     stateRef.sock = sock;
 
-    // Pairing code mode for phone number e.g. +234 906 498 2841
+    // Pairing code mode for phone number e.g. +234 813 084 7299
     if (options.phoneNumber && !state.creds.registered) {
       const cleanPhone = options.phoneNumber.replace(/[^0-9]/g, "");
       setTimeout(async () => {

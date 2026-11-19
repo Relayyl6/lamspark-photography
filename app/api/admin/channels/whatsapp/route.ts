@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "pair") {
-      const status = await initWhatsApp({ phoneNumber: phoneNumber || "+2349064982841" });
+      const status = await initWhatsApp({ phoneNumber: phoneNumber || "+2348130847299" });
       return NextResponse.json({ success: true, status });
     }
 

@@ -90,7 +90,7 @@ const CONTENT_SCHEMA: ContentField[] = [
     label: "Concierge Secondary Phone",
     section: "Direct Communication",
     description: "Secondary studio direct line",
-    defaultValue: "+234 906 498 2841",
+    defaultValue: "+234 813 084 7299",
   },
   {
     key: "concierge_whatsapp",

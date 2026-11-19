@@ -224,7 +224,7 @@ function BookingWizard() {
 
   // Pre-filled WhatsApp message with reference code & answers
   const whatsappUrl = useMemo(() => {
-    const businessNumber = "2349064982841"; // LamSparks official studio line (Osemene)
+    const businessNumber = "2348130847299"; // LamSparks official studio line (Osemene)
     const text = `Hello LamSparks! I have completed my session estimate online.\n\n` +
       `Reference: ${referenceCode}\n` +
       `Client: ${clientName || "Client"}\n` +
@@ -242,7 +242,7 @@ function BookingWizard() {
   }, [referenceCode, clientName, sessionType, estimate, purpose, feeling, receiptUrl]);
 
   const talkFirstUrl = useMemo(() => {
-    const businessNumber = "2349064982841";
+    const businessNumber = "2348130847299";
     const text = `Hello Osemene! I am looking at a ${SESSION_TYPES[sessionType]?.title} session (Ref: ${referenceCode}), but I have a few questions before locking my date.`;
     return `https://wa.me/${businessNumber}?text=${encodeURIComponent(text)}`;
   }, [sessionType, referenceCode]);
@@ -884,7 +884,7 @@ function BookingWizard() {
                     </div>
                     <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
                       <span className="text-muted block text-[10px] uppercase tracking-wider">Account Number</span>
-                      <strong className="text-deep font-semibold text-sm tracking-wider">9064982841</strong>
+                      <strong className="text-deep font-semibold text-sm tracking-wider">08130847299</strong>
                     </div>
                     <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
                       <span className="text-muted block text-[10px] uppercase tracking-wider">Account Name</span>

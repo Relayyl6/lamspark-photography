@@ -418,7 +418,7 @@ async function seed() {
     studio_hours: "09:00 – 18:00 WAT · Monday through Saturday",
     studio_address: "Maitama Studio Suite, Maitama District, Abuja, Federal Capital Territory, Nigeria",
     concierge_phone_primary: "+234 813 084 7299",
-    concierge_phone_secondary: "+234 906 498 2841",
+    concierge_phone_secondary: "+234 813 084 7299",
     concierge_whatsapp: "2348130847299",
     concierge_email: "concierge@lamsparks.com",
   };

@@ -1,5 +1,5 @@
 # LamSparks Studio — WhatsApp Cloud API Setup Guide
-**Owner Line:** `+234 906 498 2841`  
+**Owner Line:** `+234 813 084 7299`  
 **Studio Endpoint:** `/api/webhooks/whatsapp`  
 **Studio Inbox:** `/studio/inbox`
 
@@ -36,14 +36,14 @@ POST /api/admin/inbox ───────► Meta Graph API (outbound message 
 2. Under the left sidebar, navigate to **WhatsApp** &rarr; **API Setup**.
 3. You will see a temporary access token and a test phone number.
 
-### Step 3: Register Official Studio Phone Number (`+234 906 498 2841`)
+### Step 3: Register Official Studio Phone Number (`+234 813 084 7299`)
 1. In **API Setup**, scroll down to **Step 5: Add a phone number**.
 2. Click **Add phone number**.
 3. Fill in the profile details:
    - **Business Name:** `LamSparks Photography Abuja`
    - **Category:** `Photography & Videography / Arts & Entertainment`
    - **Description:** `Unhurried luxury maternity, milestone toddler, and editorial wedding photography in Maitama, Abuja.`
-4. Enter Phone Number: `+234 906 498 2841`.
+4. Enter Phone Number: `+234 813 084 7299`.
 5. Choose verification method: **SMS** or **Voice Call** &rarr; Enter 6-digit code.
 6. Once verified, copy your **Phone number ID**.
 
@@ -79,7 +79,7 @@ WHATSAPP_VERIFY_TOKEN="lamsparks_secure_token_2026"
 ---
 
 ## Verifying End-to-End Operation
-1. **Inbound Test:** Send a WhatsApp message from any personal phone to `+234 906 498 2841`.
+1. **Inbound Test:** Send a WhatsApp message from any personal phone to `+234 813 084 7299`.
 2. Open `/studio/inbox` in the Studio: The new conversation appears instantly in the sidebar with the client's name and message.
 3. **Outbound Test:** Click on the conversation in `/studio/inbox`, type a response (e.g., *"Hello! We would love to capture your baby's milestone in our Maitama studio."*), and click **Send**.
 4. The message will arrive directly in the client's WhatsApp chat!
