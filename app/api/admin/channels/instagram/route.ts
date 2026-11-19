@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { neon } from "@neondatabase/serverless";
 import {
   getInstagramStatus,
   loginInstagram,
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { action, username, password } = body;
+    const { action, username, password, clearMessages } = body;
 
     if (action === "login") {
       if (!username) {
@@ -40,7 +41,23 @@ export async function POST(req: NextRequest) {
 
     if (action === "logout") {
       await logoutInstagram();
-      return NextResponse.json({ success: true, message: "Instagram session logged out." });
+      if (clearMessages) {
+        try {
+          const sql = neon(process.env.DATABASE_URL!);
+          await sql.query(
+            `DELETE FROM message WHERE conversation_id IN (SELECT id FROM conversation WHERE channel = 'instagram')`
+          );
+          await sql.query(`DELETE FROM conversation WHERE channel = 'instagram'`);
+        } catch (dbErr) {
+          console.error("[Purge IG messages error]", dbErr);
+        }
+      }
+      return NextResponse.json({
+        success: true,
+        message: clearMessages
+          ? "Instagram session logged out and test messages purged successfully."
+          : "Instagram session logged out.",
+      });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

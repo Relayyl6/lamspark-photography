@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { neon } from "@neondatabase/serverless";
 import {
   getWhatsAppStatus,
   initWhatsApp,
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { action, phoneNumber } = body;
+    const { action, phoneNumber, clearMessages } = body;
 
     if (action === "start") {
       const status = await initWhatsApp({ phoneNumber });
@@ -36,7 +37,23 @@ export async function POST(req: NextRequest) {
 
     if (action === "disconnect") {
       await disconnectWhatsApp();
-      return NextResponse.json({ success: true, message: "WhatsApp Web unlinked successfully." });
+      if (clearMessages) {
+        try {
+          const sql = neon(process.env.DATABASE_URL!);
+          await sql.query(
+            `DELETE FROM message WHERE conversation_id IN (SELECT id FROM conversation WHERE channel = 'whatsapp')`
+          );
+          await sql.query(`DELETE FROM conversation WHERE channel = 'whatsapp'`);
+        } catch (dbErr) {
+          console.error("[Purge test messages error]", dbErr);
+        }
+      }
+      return NextResponse.json({
+        success: true,
+        message: clearMessages
+          ? "WhatsApp Web unlinked and test messages purged successfully."
+          : "WhatsApp Web unlinked successfully.",
+      });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
