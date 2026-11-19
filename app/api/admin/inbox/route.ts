@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
 import { triageInboundMessage } from "@/lib/ai/service";
+import { sendWhatsAppMessage } from "@/lib/integrations/whatsapp/baileys";
+import { sendInstagramMessage } from "@/lib/integrations/instagram/client";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -191,20 +193,35 @@ export async function POST(req: NextRequest) {
       [conversationId]
     );
 
-    // If Meta WhatsApp Cloud API is configured, forward message directly to client's phone
-    const token = process.env.WHATSAPP_ACCESS_TOKEN;
-    const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    // Dispatch Outbound Message:
+    // 1. WhatsApp Dispatch (Baileys Web Client first, then Meta Cloud API fallback)
+    const clientRow = await sql.query(
+      `SELECT c.whatsapp_e164, c.instagram_handle, conv.channel FROM client c
+       JOIN conversation conv ON conv.client_id = c.id
+       WHERE conv.id = $1`,
+      [conversationId]
+    );
 
-    if (token && phoneId) {
+    const convChannel = clientRow[0]?.channel?.toLowerCase() || channel.toLowerCase();
+    const recipientPhone = clientRow[0]?.whatsapp_e164;
+    const igHandle = clientRow[0]?.instagram_handle;
+
+    if (convChannel === "whatsapp" && recipientPhone) {
+      let dispatched = false;
       try {
-        const clientRow = await sql.query(
-          `SELECT c.whatsapp_e164 FROM client c
-           JOIN conversation conv ON conv.client_id = c.id
-           WHERE conv.id = $1`,
-          [conversationId]
-        );
-        const recipientPhone = clientRow[0]?.whatsapp_e164?.replace(/[^0-9]/g, "");
-        if (recipientPhone) {
+        await sendWhatsAppMessage(recipientPhone, text.trim());
+        dispatched = true;
+        console.log(`[WhatsApp Outbound Dispatched via Baileys Web to ${recipientPhone}]`);
+      } catch (baileysErr: any) {
+        console.warn("[Baileys Dispatch Notice]", baileysErr.message);
+      }
+
+      // Fallback to Meta Cloud API if configured
+      const token = process.env.WHATSAPP_ACCESS_TOKEN;
+      const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+      if (!dispatched && token && phoneId) {
+        try {
+          const cleanRecipient = recipientPhone.replace(/[^0-9]/g, "");
           await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
             method: "POST",
             headers: {
@@ -213,31 +230,35 @@ export async function POST(req: NextRequest) {
             },
             body: JSON.stringify({
               messaging_product: "whatsapp",
-              to: recipientPhone,
+              to: cleanRecipient,
               type: "text",
               text: { body: text.trim() },
             }),
           });
+        } catch (waErr) {
+          console.warn("[Meta WhatsApp Cloud API Fallback Notice]", waErr);
         }
-      } catch (waErr) {
-        console.warn("[Meta WhatsApp Dispatch Warning]", waErr);
       }
     }
 
-    // If Meta Instagram Messaging is configured and channel is instagram
-    const igToken = process.env.INSTAGRAM_PAGE_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
-    if (igToken) {
-      try {
-        const convRow = await sql.query(
-          `SELECT c.whatsapp_e164, conv.channel FROM client c
-           JOIN conversation conv ON conv.client_id = c.id
-           WHERE conv.id = $1`,
-          [conversationId]
-        );
-        const channel = convRow[0]?.channel;
-        const rawHandle = convRow[0]?.whatsapp_e164;
-        if (channel === "instagram" && rawHandle?.startsWith("ig:")) {
-          const igUserId = rawHandle.replace("ig:", "");
+    // 2. Instagram Dispatch (Instagram Direct Client first, then Meta Graph API fallback)
+    if (convChannel === "instagram") {
+      let dispatched = false;
+      const targetUser = igHandle || recipientPhone?.replace("@", "");
+      if (targetUser) {
+        try {
+          await sendInstagramMessage(targetUser, text.trim());
+          dispatched = true;
+          console.log(`[Instagram Outbound Dispatched directly to @${targetUser}]`);
+        } catch (igDirectErr: any) {
+          console.warn("[Instagram Direct Dispatch Notice]", igDirectErr.message);
+        }
+      }
+
+      const igToken = process.env.INSTAGRAM_PAGE_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
+      if (!dispatched && igToken && targetUser?.startsWith("ig:")) {
+        try {
+          const igUserId = targetUser.replace("ig:", "");
           await fetch(`https://graph.facebook.com/v19.0/me/messages`, {
             method: "POST",
             headers: {
@@ -249,9 +270,9 @@ export async function POST(req: NextRequest) {
               message: { text: text.trim() },
             }),
           });
+        } catch (igErr) {
+          console.warn("[Meta Instagram Fallback Notice]", igErr);
         }
-      } catch (igErr) {
-        console.warn("[Meta Instagram Dispatch Warning]", igErr);
       }
     }
 

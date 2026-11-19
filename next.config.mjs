@@ -1,5 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: [
+      '@whiskeysockets/baileys',
+      'ws',
+      'bufferutil',
+      'utf-8-validate',
+      'pino',
+      'pino-pretty',
+      'instagram-private-api',
+    ],
+  },
   images: {
     remotePatterns: [
       {
@@ -15,3 +26,4 @@ const nextConfig = {
 };
 
 export default nextConfig;
+

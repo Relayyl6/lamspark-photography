@@ -17,6 +17,13 @@ import {
   Key,
   Save,
   Radio,
+  QrCode,
+  Smartphone,
+  RefreshCw,
+  LogOut,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
 } from "lucide-react";
 
 interface SettingsData {
@@ -41,13 +48,55 @@ interface SettingsData {
   };
 }
 
+interface BaileysStatus {
+  state: "disconnected" | "connecting" | "qr_ready" | "connected";
+  qrCodeDataUrl: string | null;
+  pairingCode: string | null;
+  user: {
+    id: string;
+    name?: string;
+    phone?: string;
+  } | null;
+  error?: string | null;
+}
+
+interface InstagramStatus {
+  connected: boolean;
+  username: string | null;
+  userId?: string | null;
+  lastSyncAt?: string | null;
+  error?: string | null;
+}
+
 export function SettingsManager() {
   const [data, setData] = useState<SettingsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
-  // Meta Form State
+  // Baileys WhatsApp State
+  const [waStatus, setWaStatus] = useState<BaileysStatus>({
+    state: "disconnected",
+    qrCodeDataUrl: null,
+    pairingCode: null,
+    user: null,
+  });
+  const [waLoading, setWaLoading] = useState(false);
+  const [pairPhone, setPairPhone] = useState("+234 906 498 2841");
+  const [waMode, setWaMode] = useState<"qr" | "pair">("qr");
+
+  // Instagram Direct State
+  const [igStatus, setIgStatus] = useState<InstagramStatus>({
+    connected: false,
+    username: null,
+  });
+  const [igLoading, setIgLoading] = useState(false);
+  const [igUsername, setIgUsername] = useState("lamsparksphotography");
+  const [igPassword, setIgPassword] = useState("");
+  const [igMessage, setIgMessage] = useState<string | null>(null);
+
+  // Meta Cloud API Fallback State
+  const [showMetaFallback, setShowMetaFallback] = useState(false);
   const [waPhoneId, setWaPhoneId] = useState("");
   const [waToken, setWaToken] = useState("");
   const [igAccountId, setIgAccountId] = useState("");
@@ -56,8 +105,9 @@ export function SettingsManager() {
   const [isSavingMeta, setIsSavingMeta] = useState(false);
   const [metaSaveStatus, setMetaSaveStatus] = useState<string | null>(null);
 
+  // Load Initial Settings & Statuses
   useEffect(() => {
-    async function loadSettings() {
+    async function loadAll() {
       try {
         const res = await fetch("/api/admin/settings");
         const json = await res.json();
@@ -67,14 +117,43 @@ export function SettingsManager() {
           setIgAccountId(json.metaCredentials.instagramAccountId || "");
           setVerifyToken(json.metaCredentials.webhookVerifyToken || "lamsparks_secure_token_2026");
         }
+
+        // Fetch WhatsApp status
+        const waRes = await fetch("/api/admin/channels/whatsapp");
+        const waJson = await waRes.json();
+        if (waJson.status) setWaStatus(waJson.status);
+
+        // Fetch Instagram status
+        const igRes = await fetch("/api/admin/channels/instagram");
+        const igJson = await igRes.json();
+        if (igJson.status) setIgStatus(igJson.status);
       } catch (err) {
         console.error("Failed to load settings:", err);
       } finally {
         setIsLoading(false);
       }
     }
-    loadSettings();
+    loadAll();
   }, []);
+
+  // Poll WhatsApp status if in connecting / qr_ready state
+  useEffect(() => {
+    if (waStatus.state === "qr_ready" || waStatus.state === "connecting") {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/admin/channels/whatsapp");
+          const json = await res.json();
+          if (json.status) {
+            setWaStatus(json.status);
+            if (json.status.state === "connected") {
+              clearInterval(interval);
+            }
+          }
+        } catch {}
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [waStatus.state]);
 
   function handleCopy(text: string, id: string) {
     navigator.clipboard.writeText(text);
@@ -87,6 +166,127 @@ export function SettingsManager() {
     }
   }
 
+  // --- Baileys Actions ---
+  async function handleStartWhatsApp() {
+    setWaLoading(true);
+    try {
+      const res = await fetch("/api/admin/channels/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start" }),
+      });
+      const json = await res.json();
+      if (json.status) setWaStatus(json.status);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWaLoading(false);
+    }
+  }
+
+  async function handlePairWhatsApp() {
+    setWaLoading(true);
+    try {
+      const res = await fetch("/api/admin/channels/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "pair", phoneNumber: pairPhone }),
+      });
+      const json = await res.json();
+      if (json.status) setWaStatus(json.status);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWaLoading(false);
+    }
+  }
+
+  async function handleDisconnectWhatsApp() {
+    setWaLoading(true);
+    try {
+      await fetch("/api/admin/channels/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "disconnect" }),
+      });
+      setWaStatus({
+        state: "disconnected",
+        qrCodeDataUrl: null,
+        pairingCode: null,
+        user: null,
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWaLoading(false);
+    }
+  }
+
+  // --- Instagram Actions ---
+  async function handleLoginInstagram(e: React.FormEvent) {
+    e.preventDefault();
+    setIgLoading(true);
+    setIgMessage(null);
+    try {
+      const res = await fetch("/api/admin/channels/instagram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "login",
+          username: igUsername.replace("@", "").trim(),
+          password: igPassword,
+        }),
+      });
+      const json = await res.json();
+      if (json.success && json.status) {
+        setIgStatus(json.status);
+        setIgMessage("Successfully linked Instagram Direct!");
+        setIgPassword("");
+      } else {
+        setIgMessage(json.error || "Login failed. Check credentials.");
+      }
+    } catch (err: any) {
+      setIgMessage(err.message || "Network error logging into Instagram");
+    } finally {
+      setIgLoading(false);
+    }
+  }
+
+  async function handleSyncInstagram() {
+    setIgLoading(true);
+    try {
+      const res = await fetch("/api/admin/channels/instagram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync" }),
+      });
+      const json = await res.json();
+      setIgMessage(`Sync complete. ${json.newMessagesCount || 0} new messages ingested.`);
+      setTimeout(() => setIgMessage(null), 4000);
+    } catch (err: any) {
+      setIgMessage("Error syncing Instagram DMs");
+    } finally {
+      setIgLoading(false);
+    }
+  }
+
+  async function handleLogoutInstagram() {
+    setIgLoading(true);
+    try {
+      await fetch("/api/admin/channels/instagram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "logout" }),
+      });
+      setIgStatus({ connected: false, username: null });
+      setIgMessage("Instagram session logged out.");
+    } catch {}
+    finally {
+      setIgLoading(false);
+    }
+  }
+
+  // --- Meta Fallback ---
   async function handleSaveMetaCredentials(e: React.FormEvent) {
     e.preventDefault();
     setIsSavingMeta(true);
@@ -130,173 +330,385 @@ export function SettingsManager() {
     <div className="space-y-6 animate-in fade-in duration-200 max-w-4xl">
       <div>
         <span className="font-body text-xs uppercase tracking-label text-gold font-semibold block mb-1">
-          System Secrets &amp; Cloud Messaging
+          Direct Channels &amp; Operating Credentials
         </span>
         <h1 className="font-display text-3xl sm:text-4xl text-deep font-normal">
-          Studio Settings &amp; Configuration
+          Studio Settings &amp; Integrations
         </h1>
         <p className="font-body text-xs sm:text-sm text-brown/80 mt-1">
-          Core credentials, Meta WhatsApp &amp; Instagram Cloud API integrations, payment accounts, and database connections.
+          Zero-API stress WhatsApp Web linking (Baileys), direct Instagram connectivity, deposit bank details, and Cloudinary media storage.
         </p>
       </div>
 
-      {metaSaveStatus && (
-        <div className="p-3 bg-emerald-100 text-emerald-800 rounded-xl border border-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-          <Check className="w-4 h-4 text-emerald-600" />
-          <span>{metaSaveStatus}</span>
-        </div>
-      )}
-
-      {/* 1. META WHATSAPP & INSTAGRAM CLOUD API */}
+      {/* 1. WHATSAPP WEB LINKING (BAILEYS ENGINE - ZERO META STRESS) */}
       <div className="bg-warm-white p-6 rounded-2xl border border-line shadow-sm space-y-5">
-        <div className="flex items-center justify-between pb-3 border-b border-line">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center">
-              <MessageCircle className="w-4 h-4" />
+            <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+              <MessageCircle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-display text-lg text-deep font-semibold">
-                Meta WhatsApp &amp; Instagram Cloud API Credentials
-              </h3>
-              <p className="font-body text-xs text-muted">
-                Connect your official line (<strong>+234 906 498 2841</strong>) and Instagram DM directly into Human Inbox.
+              <div className="flex items-center gap-2">
+                <h3 className="font-display text-lg text-deep font-semibold">
+                  WhatsApp Web Integration (Baileys Multi-Device)
+                </h3>
+                <span className="text-[10px] font-mono uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                  Zero Meta API Stress
+                </span>
+              </div>
+              <p className="font-body text-xs text-muted mt-0.5">
+                Connects directly to WhatsApp Web. Scan QR code or enter pairing code to link <strong>+234 906 498 2841</strong> directly.
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-mono uppercase bg-cream px-2 py-0.5 rounded border border-line text-muted">
-            Neon DB Persisted
-          </span>
-        </div>
 
-        {/* Webhook URLs for Meta Developer Portal */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-cream/40 rounded-xl border border-line text-xs font-body">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-muted block mb-1 flex items-center gap-1">
-              <MessageCircle className="w-3 h-3 text-emerald-600" /> WhatsApp Callback URL
-            </span>
-            <div className="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-line font-mono text-[11px] text-deep">
-              <span className="truncate">{origin}/api/webhooks/whatsapp</span>
-              <button
-                type="button"
-                onClick={() => handleCopy(`${origin}/api/webhooks/whatsapp`, "wa_url")}
-                className="text-muted hover:text-deep ml-2"
-                title="Copy URL"
-              >
-                {copiedUrl === "wa_url" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <span className="text-[10px] uppercase font-bold text-muted block mb-1 flex items-center gap-1">
-              <Instagram className="w-3 h-3 text-rose-600" /> Instagram Callback URL
-            </span>
-            <div className="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-line font-mono text-[11px] text-deep">
-              <span className="truncate">{origin}/api/webhooks/instagram</span>
-              <button
-                type="button"
-                onClick={() => handleCopy(`${origin}/api/webhooks/instagram`, "ig_url")}
-                className="text-muted hover:text-deep ml-2"
-                title="Copy URL"
-              >
-                {copiedUrl === "ig_url" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Credentials Form */}
-        <form onSubmit={handleSaveMetaCredentials} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-3 p-4 bg-cream/20 rounded-xl border border-line/70">
-              <span className="text-xs font-display font-semibold text-deep flex items-center gap-1.5">
-                <MessageCircle className="w-4 h-4 text-emerald-600" />
-                WhatsApp Cloud API
+          <div className="flex items-center gap-2 shrink-0">
+            {waStatus.state === "connected" ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                <span>Connected: {waStatus.user?.phone || "+234 906 498 2841"}</span>
               </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span>{waStatus.state === "qr_ready" ? "Scan QR to Link" : "Device Unlinked"}</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {waStatus.state === "connected" ? (
+          <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="font-display text-sm font-semibold text-deep">
+                Active Session: {waStatus.user?.name || "LamSparks Studio Line"}
+              </h4>
+              <p className="font-body text-xs text-brown/80 mt-0.5">
+                All incoming chats automatically ingest into the Human Inbox with AI triage tags. Outbound replies send straight from this number.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDisconnectWhatsApp}
+              disabled={waLoading}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-semibold transition-all shrink-0"
+            >
+              {waLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
+              <span>Unlink WhatsApp Device</span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Mode Switcher */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setWaMode("qr")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  waMode === "qr"
+                    ? "bg-deep text-warm-white shadow-xs"
+                    : "bg-cream text-brown hover:bg-cream/70"
+                }`}
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>Scan QR Code</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setWaMode("pair")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  waMode === "pair"
+                    ? "bg-deep text-warm-white shadow-xs"
+                    : "bg-cream text-brown hover:bg-cream/70"
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Pair with Phone Number</span>
+              </button>
+            </div>
+
+            {waMode === "qr" && (
+              <div className="p-5 bg-cream/30 rounded-xl border border-line flex flex-col sm:flex-row items-center gap-6">
+                <div className="p-3 bg-white rounded-xl border border-line shadow-sm shrink-0 flex items-center justify-center min-w-[200px] min-h-[200px]">
+                  {waStatus.qrCodeDataUrl ? (
+                    <img
+                      src={waStatus.qrCodeDataUrl}
+                      alt="WhatsApp Web QR Code"
+                      className="w-48 h-48 object-contain rounded"
+                    />
+                  ) : waLoading ? (
+                    <div className="text-center p-6 space-y-2">
+                      <Loader2 className="w-7 h-7 animate-spin text-gold mx-auto" />
+                      <span className="text-xs text-muted block">Generating QR code...</span>
+                    </div>
+                  ) : (
+                    <div className="text-center p-6 space-y-2 text-muted">
+                      <QrCode className="w-10 h-10 mx-auto text-muted/60" />
+                      <span className="text-xs block">Click "Start Link" below</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3 font-body text-xs text-brown">
+                  <h4 className="font-display text-sm font-semibold text-deep">
+                    How to Link your Phone in 10 Seconds:
+                  </h4>
+                  <ol className="list-decimal pl-4 space-y-1.5 text-muted leading-relaxed">
+                    <li>Open WhatsApp on your phone (<strong>+234 906 498 2841</strong>).</li>
+                    <li>Tap <strong>Settings &rarr; Linked Devices &rarr; Link a Device</strong>.</li>
+                    <li>Point your camera at this QR code on the screen.</li>
+                  </ol>
+                  <p className="text-[11px] text-muted italic">
+                    Once scanned, your studio inbox will instantly receive and reply to WhatsApp messages with zero Meta API stress!
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleStartWhatsApp}
+                    disabled={waLoading}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-all shadow-sm"
+                  >
+                    {waLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    <span>{waStatus.qrCodeDataUrl ? "Refresh QR Code" : "Start WhatsApp Link"}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {waMode === "pair" && (
+              <div className="p-5 bg-cream/30 rounded-xl border border-line space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                  <div>
+                    <label className="block text-xs font-semibold text-deep mb-1">
+                      Business Phone Number (International format)
+                    </label>
+                    <input
+                      type="text"
+                      value={pairPhone}
+                      onChange={(e) => setPairPhone(e.target.value)}
+                      placeholder="+234 906 498 2841"
+                      className="w-full px-3 py-2 rounded-lg border border-line bg-white text-xs font-mono text-deep"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePairWhatsApp}
+                    disabled={waLoading}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition-all shadow-sm h-9"
+                  >
+                    {waLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
+                    <span>Request Pairing Code</span>
+                  </button>
+                </div>
+
+                {waStatus.pairingCode && (
+                  <div className="p-4 bg-white rounded-xl border border-gold/60 text-center space-y-2">
+                    <span className="text-xs text-muted block">Enter this code on your phone:</span>
+                    <div className="font-mono text-2xl font-bold tracking-widest text-deep bg-cream/60 py-2 rounded-lg inline-block px-6 border border-line">
+                      {waStatus.pairingCode}
+                    </div>
+                    <p className="text-[11px] text-muted">
+                      Open WhatsApp on your phone &rarr; <strong>Linked Devices &rarr; Link with phone number</strong> and type this code.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 2. INSTAGRAM DIRECT MESSAGING (FREE DIRECT CLIENT) */}
+      <div className="bg-warm-white p-6 rounded-2xl border border-line shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-rose-100 text-rose-800 flex items-center justify-center shrink-0">
+              <Instagram className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display text-lg text-deep font-semibold">
+                  Instagram Direct Client (Zero Graph API Review)
+                </h3>
+                <span className="text-[10px] font-mono uppercase bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold">
+                  Direct Ingestion
+                </span>
+              </div>
+              <p className="font-body text-xs text-muted mt-0.5">
+                Connect your studio Instagram (<strong>@lamsparksphotography</strong>) directly to receive and answer DMs from the inbox.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {igStatus.connected ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                <span>Connected: @{igStatus.username}</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/10 text-muted text-xs font-semibold border border-line">
+                <span>Not Connected</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {igMessage && (
+          <div className="p-3 bg-cream text-deep text-xs font-semibold rounded-xl border border-line flex items-center gap-2 animate-in fade-in">
+            <Sparkles className="w-3.5 h-3.5 text-gold shrink-0" />
+            <span>{igMessage}</span>
+          </div>
+        )}
+
+        {igStatus.connected ? (
+          <div className="p-4 bg-rose-50/40 rounded-xl border border-rose-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="font-display text-sm font-semibold text-deep">
+                Active Direct Session (@{igStatus.username})
+              </h4>
+              <p className="font-body text-xs text-brown/80 mt-0.5">
+                Last synchronized: {igStatus.lastSyncAt ? new Date(igStatus.lastSyncAt).toLocaleTimeString() : "Just now"}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSyncInstagram}
+                disabled={igLoading}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-cream border border-line text-xs font-semibold text-deep transition-all"
+              >
+                {igLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                <span>Sync DMs Now</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutInstagram}
+                disabled={igLoading}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-semibold transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Disconnect</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleLoginInstagram} className="space-y-3 p-4 bg-cream/30 rounded-xl border border-line">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-semibold text-deep uppercase tracking-wider mb-1">
-                  Phone Number ID
+                <label className="block text-xs font-semibold text-deep mb-1">
+                  Instagram Username
                 </label>
+                <input
+                  type="text"
+                  value={igUsername}
+                  onChange={(e) => setIgUsername(e.target.value)}
+                  placeholder="lamsparksphotography"
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-line bg-white text-xs text-deep"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-deep mb-1">
+                  Instagram Password
+                </label>
+                <input
+                  type="password"
+                  value={igPassword}
+                  onChange={(e) => setIgPassword(e.target.value)}
+                  placeholder="Account password"
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-line bg-white text-xs text-deep"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[11px] text-muted">
+                Cookies are encrypted and saved locally in <code>./data/ig_session.json</code>.
+              </span>
+              <button
+                type="submit"
+                disabled={igLoading}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm"
+              >
+                {igLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Instagram className="w-3.5 h-3.5 text-rose-400" />}
+                <span>Connect Instagram Direct</span>
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* 3. OPTIONAL META CLOUD API (ENTERPRISE WEBHOOK FALLBACK) */}
+      <div className="bg-warm-white p-5 rounded-2xl border border-line shadow-sm space-y-4">
+        <button
+          type="button"
+          onClick={() => setShowMetaFallback(!showMetaFallback)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="w-5 h-5 text-muted" />
+            <div>
+              <h3 className="font-display text-sm font-semibold text-deep">
+                Optional: Meta Cloud API Webhooks (Enterprise Fallback)
+              </h3>
+              <p className="font-body text-[11px] text-muted">
+                If you already have a Meta Developer App with verified webhooks, you can also store tokens here.
+              </p>
+            </div>
+          </div>
+          {showMetaFallback ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
+        </button>
+
+        {showMetaFallback && (
+          <form onSubmit={handleSaveMetaCredentials} className="space-y-4 pt-3 border-t border-line animate-in fade-in">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-cream/30 rounded-xl border border-line text-xs font-mono">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted block mb-1">WhatsApp Webhook Callback</span>
+                <span className="truncate block bg-white px-2 py-1 rounded border border-line text-[11px]">{origin}/api/webhooks/whatsapp</span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted block mb-1">Instagram Webhook Callback</span>
+                <span className="truncate block bg-white px-2 py-1 rounded border border-line text-[11px]">{origin}/api/webhooks/instagram</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-deep mb-1">WhatsApp Phone Number ID</label>
                 <input
                   type="text"
                   value={waPhoneId}
                   onChange={(e) => setWaPhoneId(e.target.value)}
                   placeholder="e.g. 102938475610293"
-                  className="w-full px-3 py-2 rounded-lg border border-line bg-white text-xs font-mono text-deep"
+                  className="w-full px-3 py-1.5 rounded border border-line bg-white text-xs font-mono"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-deep uppercase tracking-wider mb-1">
-                  Permanent Access Token
-                </label>
+                <label className="block text-[11px] font-semibold text-deep mb-1">WhatsApp Permanent Access Token</label>
                 <input
                   type="password"
                   value={waToken}
                   onChange={(e) => setWaToken(e.target.value)}
-                  placeholder={data?.metaCredentials?.hasWhatsappToken ? "•••••••••••••••• (Token configured)" : "EAAG..."}
-                  className="w-full px-3 py-2 rounded-lg border border-line bg-white text-xs font-mono text-deep"
+                  placeholder={data?.metaCredentials?.hasWhatsappToken ? "•••••••• (Configured)" : "EAAG..."}
+                  className="w-full px-3 py-1.5 rounded border border-line bg-white text-xs font-mono"
                 />
               </div>
             </div>
 
-            <div className="space-y-3 p-4 bg-cream/20 rounded-xl border border-line/70">
-              <span className="text-xs font-display font-semibold text-deep flex items-center gap-1.5">
-                <Instagram className="w-4 h-4 text-rose-600" />
-                Instagram Messaging API
-              </span>
-              <div>
-                <label className="block text-[11px] font-semibold text-deep uppercase tracking-wider mb-1">
-                  Instagram Account / Page ID
-                </label>
-                <input
-                  type="text"
-                  value={igAccountId}
-                  onChange={(e) => setIgAccountId(e.target.value)}
-                  placeholder="e.g. 17841400000000"
-                  className="w-full px-3 py-2 rounded-lg border border-line bg-white text-xs font-mono text-deep"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-deep uppercase tracking-wider mb-1">
-                  Page Access Token
-                </label>
-                <input
-                  type="password"
-                  value={igToken}
-                  onChange={(e) => setIgToken(e.target.value)}
-                  placeholder={data?.metaCredentials?.hasInstagramToken ? "•••••••••••••••• (Token configured)" : "EAAG..."}
-                  className="w-full px-3 py-2 rounded-lg border border-line bg-white text-xs font-mono text-deep"
-                />
-              </div>
+            <div className="flex items-center justify-end pt-1">
+              <button
+                type="submit"
+                disabled={isSavingMeta}
+                className="px-4 py-1.5 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all"
+              >
+                {isSavingMeta ? "Saving..." : "Save Meta Tokens to DB"}
+              </button>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] font-semibold text-deep uppercase tracking-wider">
-                Webhook Verify Token:
-              </label>
-              <input
-                type="text"
-                value={verifyToken}
-                onChange={(e) => setVerifyToken(e.target.value)}
-                className="px-2.5 py-1 rounded border border-line bg-white text-xs font-mono text-deep w-56"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSavingMeta}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm"
-            >
-              {isSavingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 text-gold" />}
-              <span>Save Meta Credentials</span>
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
 
-      {/* 2. BANK ACCOUNT FOR CLIENT DEPOSITS */}
+      {/* 4. BANK ACCOUNT FOR CLIENT DEPOSITS */}
       <div className="bg-warm-white p-6 rounded-2xl border border-line shadow-sm space-y-4">
         <div className="flex items-center gap-2.5 pb-3 border-b border-line">
           <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center">
@@ -320,89 +732,79 @@ export function SettingsManager() {
             <span className="font-display text-base font-semibold text-deep">
               {data?.bankDetails.bankName || "PalmPay"}
             </span>
-            <span className="text-[10px] text-emerald-600 block mt-1 font-mono">
-              ✓ Active from .env
-            </span>
           </div>
 
-          <div className="bg-cream/50 p-4 rounded-xl border border-line relative group">
+          <div className="bg-cream/50 p-4 rounded-xl border border-line">
             <span className="text-[10px] uppercase tracking-wider text-muted font-bold block mb-1">
               Account Number
             </span>
             <div className="flex items-center justify-between">
-              <span className="font-mono text-lg font-bold text-deep tracking-wider">
+              <span className="font-mono text-base font-bold text-deep tracking-wider">
                 {data?.bankDetails.accountNumber || "9064982841"}
               </span>
               <button
                 type="button"
                 onClick={() => handleCopy(data?.bankDetails.accountNumber || "9064982841", "account")}
-                className="p-1 rounded text-muted hover:text-deep"
-                title="Copy account number"
+                className="text-muted hover:text-deep p-1 rounded hover:bg-cream transition-colors"
+                title="Copy Account Number"
               >
-                {copiedAccount ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                {copiedAccount ? (
+                  <Check className="w-4 h-4 text-emerald-600" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
               </button>
             </div>
-            <span className="text-[10px] text-muted block mt-1">
-              Used in WhatsApp prompts &amp; deposit card
-            </span>
           </div>
 
           <div className="bg-cream/50 p-4 rounded-xl border border-line">
             <span className="text-[10px] uppercase tracking-wider text-muted font-bold block mb-1">
-              Beneficiary Name
+              Account Beneficiary
             </span>
-            <span className="font-body text-xs font-semibold text-deep leading-snug block">
+            <span className="font-display text-sm font-semibold text-deep line-clamp-1">
               {data?.bankDetails.accountName || "LEONARD OSEGHALE OSELUMHENSE"}
-            </span>
-            <span className="text-[10px] text-muted block mt-1">
-              Verified business / studio account
             </span>
           </div>
         </div>
       </div>
 
-      {/* 3. CLOUD & DATABASE CONNECTIONS */}
+      {/* 5. CLOUDINARY CONFIGURATION */}
       <div className="bg-warm-white p-6 rounded-2xl border border-line shadow-sm space-y-4">
         <div className="flex items-center gap-2.5 pb-3 border-b border-line">
           <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center">
-            <Database className="w-4 h-4" />
+            <Cloud className="w-4 h-4" />
           </div>
           <div>
             <h3 className="font-display text-lg text-deep font-semibold">
-              Cloud Infrastructure &amp; Database State
+              Cloudinary Media Storage
             </h3>
             <p className="font-body text-xs text-muted">
-              Neon PostgreSQL pooler, object storage, and Cloudinary CDN status.
+              Used for client uploads, proof delivery galleries, and high-resolution photo archives.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-body">
-          <div className="p-3.5 bg-cream/40 rounded-xl border border-line flex items-center justify-between">
-            <div>
-              <span className="font-semibold text-deep block">Neon PostgreSQL Database</span>
-              <span className="text-[11px] text-muted">Primary Single Source of Truth</span>
-            </div>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold">
-              Connected
-            </span>
-          </div>
-
-          <div className="p-3.5 bg-cream/40 rounded-xl border border-line flex items-center justify-between">
-            <div>
-              <span className="font-semibold text-deep block">Cloudinary Media CDN</span>
-              <span className="text-[11px] text-muted">Cloud: drgwnkllv</span>
-            </div>
-            <span
-              className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-bold ${
-                data?.cloudinaryConfigured
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-amber-100 text-amber-800"
+        <div className="flex items-center justify-between p-4 bg-cream/40 rounded-xl border border-line">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-3 h-3 rounded-full ${
+                data?.cloudinaryConfigured ? "bg-emerald-500" : "bg-amber-500"
               }`}
-            >
-              {data?.cloudinaryConfigured ? "Configured" : "Local Storage Mode"}
-            </span>
+            />
+            <div>
+              <span className="font-body text-xs font-semibold text-deep block">
+                {data?.cloudinaryConfigured
+                  ? "Cloudinary API Connected & Operational"
+                  : "Cloudinary Configuration Incomplete"}
+              </span>
+              <span className="font-mono text-[11px] text-muted">
+                Cloud Name: drgwnkllv · Key: •••••••••••••••
+              </span>
+            </div>
           </div>
+          <span className="text-[10px] font-mono uppercase bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold">
+            Live
+          </span>
         </div>
       </div>
     </div>

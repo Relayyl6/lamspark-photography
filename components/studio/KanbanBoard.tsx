@@ -119,6 +119,9 @@ export function KanbanBoard({
   const touchHoldTimer = useRef<NodeJS.Timeout | null>(null);
   const isTouchDragging = useRef<boolean>(false);
   const [touchLiftedCardId, setTouchLiftedCardId] = useState<string | null>(null);
+  const [mobileMoveCard, setMobileMoveCard] = useState<EnquiryRecord | null>(null);
+  const granularScrollRef = useRef<HTMLDivElement>(null);
+  const pillarsScrollRef = useRef<HTMLDivElement>(null);
 
   // Quick Lead Modal
   const [showAddLead, setShowAddLead] = useState(false);
@@ -264,6 +267,23 @@ export function KanbanBoard({
     setDraggedCardId(null);
     setDragOverPillar(null);
     setDragOverStage(null);
+  }
+
+  function scrollGranular(offset: number) {
+    if (granularScrollRef.current) {
+      granularScrollRef.current.scrollBy({ left: offset, behavior: "smooth" });
+    }
+  }
+
+  function scrollPillars(offset: number) {
+    if (pillarsScrollRef.current) {
+      pillarsScrollRef.current.scrollBy({ left: offset, behavior: "smooth" });
+    }
+  }
+
+  function handleOpenMoveModal(e: React.SyntheticEvent, card: EnquiryRecord) {
+    e.stopPropagation();
+    setMobileMoveCard(card);
   }
 
   // Quick 1-click stage advancement
@@ -519,8 +539,8 @@ export function KanbanBoard({
 
       {/* VIEW 1: EXECUTIVE PILLARS (5 Horizontal Swimlanes) */}
       {viewMode === "pillars" && (
-        <div className="w-full max-w-full min-w-0 overflow-x-auto pb-6 scroll-smooth lg:overflow-visible">
-          <div className="flex lg:grid lg:grid-cols-5 gap-4 min-w-[1200px] lg:min-w-0">
+        <div ref={pillarsScrollRef} className="w-full max-w-full min-w-0 overflow-x-auto pb-6 scroll-smooth lg:overflow-visible">
+          <div className="flex lg:grid lg:grid-cols-5 gap-4 min-w-[1200px] lg:min-w-0 select-none">
             {PILLARS.map((pillar) => {
               const pillarCards = filteredEnquiries.filter((e) => pillar.stages.includes(e.stage));
               const isDragTarget = dragOverPillar === pillar.id;
@@ -542,7 +562,7 @@ export function KanbanBoard({
                     setDragOverPillar(null);
                     setDraggedCardId(null);
                   }}
-                  className={`w-[280px] sm:w-[320px] lg:w-auto shrink-0 flex flex-col rounded-2xl border transition-all duration-200 p-3 sm:p-4 shadow-sm min-h-[580px] ${
+                  className={`w-[280px] sm:w-[320px] lg:w-auto shrink-0 flex flex-col rounded-2xl border transition-all duration-200 p-3 sm:p-4 shadow-sm min-h-[580px] select-none ${
                     isDragTarget
                       ? "bg-amber-50/70 border-gold border-2 scale-[1.01] shadow-md ring-2 ring-gold/20"
                       : `bg-[#FBF9F6] ${pillar.color}`
@@ -590,7 +610,13 @@ export function KanbanBoard({
                           onTouchMove={handleTouchMove}
                           onTouchEnd={handleTouchEnd}
                           onClick={() => onSelectEnquiry(card)}
-                          className={`group relative p-3.5 rounded-xl bg-warm-white hover:bg-white border border-line hover:border-gold shadow-xs hover:shadow-editorial cursor-grab active:cursor-grabbing transition-all space-y-2.5 ${
+                          style={{
+                            WebkitTouchCallout: "none",
+                            WebkitUserSelect: "none",
+                            userSelect: "none",
+                            touchAction: touchLiftedCardId === card.id ? "none" : "pan-x pan-y",
+                          }}
+                          className={`group relative p-3.5 rounded-xl bg-warm-white hover:bg-white border border-line hover:border-gold shadow-xs hover:shadow-editorial cursor-grab active:cursor-grabbing transition-all space-y-2.5 select-none ${
                             draggedCardId === card.id ? "opacity-50 scale-95" : ""
                           } ${
                             touchLiftedCardId === card.id
@@ -663,28 +689,39 @@ export function KanbanBoard({
 
                           {/* Accessible 1-tap Stage Selector & Advance Button */}
                           <div className="pt-1 flex items-center justify-between gap-1 text-[10px]">
-                            <select
-                              value={card.stage}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => handleDropCard(card.id, e.target.value as PipelineStage)}
-                              className="bg-cream/60 border border-line rounded px-1.5 py-0.5 text-deep font-body text-[10px] focus:outline-none focus:border-gold"
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenMoveModal(e, card)}
+                              className="text-deep font-semibold inline-flex items-center gap-1 px-2 py-1 rounded bg-cream hover:bg-gold/20 border border-line transition-all shrink-0"
                             >
-                              {ALL_11_STAGES.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  &rarr; {s.label}
-                                </option>
-                              ))}
-                            </select>
+                              <span>Move</span>
+                              <ChevronRight className="w-2.5 h-2.5 text-gold" />
+                            </button>
 
-                            {card.stage !== "closed" && (
-                              <button
-                                onClick={(e) => handleQuickAdvance(e, card)}
-                                className="text-gold hover:text-deep font-semibold inline-flex items-center gap-0.5 px-2 py-0.5 rounded hover:bg-cream transition-colors"
+                            <div className="flex items-center gap-1">
+                              <select
+                                value={card.stage}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => handleDropCard(card.id, e.target.value as PipelineStage)}
+                                className="bg-cream/60 border border-line rounded px-1.5 py-1 text-deep font-body text-[10px] focus:outline-none focus:border-gold"
                               >
-                                <span>Next</span>
-                                <ChevronRight className="w-3 h-3" />
-                              </button>
-                            )}
+                                {ALL_11_STAGES.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    &rarr; {s.label}
+                                  </option>
+                                ))}
+                              </select>
+
+                              {card.stage !== "closed" && (
+                                <button
+                                  onClick={(e) => handleQuickAdvance(e, card)}
+                                  className="text-gold hover:text-deep font-semibold inline-flex items-center gap-0.5 px-2 py-1 rounded hover:bg-cream transition-colors"
+                                >
+                                  <span>Next</span>
+                                  <ChevronRight className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))
@@ -699,119 +736,244 @@ export function KanbanBoard({
 
       {/* VIEW 2: GRANULAR 11-STAGE BOARD (Clamped to prevent page overflow) */}
       {viewMode === "granular" && (
-        <div className="w-full max-w-full min-w-0 overflow-x-auto pb-6 scroll-smooth">
-          <div className="flex gap-3.5 w-max min-w-full">
-            {ALL_11_STAGES.map((stg) => {
-              const stageCards = filteredEnquiries.filter((e) => e.stage === stg.id);
-              const isTarget = dragOverStage === stg.id;
+        <div className="space-y-2 w-full max-w-full min-w-0">
+          {/* Scroll navigation controls for 11 stages */}
+          <div className="flex items-center justify-between px-1 py-1 text-xs font-mono text-muted">
+            <span className="flex items-center gap-1.5 text-deep font-semibold">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-gold" />
+              <span>11 Fine Production Stages</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => scrollGranular(-320)}
+                className="px-2.5 py-1 rounded-full border border-line bg-warm-white hover:bg-cream text-deep text-xs font-body font-semibold transition-all flex items-center gap-1 shadow-2xs"
+                title="Scroll stages left"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 text-gold" />
+                <span>Scroll Left</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollGranular(320)}
+                className="px-2.5 py-1 rounded-full border border-line bg-warm-white hover:bg-cream text-deep text-xs font-body font-semibold transition-all flex items-center gap-1 shadow-2xs"
+                title="Scroll stages right"
+              >
+                <span>Scroll Right</span>
+                <ChevronRight className="w-3.5 h-3.5 text-gold" />
+              </button>
+            </div>
+          </div>
 
-              return (
-                <div
-                  key={stg.id}
-                  data-stage-id={stg.id}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                    setDragOverStage(stg.id);
-                  }}
-                  onDragLeave={() => setDragOverStage(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const id = e.dataTransfer.getData("text/plain") || draggedCardId;
-                    if (id) handleDropCard(id, stg.id);
-                    setDragOverStage(null);
-                    setDraggedCardId(null);
-                  }}
-                  className={`w-72 shrink-0 rounded-2xl border transition-all p-3 shadow-xs flex flex-col min-h-[550px] ${
-                    isTarget ? "bg-amber-50/80 border-gold border-2 ring-2 ring-gold/20" : "bg-[#FBF9F6] border-line"
-                  }`}
-                >
-                  <div className="pb-2 border-b border-line mb-3 flex items-center justify-between">
-                    <span className="font-display text-xs font-semibold text-deep truncate">
-                      {stg.label}
-                    </span>
-                    <span className="text-[10px] font-mono bg-cream px-1.5 py-0.5 rounded border border-line font-bold">
-                      {stageCards.length}
-                    </span>
-                  </div>
+          <div
+            ref={granularScrollRef}
+            className="w-full max-w-full min-w-0 overflow-x-auto pb-6 scroll-smooth select-none"
+          >
+            <div className="flex gap-3.5 w-max min-w-full select-none">
+              {ALL_11_STAGES.map((stg) => {
+                const stageCards = filteredEnquiries.filter((e) => e.stage === stg.id);
+                const isTarget = dragOverStage === stg.id;
 
-                  <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[65vh]">
-                    {stageCards.length === 0 ? (
-                      <div className="h-24 border border-dashed border-line/60 rounded-lg flex items-center justify-center text-center p-2">
-                        <span className="text-[10px] font-body text-muted italic">Drop card here</span>
-                      </div>
-                    ) : (
-                      stageCards.map((card) => (
-                        <div
-                          key={card.id}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData("text/plain", card.id);
-                            e.dataTransfer.effectAllowed = "move";
-                            setDraggedCardId(card.id);
-                          }}
-                          onDragEnd={() => {
-                            setDraggedCardId(null);
-                            setDragOverStage(null);
-                          }}
-                          onTouchStart={(e) => handleTouchStart(e, card.id)}
-                          onTouchMove={handleTouchMove}
-                          onTouchEnd={handleTouchEnd}
-                          onClick={() => onSelectEnquiry(card)}
-                          className={`p-3 rounded-lg bg-warm-white border border-line hover:border-gold shadow-2xs cursor-grab active:cursor-grabbing text-xs space-y-2 transition-all ${
-                            draggedCardId === card.id ? "opacity-50" : ""
-                          } ${
-                            touchLiftedCardId === card.id
-                              ? "scale-[1.03] ring-2 ring-gold border-gold shadow-2xl z-40 bg-amber-50/95"
-                              : ""
-                          }`}
-                        >
-                          <div className="flex items-center justify-between font-mono text-[10px]">
-                            <span className="font-bold text-deep">{card.reference_code}</span>
-                            <span className="text-gold font-bold uppercase">{card.session_type}</span>
-                          </div>
+                return (
+                  <div
+                    key={stg.id}
+                    data-stage-id={stg.id}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      setDragOverStage(stg.id);
+                    }}
+                    onDragLeave={() => setDragOverStage(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const id = e.dataTransfer.getData("text/plain") || draggedCardId;
+                      if (id) handleDropCard(id, stg.id);
+                      setDragOverStage(null);
+                      setDraggedCardId(null);
+                    }}
+                    className={`w-72 shrink-0 rounded-2xl border transition-all p-3 shadow-xs flex flex-col min-h-[550px] select-none ${
+                      isTarget
+                        ? "bg-amber-50/80 border-gold border-2 ring-2 ring-gold/20"
+                        : "bg-[#FBF9F6] border-line"
+                    }`}
+                  >
+                    <div className="pb-2 border-b border-line mb-3 flex items-center justify-between">
+                      <span className="font-display text-xs font-semibold text-deep truncate">
+                        {stg.label}
+                      </span>
+                      <span className="text-[10px] font-mono bg-cream px-1.5 py-0.5 rounded border border-line font-bold">
+                        {stageCards.length}
+                      </span>
+                    </div>
 
-                          {(card as any).client_name && (
-                            <span className="font-body text-xs font-semibold text-deep block">
-                              {(card as any).client_name}
-                            </span>
-                          )}
-
-                          <p className="font-body text-[11px] text-brown/90 line-clamp-2">
-                            {card.purpose_text}
-                          </p>
-
-                          <div className="pt-1.5 border-t border-line/50 flex items-center justify-between text-[10px]">
-                            <select
-                              value={card.stage}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => handleDropCard(card.id, e.target.value as PipelineStage)}
-                              className="bg-cream/60 border border-line rounded px-1.5 py-0.5 text-deep font-body text-[10px] focus:outline-none"
-                            >
-                              {ALL_11_STAGES.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  &rarr; {s.label}
-                                </option>
-                              ))}
-                            </select>
-
-                            {card.stage !== "closed" && (
-                              <button
-                                onClick={(e) => handleQuickAdvance(e, card)}
-                                className="text-gold hover:text-deep font-semibold inline-flex items-center gap-0.5"
-                              >
-                                <span>Next</span>
-                                <ChevronRight className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
+                    <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[65vh]">
+                      {stageCards.length === 0 ? (
+                        <div className="h-24 border border-dashed border-line/60 rounded-lg flex items-center justify-center text-center p-2">
+                          <span className="text-[10px] font-body text-muted italic">Drop card here</span>
                         </div>
-                      ))
-                    )}
+                      ) : (
+                        stageCards.map((card) => (
+                          <div
+                            key={card.id}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData("text/plain", card.id);
+                              e.dataTransfer.effectAllowed = "move";
+                              setDraggedCardId(card.id);
+                            }}
+                            onDragEnd={() => {
+                              setDraggedCardId(null);
+                              setDragOverStage(null);
+                            }}
+                            onTouchStart={(e) => handleTouchStart(e, card.id)}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            onClick={() => onSelectEnquiry(card)}
+                            style={{
+                              WebkitTouchCallout: "none",
+                              WebkitUserSelect: "none",
+                              userSelect: "none",
+                              touchAction: touchLiftedCardId === card.id ? "none" : "pan-x pan-y",
+                            }}
+                            className={`p-3 rounded-lg bg-warm-white border border-line hover:border-gold shadow-2xs cursor-grab active:cursor-grabbing text-xs space-y-2 transition-all select-none ${
+                              draggedCardId === card.id ? "opacity-50" : ""
+                            } ${
+                              touchLiftedCardId === card.id
+                                ? "scale-[1.03] ring-2 ring-gold border-gold shadow-2xl z-40 bg-amber-50/95"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex items-center justify-between font-mono text-[10px]">
+                              <span className="font-bold text-deep">{card.reference_code}</span>
+                              <span className="text-gold font-bold uppercase">{card.session_type}</span>
+                            </div>
+
+                            {(card as any).client_name && (
+                              <span className="font-body text-xs font-semibold text-deep block">
+                                {(card as any).client_name}
+                              </span>
+                            )}
+
+                            <p className="font-body text-[11px] text-brown/90 line-clamp-2">
+                              {card.purpose_text}
+                            </p>
+
+                            <div className="pt-1.5 border-t border-line/50 flex items-center justify-between gap-1 text-[10px]">
+                              <button
+                                type="button"
+                                onClick={(e) => handleOpenMoveModal(e, card)}
+                                className="text-deep font-semibold inline-flex items-center gap-1 px-2 py-1 rounded bg-cream hover:bg-gold/20 border border-line transition-all shrink-0"
+                              >
+                                <span>Move</span>
+                                <ChevronRight className="w-2.5 h-2.5 text-gold" />
+                              </button>
+
+                              <div className="flex items-center gap-1">
+                                <select
+                                  value={card.stage}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => handleDropCard(card.id, e.target.value as PipelineStage)}
+                                  className="bg-cream/60 border border-line rounded px-1.5 py-1 text-deep font-body text-[10px] focus:outline-none"
+                                >
+                                  {ALL_11_STAGES.map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                      &rarr; {s.label}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                {card.stage !== "closed" && (
+                                  <button
+                                    onClick={(e) => handleQuickAdvance(e, card)}
+                                    className="text-gold hover:text-deep font-semibold inline-flex items-center gap-0.5 px-2 py-1 rounded hover:bg-cream transition-colors"
+                                  >
+                                    <span>Next</span>
+                                    <ChevronRight className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Move Stage Sheet Modal */}
+      {mobileMoveCard && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setMobileMoveCard(null)}
+        >
+          <div
+            className="bg-warm-white rounded-t-3xl sm:rounded-2xl border border-line max-w-md w-full p-5 sm:p-6 shadow-2xl max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div>
+                <span className="text-[10px] font-mono text-gold font-bold uppercase tracking-wider block">
+                  Move Stage · {mobileMoveCard.reference_code}
+                </span>
+                <h3 className="font-display text-lg text-deep font-semibold">
+                  {(mobileMoveCard as any).client_name || mobileMoveCard.purpose_text}
+                </h3>
+              </div>
+              <button
+                onClick={() => setMobileMoveCard(null)}
+                className="p-1 rounded-full text-muted hover:text-deep hover:bg-cream"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs font-body text-brown/80">
+              Select target stage to move this client commission to. All updates persist to Neon DB immediately:
+            </p>
+
+            <div className="space-y-1.5 max-h-[55vh] overflow-y-auto pr-1">
+              {ALL_11_STAGES.map((stg) => {
+                const isCurrent = mobileMoveCard.stage === stg.id;
+                return (
+                  <button
+                    key={stg.id}
+                    onClick={() => {
+                      handleDropCard(mobileMoveCard.id, stg.id);
+                      setMobileMoveCard(null);
+                    }}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left text-xs font-body font-semibold transition-all ${
+                      isCurrent
+                        ? "bg-gold/20 border-gold text-deep font-bold ring-1 ring-gold"
+                        : "bg-white hover:bg-cream/60 border-line text-deep"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${isCurrent ? "bg-gold" : "bg-muted/40"}`} />
+                      <span>{stg.label}</span>
+                    </div>
+                    {isCurrent && (
+                      <span className="text-[10px] font-mono uppercase bg-gold text-deep px-2 py-0.5 rounded-full font-bold">
+                        Current
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 border-t border-line flex justify-end">
+              <button
+                onClick={() => setMobileMoveCard(null)}
+                className="px-4 py-2 rounded-full bg-cream text-deep text-xs font-body font-semibold hover:bg-line transition-all"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -206,7 +206,7 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
       )}
 
       {/* Main Studio Workspace with Desktop Sticky Sidebar */}
-      <div className="flex-1 flex flex-col md:flex-row">
+      <div className="flex-1 flex flex-col md:flex-row min-w-0 w-full overflow-x-hidden">
         {/* Desktop Sidebar Nav (md:flex, hidden on mobile) */}
         <aside className="hidden md:flex w-64 bg-[#FAF8F5] border-r border-[#EFE9E1] p-4 shrink-0 sticky top-[57px] h-[calc(100vh-57px)] flex-col justify-between select-none z-30">
           <nav className="w-full space-y-1.5 overflow-y-auto no-scrollbar">
@@ -251,7 +251,7 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
         </aside>
 
         {/* Content Area */}
-        <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>
