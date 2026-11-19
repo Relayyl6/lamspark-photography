@@ -30,8 +30,8 @@ function LoginForm() {
         throw new Error(data.error || "Login failed");
       }
 
-      router.push(from);
-      router.refresh();
+      // Full hard navigation ensures cookies and layout re-mount cleanly with studio frame
+      window.location.href = from;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication error");
     } finally {
