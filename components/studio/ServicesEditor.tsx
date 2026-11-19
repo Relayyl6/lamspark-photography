@@ -13,6 +13,8 @@ import {
   Calendar,
   Clock,
   RotateCcw,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import type { SessionTypeSlug } from "@/lib/types";
 
@@ -35,6 +37,7 @@ interface SessionData {
 export function ServicesEditor() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingSession, setEditingSession] = useState<SessionData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -47,14 +50,24 @@ export function ServicesEditor() {
 
   async function loadSessions() {
     setIsLoading(true);
+    setErrorMessage(null);
     try {
       const res = await fetch("/api/admin/sessions");
-      const data = await res.json();
-      if (data.sessions) {
-        setSessions(data.sessions);
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error("Session expired or unauthorized. Please re-login to the Studio.");
+        }
+        throw new Error(`Failed to fetch sessions from database (${res.status})`);
       }
-    } catch (err) {
+      const data = await res.json();
+      if (data.sessions && Array.isArray(data.sessions)) {
+        setSessions(data.sessions);
+      } else {
+        throw new Error(data.error || "No sessions returned");
+      }
+    } catch (err: any) {
       console.error("Failed to load sessions:", err);
+      setErrorMessage(err.message || "Failed to load live sessions");
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +164,7 @@ export function ServicesEditor() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200 w-full max-w-full min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -167,18 +180,42 @@ export function ServicesEditor() {
         </div>
 
         {statusMessage && (
-          <div className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+          <div className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in self-start sm:self-auto">
             <Check className="w-4 h-4 text-emerald-600" />
             <span>{statusMessage}</span>
           </div>
         )}
       </div>
 
-      {/* Services Grid */}
+      {/* Services Grid or Loading / Error states */}
       {isLoading ? (
         <div className="p-12 text-center flex items-center justify-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-gold" />
-          <span className="font-body text-xs text-muted">Loading live session configurations...</span>
+          <span className="font-body text-xs text-muted">Loading live session configurations from Neon DB...</span>
+        </div>
+      ) : errorMessage ? (
+        <div className="p-8 text-center bg-warm-white rounded-2xl border border-red-200 space-y-3">
+          <AlertCircle className="w-8 h-8 text-red-500 mx-auto" />
+          <h3 className="font-display text-lg text-deep font-semibold">Unable to Load Services</h3>
+          <p className="text-xs font-body text-red-600 max-w-md mx-auto">{errorMessage}</p>
+          <button
+            onClick={loadSessions}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Loading</span>
+          </button>
+        </div>
+      ) : sessions.length === 0 ? (
+        <div className="p-8 text-center bg-warm-white rounded-2xl border border-line space-y-3">
+          <Tag className="w-8 h-8 text-gold mx-auto opacity-50" />
+          <h3 className="font-display text-lg text-deep">No services found in database</h3>
+          <button
+            onClick={loadSessions}
+            className="px-4 py-2 bg-deep text-warm-white rounded-full text-xs font-semibold"
+          >
+            Refresh Catalog
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -221,32 +258,29 @@ export function ServicesEditor() {
                     </p>
                   </div>
 
-                  <div className="pt-3 border-t border-line/60 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted font-body">Starting Rate:</span>
-                      <span className="font-display text-base font-semibold text-deep">
-                        {currentPrice !== null ? `₦${currentPrice.toLocaleString()}` : "Bespoke Quote"}
-                      </span>
+                  <div className="space-y-2 pt-3 border-t border-line/60">
+                    <div className="flex items-center justify-between text-xs font-body">
+                      <span className="text-muted">Starting Rate:</span>
+                      <strong className="font-display text-base text-deep font-semibold">
+                        {currentPrice !== null ? `₦${currentPrice.toLocaleString()}` : "Custom Bespoke"}
+                      </strong>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted font-body">Delivery Timeline:</span>
-                      <span className="font-mono text-xs text-deep">
+                    <div className="flex items-center justify-between text-xs font-body">
+                      <span className="text-muted">Delivery Timeline:</span>
+                      <span className="font-semibold text-deep truncate max-w-[160px]">
                         {currentDelivery}
                       </span>
                     </div>
                   </div>
 
-                  {/* Edit Action Button */}
-                  <div className="pt-2">
-                    <button
-                      onClick={() => handleOpenEdit(session)}
-                      className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-line bg-cream/50 hover:bg-gold hover:text-deep hover:border-gold text-deep text-xs font-body font-semibold transition-all"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span>Edit Price &amp; Cover</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleOpenEdit(session)}
+                    className="w-full py-2.5 rounded-full bg-cream hover:bg-white text-deep text-xs font-body font-semibold border border-line hover:border-gold transition-all shadow-2xs flex items-center justify-center gap-1.5"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-gold" />
+                    <span>Edit Investment &amp; Cover</span>
+                  </button>
                 </div>
               </div>
             );
@@ -254,85 +288,83 @@ export function ServicesEditor() {
         </div>
       )}
 
-      {/* Edit Session Modal */}
+      {/* Edit Modal */}
       {editingSession && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-warm-white rounded-2xl border border-line max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-5">
+          <div className="bg-warm-white rounded-2xl border border-line max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
-                <span className="font-body text-[10px] uppercase tracking-wider text-gold font-bold block">
-                  Service Configuration
-                </span>
                 <h3 className="font-display text-xl text-deep font-semibold">
-                  {editingSession.title}
+                  Edit {editingSession.title}
                 </h3>
+                <span className="text-xs font-mono text-muted uppercase">
+                  Slug: {editingSession.slug}
+                </span>
               </div>
-              <button onClick={() => setEditingSession(null)} className="text-muted hover:text-deep">✕</button>
+              <button
+                onClick={() => setEditingSession(null)}
+                className="text-muted hover:text-deep"
+              >
+                ✕
+              </button>
             </div>
 
             <form onSubmit={handleSaveSession} className="space-y-4">
-              {/* Price Field */}
               <div>
                 <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1">
-                  Starting Investment Rate (₦)
+                  Starting Investment (NGN)
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-muted text-xs">₦</span>
-                  <input
-                    type="number"
-                    value={editPrice}
-                    onChange={(e) => setEditPrice(e.target.value)}
-                    placeholder="e.g. 150000"
-                    className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-line bg-cream/40 text-sm font-mono text-deep"
-                  />
-                </div>
-                <span className="text-[11px] text-muted font-body mt-1 block">
-                  * Note: Price is used for personal estimate calculation and studio reference.
-                </span>
+                <input
+                  type="text"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  placeholder="e.g. 140000"
+                  className="w-full px-3 py-2 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep"
+                />
               </div>
 
-              {/* Cover Image Field + Upload Button */}
               <div>
                 <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1">
-                  Cover Image URL
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={editCover}
-                    onChange={(e) => setEditCover(e.target.value)}
-                    placeholder="https://... or /images/client/weddings_1.jpg"
-                    className="flex-1 px-3 py-2 rounded-lg border border-line bg-cream/40 text-xs font-mono text-deep"
-                  />
-                  <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-deep text-warm-white hover:bg-gold hover:text-deep text-xs font-body font-semibold cursor-pointer shrink-0 transition-all">
-                    {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
-                    <span>Upload</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleCoverUpload}
-                      className="hidden"
-                      disabled={isUploading}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Delivery Days Field */}
-              <div>
-                <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1">
-                  Delivery Timeline Text
+                  Standard Delivery Timeline
                 </label>
                 <input
                   type="text"
                   value={editDelivery}
                   onChange={(e) => setEditDelivery(e.target.value)}
-                  placeholder="e.g. 7 to 10 business days"
-                  className="w-full px-3 py-2.5 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep"
+                  placeholder="e.g. 7 to 10 working days"
+                  className="w-full px-3 py-2 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep"
                 />
               </div>
 
-              {/* Actions */}
+              <div>
+                <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1">
+                  Cover Image URL
+                </label>
+                <input
+                  type="text"
+                  value={editCover}
+                  onChange={(e) => setEditCover(e.target.value)}
+                  placeholder="https://... or /images/client/..."
+                  className="w-full px-3 py-2 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep mb-2"
+                />
+
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cream hover:bg-white border border-line text-xs font-body font-semibold text-deep transition-all shadow-2xs hover:border-gold">
+                  {isUploading ? (
+                    <Loader2 className="w-3.5 h-3.5 text-gold animate-spin" />
+                  ) : (
+                    <UploadCloud className="w-3.5 h-3.5 text-gold" />
+                  )}
+                  <span>Upload New Cover</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploading}
+                    className="hidden"
+                    onChange={handleCoverUpload}
+                  />
+                </label>
+              </div>
+
               <div className="pt-3 border-t border-line flex justify-end gap-2">
                 <button
                   type="button"
@@ -344,10 +376,9 @@ export function ServicesEditor() {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2 rounded-lg bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-lg bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all"
                 >
-                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{isSaving ? "Saving..." : "Save to Database"}</span>
+                  {isSaving ? "Saving to DB..." : "Save Changes"}
                 </button>
               </div>
             </form>

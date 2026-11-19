@@ -16,6 +16,11 @@ import {
   User,
   Heart,
   HelpCircle,
+  UploadCloud,
+  CheckCircle,
+  Loader2,
+  FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -60,6 +65,9 @@ function BookingWizard() {
 
   // Unique reference code (e.g. LS-4F7K)
   const [referenceCode, setReferenceCode] = useState("");
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+  const [depositReportedSuccess, setDepositReportedSuccess] = useState(false);
 
   useEffect(() => {
     // Generate reference code on mount
@@ -140,9 +148,70 @@ function BookingWizard() {
     return raw;
   }
 
+  // Save booking directly into Neon DB
+  async function submitBookingToDb(uploadedReceiptUrl?: string) {
+    if (!clientName.trim() || !whatsappPhone.trim()) return;
+
+    try {
+      await fetch("/api/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: clientName.trim(),
+          whatsappPhone: whatsappPhone.trim(),
+          clientEmail: clientEmail.trim() || undefined,
+          sessionType,
+          answers,
+          referenceCode,
+          priceAgreed,
+          messagingConsent,
+          marketingConsent: marketingImageConsent,
+          receiptUrl: uploadedReceiptUrl || receiptUrl || null,
+        }),
+      });
+    } catch (err) {
+      console.error("[Booking DB submission error]", err);
+    }
+  }
+
+  // Upload bank transfer receipt directly from client wizard
+  async function handleUploadBookingReceipt(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingReceipt(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("partition", "private");
+      formData.append("sessionType", sessionType);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      const uploadedUrl = data.url || data.privateUrl || data.storageKey;
+
+      if (uploadedUrl) {
+        setReceiptUrl(uploadedUrl);
+        setDepositReportedSuccess(true);
+        // Persist booking with attached receipt into DB
+        await submitBookingToDb(uploadedUrl);
+      } else {
+        alert(data.error || "Receipt upload failed");
+      }
+    } catch (err: any) {
+      console.error("Booking receipt upload failed:", err);
+      alert("Failed to upload receipt: " + err.message);
+    } finally {
+      setIsUploadingReceipt(false);
+    }
+  }
+
   // Pre-filled WhatsApp message with reference code & answers
   const whatsappUrl = useMemo(() => {
-    const businessNumber = "2348130847299"; // LamSparks official studio line
+    const businessNumber = "2349064982841"; // LamSparks official studio line (Osemene)
     const text = `Hello LamSparks! I have completed my session estimate online.\n\n` +
       `Reference: ${referenceCode}\n` +
       `Client: ${clientName || "Client"}\n` +
@@ -152,14 +221,15 @@ function BookingWizard() {
       (feeling ? `Desired Feeling: ${feeling}\n` : "") +
       `Total Estimate: ₦${estimate.total.toLocaleString()}\n` +
       `Required Deposit (${estimate.depositPercent}%): ₦${estimate.depositAmount.toLocaleString()}\n` +
-      `Balance on Shoot Day: ₦${estimate.balanceAmount.toLocaleString()}\n\n` +
+      `Balance on Shoot Day: ₦${estimate.balanceAmount.toLocaleString()}\n` +
+      (receiptUrl ? `Transfer Receipt: Attached to my booking profile.\n\n` : `\n`) +
       `I have reviewed the terms and I am ready to confirm my booking with Osemene.`;
 
     return `https://wa.me/${businessNumber}?text=${encodeURIComponent(text)}`;
-  }, [referenceCode, clientName, sessionType, estimate, purpose, feeling]);
+  }, [referenceCode, clientName, sessionType, estimate, purpose, feeling, receiptUrl]);
 
   const talkFirstUrl = useMemo(() => {
-    const businessNumber = "2348130847299";
+    const businessNumber = "2349064982841";
     const text = `Hello Osemene! I am looking at a ${SESSION_TYPES[sessionType]?.title} session (Ref: ${referenceCode}), but I have a few questions before locking my date.`;
     return `https://wa.me/${businessNumber}?text=${encodeURIComponent(text)}`;
   }, [sessionType, referenceCode]);
@@ -810,8 +880,72 @@ function BookingWizard() {
                   </div>
 
                   <p className="text-[11px] text-muted font-body">
-                    Please use reference <strong className="text-deep">{referenceCode}</strong> in the transfer remarks. Once transferred, you can share your receipt on WhatsApp or upload it directly.
+                    Please use reference <strong className="text-deep">{referenceCode}</strong> in the transfer remarks. Once transferred, you can share your receipt on WhatsApp or upload it directly below.
                   </p>
+                </div>
+              </div>
+
+              {/* Client Receipt Upload Zone */}
+              <div className="pt-4 border-t border-line/60">
+                <div className="p-5 rounded-2xl bg-[#F8F5F0] border border-line space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-body text-[10px] uppercase tracking-wider text-gold font-bold block">
+                        Direct Receipt Upload (Optional or Immediate)
+                      </span>
+                      <h4 className="font-display text-base text-deep font-semibold">
+                        Already completed your transfer?
+                      </h4>
+                    </div>
+                    {depositReportedSuccess && (
+                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono uppercase font-bold px-2.5 py-1 rounded-full border border-emerald-300 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Deposit Reported</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {depositReportedSuccess && receiptUrl ? (
+                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs font-body text-emerald-900 space-y-2">
+                      <p className="font-semibold">
+                        ✓ Proof of transfer received for Ref: {referenceCode}.
+                      </p>
+                      <p className="text-[11px] text-emerald-800 leading-relaxed">
+                        Your deposit has entered the LamSparks Studio Verification Queue. Our team will verify it directly against our PalmPay statement and confirm your date.
+                      </p>
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-deep hover:text-gold font-semibold underline pt-1">
+                        <span>Upload a different receipt screenshot</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploadingReceipt}
+                          className="hidden"
+                          onChange={handleUploadBookingReceipt}
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <p className="text-xs font-body text-brown/85 leading-relaxed max-w-md">
+                        Upload your bank transfer screenshot now to fast-track date verification, or share it directly on WhatsApp.
+                      </p>
+                      <label className="cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all shadow-sm shrink-0">
+                        {isUploadingReceipt ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-gold" />
+                        ) : (
+                          <UploadCloud className="w-4 h-4 text-gold" />
+                        )}
+                        <span>{isUploadingReceipt ? "Uploading..." : "Upload Transfer Receipt"}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploadingReceipt}
+                          className="hidden"
+                          onChange={handleUploadBookingReceipt}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -830,7 +964,9 @@ function BookingWizard() {
                     if (!priceAgreed || !messagingConsent) {
                       e.preventDefault();
                       alert("Please check both 'This price looks right to me' and the WhatsApp messaging consent box to continue.");
+                      return;
                     }
+                    submitBookingToDb();
                   }}
                 >
                   <MessageCircle className="w-4 h-4 text-gold" />
