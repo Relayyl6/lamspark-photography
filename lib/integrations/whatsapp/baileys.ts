@@ -3,7 +3,7 @@ import fs from "fs";
 import QRCode from "qrcode";
 import pino from "pino";
 import { neon } from "@neondatabase/serverless";
-import { triageInboundMessage } from "@/lib/ai/service";
+import { triageInboundMessage, classifyInboundMessageWithMultiAI } from "@/lib/ai/service";
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
@@ -185,11 +185,16 @@ export async function initWhatsApp(options: { phoneNumber?: string } = {}): Prom
         const formattedPhone = `+${rawPhone}`;
         const senderName = m.pushName || formattedPhone;
 
-        const bodyText =
+        const isImage = !!m.message?.imageMessage;
+        let bodyText =
           m.message?.conversation ||
           m.message?.extendedTextMessage?.text ||
           m.message?.imageMessage?.caption ||
           "";
+
+        if (!bodyText.trim() && isImage) {
+          bodyText = "[Bank Transfer Receipt Screenshot Attached]";
+        }
 
         if (!bodyText.trim()) continue;
 
@@ -215,54 +220,60 @@ export async function initWhatsApp(options: { phoneNumber?: string } = {}): Prom
             clientId = newClient[0].id;
           }
 
-          // 2. Find or create conversation for this host studio number
+          // 2. Find or create conversation scoped to host_account / account_phone
           const userJid = sock.user?.id || "";
-          const hostPhone = userJid ? `+${userJid.split(":")[0] || userJid.split("@")[0]}` : null;
+          const hostPhone = userJid ? `+${userJid.split(":")[0] || userJid.split("@")[0]}` : "+2348130847299";
 
           let conv = await sql.query(
-            `SELECT id, state FROM conversation WHERE client_id = $1 AND channel = 'whatsapp' AND (host_account = $2 OR host_account IS NULL) LIMIT 1`,
+            `SELECT id, state FROM conversation WHERE client_id = $1 AND channel = 'whatsapp' AND (host_account = $2 OR account_phone = $2 OR host_account IS NULL) LIMIT 1`,
             [clientId, hostPhone]
           );
 
           let convId: string;
           if (conv.length > 0) {
             convId = conv[0].id;
-            if (hostPhone) {
-              await sql.query(`UPDATE conversation SET host_account = $1 WHERE id = $2 AND host_account IS NULL`, [hostPhone, convId]);
-            }
+            await sql.query(
+              `UPDATE conversation SET host_account = COALESCE(host_account, $1), account_phone = COALESCE(account_phone, $1) WHERE id = $2`,
+              [hostPhone, convId]
+            );
           } else {
             const newConv = await sql.query(
               `INSERT INTO conversation (
-                id, client_id, channel, state, host_account, last_inbound_at, created_at, updated_at
+                id, client_id, channel, state, host_account, account_phone, last_inbound_at, created_at, updated_at
               ) VALUES (
-                gen_random_uuid(), $1, 'whatsapp', 'bot', $2, NOW(), NOW(), NOW()
+                gen_random_uuid(), $1, 'whatsapp', 'bot', $2, $2, NOW(), NOW(), NOW()
               ) RETURNING id`,
               [clientId, hostPhone]
             );
             convId = newConv[0].id;
           }
 
-          // 3. AI Triage
-          let label = "session_inquiry";
-          let draft = "";
+          // 3. AI Triage & Business vs. Personal Classifier
+          let label = isImage ? "deposit_submission" : "session_inquiry";
+          let draft = isImage ? "Inspect bank transfer screenshot in Studio Deposit Queue" : "";
+          let category = "business";
+          let isBusiness = true;
+
           try {
-            const triage = triageInboundMessage(bodyText.trim());
+            const triage = await classifyInboundMessageWithMultiAI(bodyText.trim());
             if (triage) {
               label = triage.label;
               draft = triage.suggestedAction || "";
+              category = triage.category;
+              isBusiness = triage.isBusiness;
             }
           } catch {
-            label = "session_inquiry";
+            label = isImage ? "deposit_submission" : "session_inquiry";
           }
 
-          // 4. Insert message
+          // 4. Insert message with category & business classification
           await sql.query(
             `INSERT INTO message (
-              id, conversation_id, direction, body, status, ai_label, ai_draft, created_at, updated_at
+              id, conversation_id, direction, body, status, ai_label, ai_draft, category, is_business, created_at, updated_at
             ) VALUES (
-              gen_random_uuid(), $1, 'inbound', $2, 'delivered', $3, $4, NOW(), NOW()
+              gen_random_uuid(), $1, 'inbound', $2, 'delivered', $3, $4, $5, $6, NOW(), NOW()
             )`,
-            [convId, bodyText.trim(), label, draft]
+            [convId, bodyText.trim(), label, draft, category, isBusiness]
           );
 
           // 5. Update conversation timestamp
@@ -271,7 +282,7 @@ export async function initWhatsApp(options: { phoneNumber?: string } = {}): Prom
             [convId]
           );
 
-          console.log(`[Baileys Live Inbound Saved]: ${senderName} (${formattedPhone}): "${bodyText.slice(0, 40)}..."`);
+          console.log(`[Baileys Inbound Saved]: ${senderName} (${formattedPhone}) [${category.toUpperCase()}]: "${bodyText.slice(0, 40)}..."`);
         } catch (dbErr) {
           console.error("[Baileys Inbound DB Ingest Error]", dbErr);
         }

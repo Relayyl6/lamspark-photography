@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
-import { triageInboundMessage } from "@/lib/ai/service";
+import { triageInboundMessage, classifyInboundMessageWithMultiAI } from "@/lib/ai/service";
 import { sendWhatsAppMessage } from "@/lib/integrations/whatsapp/baileys";
 import { sendInstagramMessage } from "@/lib/integrations/instagram/client";
 
@@ -28,7 +28,7 @@ export async function GET() {
         (
           SELECT json_agg(m ORDER BY m.created_at ASC)
           FROM (
-            SELECT id, direction, body, sent_by, ai_label, ai_draft, status, created_at
+            SELECT id, direction, body, sent_by, ai_label, ai_draft, category, is_business, status, created_at
             FROM message
             WHERE conversation_id = cv.id
             ORDER BY created_at ASC
@@ -131,14 +131,18 @@ export async function POST(req: NextRequest) {
         convId = newConv[0].id;
       }
 
-      // Generate AI triage
+      // Multi-Model AI Consensus Triage
       let label = intent_tag;
       let draft = "";
+      let category = "business";
+      let isBusiness = true;
       try {
-        const triage = triageInboundMessage(message.trim());
+        const triage = await classifyInboundMessageWithMultiAI(message.trim());
         if (triage) {
           label = label || triage.label;
           draft = triage.suggestedAction || "";
+          category = triage.category;
+          isBusiness = triage.isBusiness;
         }
       } catch {
         label = label || "session_inquiry";
@@ -147,11 +151,11 @@ export async function POST(req: NextRequest) {
       // Insert inbound message
       const inserted = await sql.query(
         `INSERT INTO message (
-          id, conversation_id, direction, body, status, ai_label, ai_draft, created_at, updated_at
+          id, conversation_id, direction, body, status, ai_label, ai_draft, category, is_business, created_at, updated_at
         ) VALUES (
-          gen_random_uuid(), $1, 'inbound', $2, 'delivered', $3, $4, NOW(), NOW()
+          gen_random_uuid(), $1, 'inbound', $2, 'delivered', $3, $4, $5, $6, NOW(), NOW()
         ) RETURNING *`,
-        [convId, message.trim(), label, draft]
+        [convId, message.trim(), label, draft, category, isBusiness]
       );
 
       // Update conversation timestamp

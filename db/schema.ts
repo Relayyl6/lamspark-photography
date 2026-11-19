@@ -346,6 +346,7 @@ export const conversations = pgTable(
     channel: text("channel").notNull().default("whatsapp"), // whatsapp | instagram | facebook | web
     state: text("state").notNull().default("bot"), // bot | human | closed
     hostAccount: text("host_account"), // e.g. "+2348130847299" or IG handle
+    accountPhone: text("account_phone"), // Studio line e.g. "+2348130847299" for multi-device persistence
     takenOverBy: text("taken_over_by"),
     lastInboundAt: timestamp("last_inbound_at", { withTimezone: true }),
     windowExpiresAt: timestamp("window_expires_at", { withTimezone: true }),
@@ -369,6 +370,8 @@ export const messages = pgTable("message", {
   setting: text("setting").notNull().default("automatic"), // automatic | reviewed | personal
   aiLabel: text("ai_label"),
   aiDraft: text("ai_draft"),
+  category: text("category").default("business"), // business | personal | automated
+  isBusiness: boolean("is_business").default(true), // true for studio business inquiries, false for personal chatter
   sentBy: text("sent_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

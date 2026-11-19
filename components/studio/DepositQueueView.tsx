@@ -35,6 +35,20 @@ interface DepositItem {
     status: string;
     bankReference: string | null;
     aiCheck: any;
+    accountingCheck?: {
+      expectedAmount: number;
+      extractedAmount: number | null;
+      status: string;
+      amountMatches: boolean;
+      isOfficialAccount: boolean;
+      shortfall: number;
+      surplus: number;
+      badge: {
+        label: string;
+        variant: "success" | "warning" | "danger" | "info";
+      };
+      notes: string;
+    };
   };
   created_at: string;
 }
@@ -306,18 +320,38 @@ export function DepositQueueView() {
                   <span className="text-[11px] text-muted">Supports JPG, PNG</span>
                 </div>
 
-                {/* Background AI Readout */}
-                <div className="p-3 bg-cream/70 rounded-xl border border-line/80 text-xs font-body space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-gold font-semibold text-[11px]">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Background AI Verification Status:</span>
+                {/* Background AI & Accounting Readout */}
+                <div className="p-3 bg-cream/70 rounded-xl border border-line/80 text-xs font-body space-y-2">
+                  <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-gold font-semibold text-[11px]">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Accounting Verification:</span>
+                    </div>
+                    {enq.payment.accountingCheck?.badge && (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          enq.payment.accountingCheck.badge.variant === "danger"
+                            ? "bg-rose-100 text-rose-800 border-rose-300"
+                            : enq.payment.accountingCheck.badge.variant === "warning"
+                            ? "bg-amber-100 text-amber-900 border-amber-300"
+                            : enq.payment.accountingCheck.badge.variant === "info"
+                            ? "bg-blue-100 text-blue-900 border-blue-300"
+                            : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                        }`}
+                      >
+                        {enq.payment.accountingCheck.badge.label}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-brown/90 text-[11px] leading-relaxed line-clamp-2">
-                    {aiData?.summary || "Automated OCR pending. Staff must verify transfer directly against bank statement."}
+
+                  <p className="text-brown/90 text-[11px] leading-relaxed">
+                    {enq.payment.accountingCheck?.notes || aiData?.summary || "Automated OCR pending. Staff must verify transfer directly against bank statement."}
                   </p>
+
                   <div className="flex items-center justify-between text-[10px] text-muted pt-1 border-t border-line/40">
-                    <span>Detected: {aiData?.extractedAmount ? `₦${Number(aiData.extractedAmount).toLocaleString()}` : `₦${expected.toLocaleString()}`}</span>
-                    <span>Bank Ref: {aiData?.reference || "Pending manual entry"}</span>
+                    <span>Detected: {aiData?.extractedAmount ? `₦${Number(aiData.extractedAmount).toLocaleString()}` : (expected ? `₦${expected.toLocaleString()}` : "Pending")}</span>
+                    <span>Beneficiary: {aiData?.recipientBank || "Fidelity Bank (5601662438)"}</span>
+                    <span>Bank Ref: {aiData?.reference || "Pending"}</span>
                   </div>
                 </div>
 

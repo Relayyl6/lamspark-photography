@@ -36,6 +36,8 @@ interface MessageItem {
   sent_by?: string;
   ai_label?: string;
   ai_draft?: string;
+  category?: "business" | "personal" | "automated";
+  is_business?: boolean;
   created_at: string;
 }
 
@@ -45,6 +47,7 @@ interface ConversationItem {
   clientName: string;
   whatsapp: string;
   channel: string;
+  hostAccount?: string | null;
   state: "bot" | "human";
   lastInboundAt?: string;
   messages: MessageItem[];
@@ -77,8 +80,10 @@ export function HumanInbox() {
   const [isSending, setIsSending] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Channel filter
+  // Channel & Triage filters
   const [channelFilter, setChannelFilter] = useState<"all" | "whatsapp" | "instagram">("all");
+  const [triageFilter, setTriageFilter] = useState<"all" | "business" | "personal">("business");
+  const [activeHostOnly, setActiveHostOnly] = useState<boolean>(true);
 
   // Device Link Modal State (Baileys & IG Direct)
   const [showDeviceModal, setShowDeviceModal] = useState(false);
@@ -528,6 +533,51 @@ export function HumanInbox() {
               </button>
             </div>
 
+            {/* Smart AI Triage Filter (Business Inquiries vs. Personal Filtered) */}
+            <div className="flex items-center gap-1 p-1 bg-warm-white rounded-lg border border-line text-[11px] font-body">
+              <button
+                type="button"
+                onClick={() => setTriageFilter("business")}
+                className={`flex-1 py-1 rounded text-center transition-all ${
+                  triageFilter === "business" ? "bg-gold text-deep font-bold shadow-xs" : "text-muted hover:text-deep"
+                }`}
+              >
+                Studio Leads
+              </button>
+              <button
+                type="button"
+                onClick={() => setTriageFilter("all")}
+                className={`flex-1 py-1 rounded text-center font-medium transition-all ${
+                  triageFilter === "all" ? "bg-deep text-warm-white shadow-xs" : "text-muted hover:text-deep"
+                }`}
+              >
+                All Chats
+              </button>
+              <button
+                type="button"
+                onClick={() => setTriageFilter("personal")}
+                className={`flex-1 py-1 rounded text-center font-medium transition-all ${
+                  triageFilter === "personal" ? "bg-amber-100 text-amber-900 border border-amber-300 shadow-xs" : "text-muted hover:text-deep"
+                }`}
+              >
+                Personal / Filtered
+              </button>
+            </div>
+
+            {/* Studio Line Isolation Status */}
+            {waStatus.state === "connected" && waStatus.user?.phone && (
+              <div className="flex items-center justify-between px-2 py-1 bg-cream/50 rounded-md border border-line/50 text-[10px] font-mono text-muted">
+                <span>Line: {waStatus.user.phone}</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveHostOnly(!activeHostOnly)}
+                  className="text-gold hover:underline font-semibold"
+                >
+                  {activeHostOnly ? "Show All Lines" : "Active Line Only"}
+                </button>
+              </div>
+            )}
+
             <div className="space-y-1.5 max-h-[520px] overflow-y-auto">
               {conversations.length === 0 ? (
                 <div className="p-8 text-center text-xs font-body text-muted space-y-2">
@@ -539,11 +589,30 @@ export function HumanInbox() {
                 </div>
               ) : (
                 conversations
-                  .filter((c) => channelFilter === "all" || c.channel?.toLowerCase() === channelFilter)
+                  .filter((conv) => {
+                    if (channelFilter !== "all" && conv.channel?.toLowerCase() !== channelFilter) return false;
+
+                    const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+                    const isPersonal = lastMsg?.category === "personal" || lastMsg?.is_business === false || lastMsg?.ai_label === "personal" || lastMsg?.ai_label === "spam";
+
+                    if (triageFilter === "business" && isPersonal) return false;
+                    if (triageFilter === "personal" && !isPersonal) return false;
+
+                    if (activeHostOnly && waStatus.state === "connected" && waStatus.user?.phone) {
+                      const cleanActive = waStatus.user.phone.replace(/\D/g, "");
+                      const convHost = conv.hostAccount?.replace(/\D/g, "");
+                      if (conv.channel?.toLowerCase() === "whatsapp" && convHost && convHost !== cleanActive) {
+                        return false;
+                      }
+                    }
+
+                    return true;
+                  })
                   .map((conv) => {
                     const isSelected = conv.id === activeConv?.id;
                     const isInstagram = conv.channel?.toLowerCase() === "instagram";
                     const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+                    const isPersonal = lastMsg?.category === "personal" || lastMsg?.is_business === false || lastMsg?.ai_label === "personal";
 
                     return (
                       <button
@@ -565,6 +634,19 @@ export function HumanInbox() {
                             <h4 className="font-display text-sm font-semibold text-deep truncate">
                               {conv.clientName}
                             </h4>
+                            {isPersonal ? (
+                              <span className="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-1 py-0.2 rounded-full font-bold">
+                                Personal
+                              </span>
+                            ) : lastMsg?.ai_label === "deposit_submission" ? (
+                              <span className="text-[9px] bg-emerald-50 text-emerald-800 border border-emerald-300 px-1 py-0.2 rounded-full font-bold">
+                                Deposit
+                              </span>
+                            ) : lastMsg?.ai_label === "price_question" ? (
+                              <span className="text-[9px] bg-amber-50 text-amber-800 border border-amber-300 px-1 py-0.2 rounded-full font-bold">
+                                Pricing
+                              </span>
+                            ) : null}
                           </div>
                           <span
                             className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full font-bold ${
@@ -593,7 +675,7 @@ export function HumanInbox() {
           </div>
 
           {/* Right Pane: Thread & Reply Editor */}
-          {activeConv && (
+          {activeConv ? (
             <div className="lg:col-span-2 p-5 flex flex-col justify-between space-y-5">
               {/* Thread Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
@@ -656,18 +738,37 @@ export function HumanInbox() {
               {/* AI Triage Card */}
               {(() => {
                 const lastInbound = [...activeConv.messages].reverse().find((m) => m.direction === "inbound");
+                const isPersonal = lastInbound?.category === "personal" || lastInbound?.is_business === false || lastInbound?.ai_label === "personal";
                 return (
-                  <div className="p-3.5 bg-cream/70 rounded-xl border border-line space-y-1 text-xs font-body">
-                    <div className="flex items-center gap-1.5 text-gold font-bold uppercase tracking-wider text-[10px]">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>AI Triage Analysis</span>
+                  <div className="p-3.5 bg-cream/70 rounded-xl border border-line space-y-2 text-xs font-body">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-gold font-bold uppercase tracking-wider text-[10px]">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Multi-Model AI Consensus</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] bg-gold/15 text-deep border border-gold/30 px-1.5 py-0.5 rounded-full font-mono font-semibold">
+                          3-Model Consensus
+                        </span>
+                        <span
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                            isPersonal
+                              ? "bg-rose-100 text-rose-800 border-rose-300"
+                              : lastInbound?.ai_label === "deposit_submission"
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                              : "bg-gold/20 text-deep border-gold/40"
+                          }`}
+                        >
+                          {isPersonal ? "Personal Contact" : "Studio Client Lead"}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-brown/90 text-xs">
-                      <strong>Intent:</strong> {lastInbound?.ai_label || "General Client Inquiry"}
+                      <strong>Intent:</strong> {lastInbound?.ai_label ? lastInbound.ai_label.replace(/_/g, " ").toUpperCase() : "GENERAL INQUIRY"}
                     </p>
                     {lastInbound?.ai_draft && (
-                      <p className="text-muted text-[11px]">
-                        <strong>Suggested Direction:</strong> {lastInbound.ai_draft}
+                      <p className="text-muted text-[11px] leading-relaxed">
+                        <strong>AI Direction:</strong> {lastInbound.ai_draft}
                       </p>
                     )}
                   </div>

@@ -36,23 +36,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "disconnect") {
+      // Disconnect live WebSocket and clear ./data/baileys_auth session files.
+      // Database conversations and messages remain permanently saved and intact in Neon PostgreSQL.
       await disconnectWhatsApp();
-      if (clearMessages) {
-        try {
-          const sql = neon(process.env.DATABASE_URL!);
-          await sql.query(
-            `DELETE FROM message WHERE conversation_id IN (SELECT id FROM conversation WHERE channel = 'whatsapp')`
-          );
-          await sql.query(`DELETE FROM conversation WHERE channel = 'whatsapp'`);
-        } catch (dbErr) {
-          console.error("[Purge test messages error]", dbErr);
-        }
-      }
       return NextResponse.json({
         success: true,
-        message: clearMessages
-          ? "WhatsApp Web unlinked and test messages purged successfully."
-          : "WhatsApp Web unlinked successfully.",
+        message: "WhatsApp Web unlinked successfully. Chat history and client records remain preserved in database.",
       });
     }
 

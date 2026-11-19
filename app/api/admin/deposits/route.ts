@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
+import { verifyDepositAccounting } from "@/lib/ai/service";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -43,6 +44,12 @@ export async function GET() {
     const deposits = rawDeposits.map((d: any) => {
       const answers = typeof d.answers === "string" ? JSON.parse(d.answers) : (d.answers || {});
       const agreedPrice = answers.agreedPrice || (d.amount_expected ? Math.round(d.amount_expected / 0.7) : 0);
+      const parsedAiCheck = typeof d.ai_check === "string" ? JSON.parse(d.ai_check) : d.ai_check;
+      const accountingCheck = verifyDepositAccounting(
+        parsedAiCheck || {},
+        d.amount_expected || 0,
+        agreedPrice
+      );
 
       return {
         id: d.id,
@@ -62,7 +69,8 @@ export async function GET() {
           amountRecorded: d.amount_recorded,
           status: d.payment_status,
           bankReference: d.bank_reference,
-          aiCheck: typeof d.ai_check === "string" ? JSON.parse(d.ai_check) : d.ai_check,
+          aiCheck: parsedAiCheck,
+          accountingCheck,
         },
         created_at: d.created_at,
       };
