@@ -1,85 +1,169 @@
-# LamSparks Studio — WhatsApp Cloud API Setup Guide
-**Owner Line:** `+234 813 084 7299`  
-**Studio Endpoint:** `/api/webhooks/whatsapp`  
-**Studio Inbox:** `/studio/inbox`
+# LamSparks Studio — WhatsApp Web (Baileys) & Instagram Direct Setup Guide
+
+**Official Studio Line:** `+234 813 084 7299`  
+**Official Receiving Bank:** `Fidelity Bank` · `5601662438` · `Lamsparks Photography`  
+**Studio Human Inbox:** `/studio/inbox`  
+**Studio Channels Settings:** `/studio/settings`  
+**Integration Engine:** `@whiskeysockets/baileys` (WhatsApp Multi-Device) & `instagram-private-api`
 
 ---
 
-## Architecture Overview
+## 1. Architecture Overview (Zero-API Stress)
+
 ```
-Client (WhatsApp Phone) 
-        ▲ 
-        │ (Meta WhatsApp Cloud API)
-        ▼
-POST /api/webhooks/whatsapp ──► Neon PostgreSQL (message & conversation tables)
-                                             │
-                                             ▼
-                                /studio/inbox (Human Triage & Studio Owner View)
-                                             │ (Owner types reply & sends)
-                                             ▼
-POST /api/admin/inbox ───────► Meta Graph API (outbound message to client)
+┌────────────────────────────────────────────────────────┐
+│                   INBOUND FLOW                         │
+└────────────────────────────────────────────────────────┘
+Client WhatsApp (+234...)  ─► WhatsApp Web WebSocket (Baileys) ─► Neon DB (client, conversation, message)
+                                                                           │
+Instagram Direct Client    ─► Instagram Session Poller         ────────────┤
+                                                                           ▼
+                                                              Studio Human Inbox (/studio/inbox)
+                                                                - Real-time message thread
+                                                                - Client profile & history
+                                                                - AI-suggested draft replies
+
+┌────────────────────────────────────────────────────────┐
+│                  OUTBOUND FLOW                         │
+└────────────────────────────────────────────────────────┘
+Studio Operator clicks [Send] in /studio/inbox
+   │
+   ├── WhatsApp Channel ──► Baileys `sock.sendMessage(jid, text)` ──► Client WhatsApp Phone
+   └── Instagram Channel ─► `client.entity.directThread().broadcastText()` ──► Client Instagram Direct
 ```
+
+Unlike Meta's WhatsApp Cloud API (which requires Meta developer verification, Facebook Business Manager approvals, Webhook callback domains, credit cards, and per-conversation template fees), **Baileys runs directly on WhatsApp Web's Multi-Device protocol**. It is 100% free, requires zero Meta developer accounts, and works with standard WhatsApp or WhatsApp Business on your studio phone.
 
 ---
 
-## Step-by-Step Meta WhatsApp Setup
+## 2. Step-by-Step WhatsApp Web (Baileys) Setup
 
-### Step 1: Create a Meta for Developers Account & App
-1. Go to [Meta for Developers](https://developers.facebook.com) and log in with the Facebook account linked to the business.
-2. Click **My Apps** &rarr; **Create App**.
-3. Select **Other** as the use case &rarr; Click **Next**.
-4. Select **Business** as the app type &rarr; Click **Next**.
-5. Set App Name to: `LamSparks Studio OS` and select your Meta Business Account.
+You can link your studio phone (`+234 813 084 7299`) using either **QR Code** or **8-Digit Pairing Code**.
 
-### Step 2: Set Up WhatsApp Product
-1. On the App Dashboard, find **WhatsApp** and click **Set up**.
-2. Under the left sidebar, navigate to **WhatsApp** &rarr; **API Setup**.
-3. You will see a temporary access token and a test phone number.
-
-### Step 3: Register Official Studio Phone Number (`+234 813 084 7299`)
-1. In **API Setup**, scroll down to **Step 5: Add a phone number**.
-2. Click **Add phone number**.
-3. Fill in the profile details:
-   - **Business Name:** `LamSparks Photography Abuja`
-   - **Category:** `Photography & Videography / Arts & Entertainment`
-   - **Description:** `Unhurried luxury maternity, milestone toddler, and editorial wedding photography in Maitama, Abuja.`
-4. Enter Phone Number: `+234 813 084 7299`.
-5. Choose verification method: **SMS** or **Voice Call** &rarr; Enter 6-digit code.
-6. Once verified, copy your **Phone number ID**.
-
-### Step 4: Configure Webhook
-1. In the left sidebar, go to **WhatsApp** &rarr; **Configuration**.
-2. Beside **Webhook**, click **Edit**.
-3. Set **Callback URL**: `https://<YOUR-LIVE-DOMAIN>/api/webhooks/whatsapp` (e.g. `https://lamsparks.com/api/webhooks/whatsapp`).
-4. Set **Verify Token**: Any secure secret (e.g., `lamsparks_secure_token_2026`).
-5. Click **Verify and Save**.
-6. Under **Webhook fields**, click **Manage** &rarr; Check **messages** &rarr; Click **Subscribe**.
-
-### Step 5: Generate Permanent System User Access Token
-*Temporary tokens expire after 24 hours. A permanent token never expires:*
-1. Go to [Meta Business Settings](https://business.facebook.com/settings).
-2. Under **Users**, click **System Users** &rarr; Click **Add**.
-3. System User Name: `LamSparks System API`, Role: `Admin`.
-4. Click **Add Assets** &rarr; Assign your **LamSparks Studio OS** app with full control.
-5. Click **Generate New Token**:
-   - Select your App: `LamSparks Studio OS`
-   - Token expiration: `Never`
-   - Select permissions:
-     - `whatsapp_business_messaging`
-     - `whatsapp_business_management`
-6. Click **Generate Token** and copy the access token.
-
-### Step 6: Add Variables to Production Environment (`.env.local` or Hosting)
-```env
-WHATSAPP_PHONE_NUMBER_ID="YOUR_PHONE_NUMBER_ID"
-WHATSAPP_ACCESS_TOKEN="YOUR_PERMANENT_SYSTEM_USER_TOKEN"
-WHATSAPP_VERIFY_TOKEN="lamsparks_secure_token_2026"
-```
+### Method A: Instant QR Code Scan (Recommended)
+1. Open your browser and navigate to the Studio Inbox at `http://localhost:3000/studio/inbox` (or `/studio/settings`).
+2. In the top channels banner, click **"Link WhatsApp Web"** (or **"Pair Device"**).
+3. The server connects to WhatsApp Web servers and displays a live **QR Code** on screen.
+4. On your studio phone (`+234 813 084 7299`):
+   - Open **WhatsApp** (or WhatsApp Business).
+   - Tap **Settings** (iOS) or the **⋮ three dots menu** (Android).
+   - Tap **Linked Devices** &rarr; **Link a Device**.
+   - Point your phone camera at the QR Code on screen.
+5. Within 2 to 3 seconds, the status pill will turn **Emerald Green: Connected** (`WhatsApp Web Linked (+234 813 084 7299)`).
 
 ---
 
-## Verifying End-to-End Operation
-1. **Inbound Test:** Send a WhatsApp message from any personal phone to `+234 813 084 7299`.
-2. Open `/studio/inbox` in the Studio: The new conversation appears instantly in the sidebar with the client's name and message.
-3. **Outbound Test:** Click on the conversation in `/studio/inbox`, type a response (e.g., *"Hello! We would love to capture your baby's milestone in our Maitama studio."*), and click **Send**.
-4. The message will arrive directly in the client's WhatsApp chat!
+### Method B: 8-Digit Pairing Code (No Camera Needed)
+If you are managing the studio dashboard on a separate laptop or cannot scan a screen:
+1. In the Link WhatsApp modal, enter your studio phone number: `+234 813 084 7299`.
+2. Click **"Request 8-Digit Pairing Code"**.
+3. An 8-character alphanumeric code will appear on screen (e.g. `WASMC31V`).
+4. On your studio phone:
+   - Open **WhatsApp** &rarr; **Linked Devices** &rarr; **Link a Device**.
+   - Tap **"Link with phone number instead"** at the bottom.
+   - Type in the 8-character code shown on the screen.
+5. The device will authenticate and transition to **Connected**.
+
+---
+
+## 3. Step-by-Step Instagram Direct Setup
+
+1. Open `/studio/inbox` or `/studio/settings`.
+2. Beside the Instagram status pill, click **"Configure Instagram"** (or **"Direct Login"**).
+3. Enter your studio's Instagram credentials:
+   - **Instagram Username**: (e.g. `lamsparksphotography` or `lamsparks`)
+   - **Password**: Your Instagram account password
+4. Click **"Log In & Authorize Direct"**.
+5. The system performs a secure mobile simulation login via `instagram-private-api` and serializes the authenticated session cookies to `./data/ig_session.json`.
+6. Once authenticated, client DMs sent to your Instagram profile will synchronize automatically into the same studio inbox.
+
+---
+
+## 4. Session Longevity: Can Baileys Sustain Long Runs?
+
+### How Session Persistence Works
+When you link your phone, WhatsApp generates cryptographic signing keys and session tokens. Baileys saves these keys to disk using `useMultiFileAuthState` at:
+```
+data/baileys_auth/
+├── creds.json                     # Main cryptographic device credentials
+├── app-state-sync-key-...json     # Encryption sync keys
+└── pre-key-...json                # Pre-shared Noise session keys
+```
+
+### Key Longevity Guarantees:
+1. **Survives Server Restarts**:
+   If the Node.js server restarts (deployments, machine reboots, crash restarts), Baileys reads the credentials from `data/baileys_auth/` on startup. **You do NOT need to rescan the QR code or re-enter pairing codes after restarts.**
+2. **Automatic Reconnection on Network Blips**:
+   If the internet connection drops or WhatsApp servers restart, Baileys captures `connection.update` with `connection === 'close'`. If the status is not `loggedOut` (401), our handler automatically reconnects after 5 seconds:
+   ```ts
+   // lib/integrations/whatsapp/baileys.ts
+   } else if (state.creds.registered) {
+     stateRef.status.state = "connecting";
+     setTimeout(() => initWhatsApp(), 5000);
+   }
+   ```
+3. **WhatsApp's 14-Day Active Phone Policy**:
+   WhatsApp Multi-Device maintains linked device sessions indefinitely **as long as the primary phone connects to the internet at least once every 14 days**. Since `+234 813 084 7299` is an active daily studio phone, the session will remain active indefinitely.
+4. **Unlinking / Intentional Logout**:
+   The session only invalidates if:
+   - You tap **"Log Out"** on the phone under WhatsApp > Linked Devices.
+   - You click **"Unlink WhatsApp"** in `/studio/inbox` or `/studio/settings`.
+
+---
+
+## 5. Production Deployment Recommendations
+
+Because Baileys maintains a live persistent WebSocket connection and writes session files to disk, **the deployment environment must provide persistent storage**:
+
+### Recommended Production Setup:
+* **Host Type:** VPS (DigitalOcean Droplet, Hetzner, AWS EC2, or Railway with persistent volume).
+* **Process Manager:** `pm2` ensures that the Node application runs continuously and restarts automatically on crash:
+  ```bash
+  # Install PM2 globally
+  npm install -g pm2
+
+  # Build production Next.js bundle
+  npm run build
+
+  # Start with PM2
+  pm2 start npm --name "lamsparks-platform" -- start
+
+  # Save PM2 startup list
+  pm2 save
+  pm2 startup
+  ```
+* **Persistent Directory:**
+  Ensure the `./data` folder is preserved across deployments so credentials are not wiped on new code releases.
+* **If Using Docker:**
+  Mount a persistent volume for the data directory:
+  ```dockerfile
+  VOLUME ["/app/data"]
+  ```
+
+---
+
+## 6. Official Receiving Bank Details
+
+Whenever clients agree to pricing or report transfers, payments must be routed to the official studio corporate account:
+
+* **Bank Institution:** `Fidelity Bank`
+* **Account Number:** `5601662438`
+* **Account Beneficiary:** `Lamsparks Photography`
+* **Verification Rule:** Team members cross-check bank alerts/statements before clicking **"Verify & Confirm Deposit"** in `/studio/deposits`.
+
+---
+
+## 7. Testing End-to-End Inbound & Outbound
+
+1. **Inbound Test:**
+   - From any client phone, send a WhatsApp message to `+234 813 084 7299` (e.g. *"Hello LamSparks, I'd like to book a Maternity session"*).
+   - In `/studio/inbox`, the message will appear within 1–2 seconds with an AI label (`session_inquiry`) and a suggested response.
+2. **Outbound Test:**
+   - In `/studio/inbox`, select the conversation.
+   - Click the AI suggested draft or type your custom message.
+   - Click **Send**.
+   - The message is delivered immediately via Baileys to the client's WhatsApp chat.
+3. **Receipt Verification Test:**
+   - Client sends receipt screenshot or uploads on `/book`.
+   - Admin verifies in `/studio/deposits` against Fidelity Bank account `5601662438`.
+   - Date is locked on the Studio Calendar (`/studio/calendar`).

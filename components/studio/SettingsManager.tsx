@@ -730,7 +730,7 @@ export function SettingsManager() {
               Bank Institution
             </span>
             <span className="font-display text-base font-semibold text-deep">
-              {data?.bankDetails.bankName || "PalmPay"}
+              {data?.bankDetails.bankName || "Fidelity Bank"}
             </span>
           </div>
 
@@ -740,11 +740,11 @@ export function SettingsManager() {
             </span>
             <div className="flex items-center justify-between">
               <span className="font-mono text-base font-bold text-deep tracking-wider">
-                {data?.bankDetails.accountNumber || "08130847299"}
+                {data?.bankDetails.accountNumber || "5601662438"}
               </span>
               <button
                 type="button"
-                onClick={() => handleCopy(data?.bankDetails.accountNumber || "08130847299", "account")}
+                onClick={() => handleCopy(data?.bankDetails.accountNumber || "5601662438", "account")}
                 className="text-muted hover:text-deep p-1 rounded hover:bg-cream transition-colors"
                 title="Copy Account Number"
               >
@@ -762,7 +762,7 @@ export function SettingsManager() {
               Account Beneficiary
             </span>
             <span className="font-display text-sm font-semibold text-deep line-clamp-1">
-              {data?.bankDetails.accountName || "LEONARD OSEGHALE OSELUMHENSE"}
+              {data?.bankDetails.accountName || "Lamsparks Photography"}
             </span>
           </div>
         </div>

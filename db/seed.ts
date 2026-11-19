@@ -75,9 +75,9 @@ async function seed() {
 
   // 2. Settings (Bank details from .env)
   console.log("Seeding studio settings...");
-  const bankName = process.env.BANK_NAME || "PalmPay";
-  const bankAccountNumber = process.env.BANK_ACCOUNT_NUMBER || "08130847299";
-  const bankAccountName = process.env.BANK_ACCOUNT_NAME || "LEONARD OSEGHALE OSELUMHENSE";
+  const bankName = process.env.BANK_NAME || "Fidelity Bank";
+  const bankAccountNumber = process.env.BANK_ACCOUNT_NUMBER || "5601662438";
+  const bankAccountName = process.env.BANK_ACCOUNT_NAME || "Lamsparks Photography";
 
   await db
     .insert(schema.settings)

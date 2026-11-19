@@ -24,9 +24,9 @@ export async function GET() {
 
     return NextResponse.json({
       bankDetails: {
-        bankName: process.env.BANK_NAME || "PalmPay",
-        accountNumber: process.env.BANK_ACCOUNT_NUMBER || "08130847299",
-        accountName: process.env.BANK_ACCOUNT_NAME || "LEONARD OSEGHALE OSELUMHENSE",
+        bankName: process.env.BANK_NAME || "Fidelity Bank",
+        accountNumber: process.env.BANK_ACCOUNT_NUMBER || "5601662438",
+        accountName: process.env.BANK_ACCOUNT_NAME || "Lamsparks Photography",
       },
       adminEmail: process.env.STUDIO_OWNER_EMAIL || "osemene@lamsparks.com",
       adminName: process.env.STUDIO_OWNER_NAME || "Osemene (Studio Owner)",

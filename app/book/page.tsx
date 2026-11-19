@@ -880,15 +880,15 @@ function BookingWizard() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-body">
                     <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
                       <span className="text-muted block text-[10px] uppercase tracking-wider">Bank</span>
-                      <strong className="text-deep font-semibold text-sm">PalmPay</strong>
+                      <strong className="text-deep font-semibold text-sm">Fidelity Bank</strong>
                     </div>
                     <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
                       <span className="text-muted block text-[10px] uppercase tracking-wider">Account Number</span>
-                      <strong className="text-deep font-semibold text-sm tracking-wider">08130847299</strong>
+                      <strong className="text-deep font-semibold text-sm tracking-wider">5601662438</strong>
                     </div>
                     <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
                       <span className="text-muted block text-[10px] uppercase tracking-wider">Account Name</span>
-                      <strong className="text-deep font-semibold text-xs leading-snug block">LEONARD OSEGHALE OSELUMHENSE</strong>
+                      <strong className="text-deep font-semibold text-xs leading-snug block">Lamsparks Photography</strong>
                     </div>
                   </div>
 
@@ -924,7 +924,7 @@ function BookingWizard() {
                         ✓ Proof of transfer received for Ref: {referenceCode}.
                       </p>
                       <p className="text-[11px] text-emerald-800 leading-relaxed">
-                        Your deposit has entered the LamSparks Studio Verification Queue. Our team will verify it directly against our PalmPay statement and confirm your date.
+                        Your deposit has entered the LamSparks Studio Verification Queue. Our team will verify it directly against our Fidelity Bank statement and confirm your date.
                       </p>
                       <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-deep hover:text-gold font-semibold underline pt-1">
                         <span>Upload a different receipt screenshot</span>

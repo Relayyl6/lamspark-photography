@@ -147,7 +147,7 @@ export function DepositQueueView() {
 
   // Reject deposit
   async function handleRejectDeposit(deposit: DepositItem) {
-    const reason = prompt("Enter reason for rejecting transfer (e.g. payment not reflecting in PalmPay statement):");
+    const reason = prompt("Enter reason for rejecting transfer (e.g. payment not reflecting in Fidelity Bank statement):");
     if (!reason) return;
 
     setIsProcessingId(deposit.id);
@@ -199,7 +199,7 @@ export function DepositQueueView() {
               Official Receiving Bank Account:
             </span>
             <div className="text-sm font-semibold text-deep">
-              PalmPay · Account: <strong className="font-mono tracking-wider">08130847299</strong> · Name: <strong>LEONARD OSEGHALE OSELUMHENSE</strong>
+              Fidelity Bank · Account: <strong className="font-mono tracking-wider">5601662438</strong> · Name: <strong>Lamsparks Photography</strong>
             </div>
           </div>
           <span className="self-start sm:self-auto text-[10px] uppercase tracking-wider bg-gold text-deep font-bold px-3 py-1 rounded-full shadow-xs">
@@ -329,7 +329,7 @@ export function DepositQueueView() {
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. GTB-TXN-8839210 or PalmPay Ref"
+                      placeholder="e.g. FDL-TXN-8839210 or NIP Reference"
                       value={bankRefs[enq.id] || ""}
                       onChange={(e) =>
                         setBankRefs((prev) => ({ ...prev, [enq.id]: e.target.value }))
