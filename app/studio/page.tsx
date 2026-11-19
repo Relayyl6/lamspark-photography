@@ -20,6 +20,7 @@ import { EnquiryRecord } from "@/lib/types";
 export default function StudioOverviewPage() {
   const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
   const [bookingsCount, setBookingsCount] = useState<number>(0);
+  const [inboxCount, setInboxCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,10 +28,14 @@ export default function StudioOverviewPage() {
     Promise.all([
       fetch("/api/admin/kanban").then((r) => r.json()),
       fetch("/api/admin/bookings").then((r) => r.json()),
+      fetch("/api/admin/inbox").then((r) => r.json()),
     ])
-      .then(([kanbanData, bookingsData]) => {
+      .then(([kanbanData, bookingsData, inboxData]) => {
         if (kanbanData.enquiries) setEnquiries(kanbanData.enquiries);
         if (bookingsData.bookings) setBookingsCount(bookingsData.bookings.length);
+        if (Array.isArray(inboxData.conversations)) {
+          setInboxCount(inboxData.conversations.length);
+        }
       })
       .catch((err) => console.error("[overview fetch]", err))
       .finally(() => setLoading(false));
@@ -140,7 +145,7 @@ export default function StudioOverviewPage() {
           </span>
           <div className="flex items-center justify-between">
             <span className="font-display text-3xl font-semibold text-deep">
-              2
+              {loading ? "-" : inboxCount}
             </span>
             <Link
               href="/studio/inbox"

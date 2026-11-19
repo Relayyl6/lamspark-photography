@@ -30,6 +30,7 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string; role: string } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pendingDepositsCount, setPendingDepositsCount] = useState<number>(0);
+  const [inboxCount, setInboxCount] = useState<number>(0);
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -53,6 +54,16 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
       .then((data) => {
         if (data.deposits) {
           setPendingDepositsCount(data.deposits.length);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch live inbox count for badge
+    fetch("/api/admin/inbox")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.conversations)) {
+          setInboxCount(data.conversations.length);
         }
       })
       .catch(() => {});
@@ -81,16 +92,21 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
     { href: "/studio/bookings", label: "BOOKINGS TRACKER", icon: CalendarCheck },
     { href: "/studio/services", label: "SERVICES & PRICING", icon: Tag },
     { href: "/studio/gallery", label: "GALLERY MANAGER", icon: ImageIcon },
-    { href: "/studio/inbox", label: "HUMAN INBOX", icon: Inbox },
+    {
+      href: "/studio/inbox",
+      label: "HUMAN INBOX",
+      icon: Inbox,
+      badge: inboxCount > 0 ? inboxCount : undefined,
+    },
     { href: "/studio/calendar", label: "CONTENT CALENDAR", icon: Calendar },
     { href: "/studio/content", label: "SITE CONTENT CMS", icon: FileText },
     { href: "/studio/settings", label: "STUDIO SETTINGS", icon: Settings },
   ];
 
   return (
-    <div className="min-h-screen bg-cream text-deep flex flex-col">
-      {/* Studio Top Navigation Bar */}
-      <header className="bg-deep text-warm-white border-b border-warm-white/10 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
+    <div className="h-screen w-full bg-cream text-deep flex flex-col overflow-hidden">
+      {/* Studio Top Navigation Bar (Fixed height, always anchored) */}
+      <header className="h-14 shrink-0 bg-deep text-warm-white border-b border-warm-white/10 px-4 sm:px-8 flex items-center justify-between z-40">
         {/* Left: Mobile Drawer Trigger + Brand */}
         <div className="flex items-center gap-3">
           <button
@@ -212,11 +228,11 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
         </div>
       )}
 
-      {/* Main Studio Workspace with Desktop Sticky Sidebar */}
-      <div className="flex-1 flex flex-col md:flex-row min-w-0 w-full overflow-x-hidden">
-        {/* Desktop Sidebar Nav (md:flex, hidden on mobile) */}
-        <aside className="hidden md:flex w-64 bg-[#FAF8F5] border-r border-[#EFE9E1] p-4 shrink-0 sticky top-[57px] h-[calc(100vh-57px)] flex-col justify-between select-none z-30">
-          <nav className="w-full space-y-1.5 overflow-y-auto no-scrollbar">
+      {/* Main Studio Workspace with Permanently Fixed Sidebar */}
+      <div className="flex-1 flex min-h-0 w-full overflow-hidden">
+        {/* Desktop Sidebar Nav (md:flex, hidden on mobile): Anchored 100% height, NEVER scrolls with content */}
+        <aside className="hidden md:flex w-64 bg-[#FAF8F5] border-r border-[#EFE9E1] p-4 shrink-0 h-full flex-col justify-between select-none z-30 overflow-y-auto no-scrollbar">
+          <nav className="w-full space-y-1.5">
             {navItems.map((tab) => {
               const Icon = tab.icon;
               const isActive =
@@ -248,7 +264,7 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
             })}
           </nav>
 
-          <div className="pt-3 border-t border-[#EFE9E1]">
+          <div className="pt-3 border-t border-[#EFE9E1] shrink-0">
             <div className="flex items-center gap-2 text-[11px] text-muted font-body">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Abuja Studio Active</span>
@@ -257,9 +273,11 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
           </div>
         </aside>
 
-        {/* Content Area */}
-        <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-y-auto overflow-x-hidden">
-          {children}
+        {/* Content Area: Pinned scrollable container, scrolls independently */}
+        <main className="flex-1 h-full overflow-y-auto overflow-x-hidden p-4 sm:p-8">
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>
