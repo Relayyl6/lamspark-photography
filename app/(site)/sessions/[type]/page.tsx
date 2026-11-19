@@ -108,18 +108,20 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                   {packages.map((pkg) => (
                     <div
                       key={pkg.id}
-                      className="bg-warm-white p-6 sm:p-7 rounded-photo-mobile sm:rounded-photo border border-line shadow-editorial flex flex-col justify-between relative"
+                      className="bg-warm-white pt-8 sm:pt-9 px-7 sm:px-8 pb-7 rounded-photo-mobile sm:rounded-photo border border-line shadow-editorial flex flex-col justify-between"
                     >
-                      {pkg.badge && (
-                        <span className="absolute top-4 right-4 bg-gold/15 text-deep font-body text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full border border-gold/30">
-                          {pkg.badge}
-                        </span>
-                      )}
                       <div>
-                        <h3 className="font-display text-2xl text-deep font-medium mb-1">
-                          {pkg.name}
-                        </h3>
-                        <div className="flex items-baseline gap-2 mb-4">
+                        <div className="flex items-start justify-between gap-4 mb-2.5">
+                          <h3 className="font-display text-2xl sm:text-[1.65rem] text-deep font-medium leading-snug">
+                            {pkg.name}
+                          </h3>
+                          {pkg.badge && (
+                            <span className="shrink-0 bg-gold/15 text-deep font-body text-[10px] uppercase tracking-wider font-semibold px-3 py-1 rounded-full border border-gold/30 mt-1 whitespace-nowrap">
+                              {pkg.badge}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-2 mb-5">
                           <p className="font-body text-lg font-semibold text-deep">
                             {pkg.price ? `₦${pkg.price.toLocaleString()}` : "Bespoke Quote"}
                           </p>
