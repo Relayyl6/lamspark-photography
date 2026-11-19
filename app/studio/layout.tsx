@@ -63,6 +63,11 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
     window.location.href = "/studio/login";
   }
 
+  // If user is on the login page, render clean standalone page without the studio sidebar/topbar
+  if (pathname === "/studio/login") {
+    return <>{children}</>;
+  }
+
   // Navigation Items
   const navItems = [
     { href: "/studio", label: "TODAY OVERVIEW", icon: Clock },
@@ -108,15 +113,17 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
 
         {/* Right: User Status, Public Site & Sign Out */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="hidden lg:flex items-center gap-1.5 text-xs font-body text-cream/75">
-            <span>Logged in as</span>
-            <strong className="text-warm-white font-medium truncate max-w-[140px]">
-              {currentUser?.name || "Osemene"}
-            </strong>
-            <span className="text-[10px] font-mono uppercase bg-gold/20 text-gold px-1.5 py-0.2 rounded border border-gold/30">
-              {currentUser?.role || "owner"}
-            </span>
-          </div>
+          {currentUser && (
+            <div className="hidden lg:flex items-center gap-1.5 text-xs font-body text-cream/75">
+              <span>Logged in as</span>
+              <strong className="text-warm-white font-medium truncate max-w-[140px]">
+                {currentUser.name}
+              </strong>
+              <span className="text-[10px] font-mono uppercase bg-gold/20 text-gold px-1.5 py-0.2 rounded border border-gold/30">
+                {currentUser.role}
+              </span>
+            </div>
+          )}
 
           <Link
             href="/"

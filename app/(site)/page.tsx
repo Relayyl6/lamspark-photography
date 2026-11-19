@@ -14,11 +14,43 @@ import { Nikon3DCamera } from "@/components/Nikon3DCamera";
 import { LiquidLogo } from "@/components/LiquidLogo";
 import { ShaderGradient } from "@/components/ShaderGradient";
 import { PhilosophyGallery } from "@/components/PhilosophyGallery";
+import { neon } from "@neondatabase/serverless";
 
 export const dynamic = "force-dynamic";
 
+const sql = neon(process.env.DATABASE_URL!);
+
+async function getHeroData() {
+  try {
+    const rows = await sql.query(
+      `SELECT key, value FROM settings WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')
+       UNION
+       SELECT key, value FROM site_content WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')`
+    );
+    const map: Record<string, any> = {};
+    for (const r of rows) {
+      map[r.key] = r.value;
+    }
+    return {
+      cards: Array.isArray(map.hero_wheel_cards) ? map.hero_wheel_cards : null,
+      copy: {
+        kicker: map.hero_kicker || "I CAPTURE · YOU REMEMBER",
+        headline: map.hero_headline || "REAL MOMENTS. BEAUTIFUL MEMORIES",
+        subtitle: map.hero_subtitle || "I capture real emotions and raw moments that tell your story in the most authentic and timeless way.",
+      },
+    };
+  } catch (e) {
+    console.error("[getHeroData error]", e);
+    return { cards: null, copy: null };
+  }
+}
+
 export default async function HomePage() {
-  const liveSessions = await getLiveSessionTypes();
+  const [liveSessions, heroData] = await Promise.all([
+    getLiveSessionTypes(),
+    getHeroData(),
+  ]);
+
   const featuredSessions = [
     liveSessions.toddler || SESSION_TYPES.toddler,
     liveSessions.maternity || SESSION_TYPES.maternity,
@@ -35,7 +67,7 @@ export default async function HomePage() {
 
       <main className="flex-1 relative z-10">
         {/* Overhauled Editorial 3D Arched Panorama Hero with Integrated 3D Nikon Camera */}
-        <HeroOverhaulSection />
+        <HeroOverhaulSection initialCards={heroData.cards} initialCopy={heroData.copy} />
 
         {/* Brand Line & Editorial Philosophy Section */}
         <PhilosophyGallery />

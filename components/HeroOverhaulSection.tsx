@@ -14,74 +14,24 @@ interface WheelCard {
   href: string;
 }
 
-const DEFAULT_CARDS: WheelCard[] = [
-  {
-    id: "weddings",
-    category: "WEDDINGS",
-    label: "Sacred Unions",
-    subtitle: "Unhurried wedding ceremonies in Abuja",
-    image: "/images/client/weddings_1.webp",
-    href: "/sessions",
-  },
-  {
-    id: "traditional",
-    category: "TRADITIONAL",
-    label: "Cultural Heritage",
-    subtitle: "Vibrant Aso-Oke & generational grace",
-    image: "/images/client/weddings_2.webp",
-    href: "/sessions",
-  },
-  {
-    id: "events",
-    category: "EVENTS",
-    label: "Milestone Galas",
-    subtitle: "Unscripted warmth & celebrations",
-    image: "/images/client/events_1.webp",
-    href: "/sessions",
-  },
-  {
-    id: "executive",
-    category: "EXECUTIVE",
-    label: "Executive Leadership",
-    subtitle: "Commanding visual presence",
-    image: "/images/client/corporate_1.webp",
-    href: "/portfolio",
-  },
-  {
-    id: "lifestyle",
-    category: "LIFESTYLE",
-    label: "Authentic Moments",
-    subtitle: "Honouring unscripted warmth & life",
-    image: "/images/client/events_3.webp",
-    href: "/sessions",
-  },
-  {
-    id: "legacy",
-    category: "LEGACY",
-    label: "Generational Craft",
-    subtitle: "Heirloom memories for decades",
-    image: "/images/client/corporate_3.webp",
-    href: "/sessions",
-  },
-  {
-    id: "atelier",
-    category: "ATELIER",
-    label: "Studio Dignity",
-    subtitle: "Quiet authority and elegance",
-    image: "/images/client/corporate_6.webp",
-    href: "/sessions",
-  },
-];
+interface HeroOverhaulSectionProps {
+  initialCards?: WheelCard[] | null;
+  initialCopy?: {
+    kicker: string;
+    headline: string;
+    subtitle: string;
+  } | null;
+}
 
-export function HeroOverhaulSection() {
+export function HeroOverhaulSection({ initialCards = null, initialCopy = null }: HeroOverhaulSectionProps) {
   const [viewportWidth, setViewportWidth] = useState(1440);
   const [wheelH, setWheelH] = useState(320);
   const [viewportHeight, setViewportHeight] = useState(900);
   const [navH, setNavH] = useState(80);
   const [rotationAngle, setRotationAngle] = useState(0); // rendering only
-  const [cards, setCards] = useState<WheelCard[]>(DEFAULT_CARDS);
-  const [loading, setLoading] = useState(false);
-  const [heroCopy, setHeroCopy] = useState({
+  const [cards, setCards] = useState<WheelCard[]>(initialCards || []);
+  const [loading, setLoading] = useState(!initialCards || initialCards.length === 0);
+  const [heroCopy, setHeroCopy] = useState(initialCopy || {
     kicker: "I CAPTURE · YOU REMEMBER",
     headline: "REAL MOMENTS. BEAUTIFUL MEMORIES",
     subtitle: "I capture real emotions and raw moments that tell your story in the most authentic and timeless way.",

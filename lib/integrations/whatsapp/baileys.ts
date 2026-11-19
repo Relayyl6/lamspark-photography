@@ -4,8 +4,8 @@ import QRCode from "qrcode";
 import pino from "pino";
 import { neon } from "@neondatabase/serverless";
 import { triageInboundMessage, classifyInboundMessageWithMultiAI } from "@/lib/ai/service";
+import { usePostgresAuthState } from "./postgres-auth";
 import makeWASocket, {
-  useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
 } from "@whiskeysockets/baileys";
@@ -44,12 +44,25 @@ if (!g.__lamsparks_baileys) {
   };
 }
 
-const AUTH_DIR = path.resolve(process.cwd(), "data", "baileys_auth");
+// 13.5-minute self-ping keepalive timer to prevent Render free instance inactivity spin-down
+let keepAliveTimer: NodeJS.Timeout | null = null;
 
-function ensureAuthDir() {
-  if (!fs.existsSync(AUTH_DIR)) {
-    fs.mkdirSync(AUTH_DIR, { recursive: true });
-  }
+function startKeepAlive() {
+  if (keepAliveTimer) return;
+  const targetUrl =
+    process.env.RENDER_EXTERNAL_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://lamspark-photography.onrender.com";
+
+  keepAliveTimer = setInterval(async () => {
+    try {
+      const pingUrl = `${targetUrl}/api/keepalive`;
+      await fetch(pingUrl, { method: "GET" });
+      console.log(`[Render Keep-Alive] Self-pinged ${pingUrl} at ${new Date().toISOString()}`);
+    } catch (err) {
+      console.warn("[Render Keep-Alive] Self-ping error:", err);
+    }
+  }, 13.5 * 60 * 1000);
 }
 
 export function getWhatsAppStatus(): BaileysStatus {
@@ -71,9 +84,12 @@ export async function initWhatsApp(options: { phoneNumber?: string } = {}): Prom
   stateRef.status.state = "connecting";
   stateRef.status.error = null;
 
+  // Activate server keep-alive
+  startKeepAlive();
+
   try {
-    ensureAuthDir();
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    // Authenticate with Neon PostgreSQL (No persistent disk required)
+    const { state, saveCreds } = await usePostgresAuthState();
     const { version } = await fetchLatestBaileysVersion();
 
     const logger = pino({ level: "silent" });
@@ -330,11 +346,13 @@ export async function disconnectWhatsApp(): Promise<boolean> {
     user: null,
   };
 
+  // Clear Neon DB auth session records so next scan starts completely fresh
   try {
-    if (fs.existsSync(AUTH_DIR)) {
-      fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-    }
-  } catch {}
+    const { clearAuth } = await usePostgresAuthState();
+    await clearAuth();
+  } catch (dbErr) {
+    console.error("[disconnectWhatsApp] Failed to clear Postgres auth session:", dbErr);
+  }
 
   return true;
 }
