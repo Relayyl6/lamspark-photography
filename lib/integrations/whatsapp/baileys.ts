@@ -215,23 +215,29 @@ export async function initWhatsApp(options: { phoneNumber?: string } = {}): Prom
             clientId = newClient[0].id;
           }
 
-          // 2. Find or create conversation
+          // 2. Find or create conversation for this host studio number
+          const userJid = sock.user?.id || "";
+          const hostPhone = userJid ? `+${userJid.split(":")[0] || userJid.split("@")[0]}` : null;
+
           let conv = await sql.query(
-            `SELECT id, state FROM conversation WHERE client_id = $1 AND channel = 'whatsapp' LIMIT 1`,
-            [clientId]
+            `SELECT id, state FROM conversation WHERE client_id = $1 AND channel = 'whatsapp' AND (host_account = $2 OR host_account IS NULL) LIMIT 1`,
+            [clientId, hostPhone]
           );
 
           let convId: string;
           if (conv.length > 0) {
             convId = conv[0].id;
+            if (hostPhone) {
+              await sql.query(`UPDATE conversation SET host_account = $1 WHERE id = $2 AND host_account IS NULL`, [hostPhone, convId]);
+            }
           } else {
             const newConv = await sql.query(
               `INSERT INTO conversation (
-                id, client_id, channel, state, last_inbound_at, created_at, updated_at
+                id, client_id, channel, state, host_account, last_inbound_at, created_at, updated_at
               ) VALUES (
-                gen_random_uuid(), $1, 'whatsapp', 'bot', NOW(), NOW(), NOW()
+                gen_random_uuid(), $1, 'whatsapp', 'bot', $2, NOW(), NOW(), NOW()
               ) RETURNING id`,
-              [clientId]
+              [clientId, hostPhone]
             );
             convId = newConv[0].id;
           }

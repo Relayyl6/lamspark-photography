@@ -345,6 +345,7 @@ export const conversations = pgTable(
       .notNull(),
     channel: text("channel").notNull().default("whatsapp"), // whatsapp | instagram | facebook | web
     state: text("state").notNull().default("bot"), // bot | human | closed
+    hostAccount: text("host_account"), // e.g. "+2348130847299" or IG handle
     takenOverBy: text("taken_over_by"),
     lastInboundAt: timestamp("last_inbound_at", { withTimezone: true }),
     windowExpiresAt: timestamp("window_expires_at", { withTimezone: true }),

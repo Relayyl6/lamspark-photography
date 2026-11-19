@@ -200,15 +200,14 @@ export function HumanInbox() {
   }
 
   async function handleDisconnectWhatsApp() {
-    if (!confirm("Are you sure you want to unlink WhatsApp Web?")) return;
-    const clear = confirm("Would you also like to purge test inbox conversations so the inbox is spotless before linking the client's phone?");
+    if (!confirm("Are you sure you want to unlink WhatsApp Web? All chat history and messages will remain safely preserved in the database.")) return;
 
     setWaLoading(true);
     try {
       await fetch("/api/admin/channels/whatsapp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "disconnect", clearMessages: clear }),
+        body: JSON.stringify({ action: "disconnect" }),
       });
       setWaStatus({
         state: "disconnected",
@@ -225,15 +224,14 @@ export function HumanInbox() {
   }
 
   async function handleLogoutInstagram() {
-    if (!confirm("Are you sure you want to log out of Instagram Direct?")) return;
-    const clear = confirm("Would you also like to purge test Instagram DMs from the inbox?");
+    if (!confirm("Are you sure you want to log out of Instagram Direct? All message history will remain safely preserved in the database.")) return;
 
     setIgLoading(true);
     try {
       await fetch("/api/admin/channels/instagram", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "logout", clearMessages: clear }),
+        body: JSON.stringify({ action: "logout" }),
       });
       setIgStatus({ connected: false, username: null, userId: null });
       await loadInbox();

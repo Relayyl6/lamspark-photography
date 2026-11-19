@@ -185,23 +185,27 @@ export async function syncInstagramInbox(): Promise<number> {
         clientId = newClient[0].id;
       }
 
-      // Find or create conversation
+      // Find or create conversation for this Instagram account
+      const hostUsername = stateRef.status.username || null;
       let conv = await sql.query(
-        `SELECT id FROM conversation WHERE client_id = $1 AND channel = 'instagram' LIMIT 1`,
-        [clientId]
+        `SELECT id FROM conversation WHERE client_id = $1 AND channel = 'instagram' AND (host_account = $2 OR host_account IS NULL) LIMIT 1`,
+        [clientId, hostUsername]
       );
 
       let convId: string;
       if (conv.length > 0) {
         convId = conv[0].id;
+        if (hostUsername) {
+          await sql.query(`UPDATE conversation SET host_account = $1 WHERE id = $2 AND host_account IS NULL`, [hostUsername, convId]);
+        }
       } else {
         const newConv = await sql.query(
           `INSERT INTO conversation (
-            id, client_id, channel, state, last_inbound_at, created_at, updated_at
+            id, client_id, channel, state, host_account, last_inbound_at, created_at, updated_at
           ) VALUES (
-            gen_random_uuid(), $1, 'instagram', 'bot', NOW(), NOW(), NOW()
+            gen_random_uuid(), $1, 'instagram', 'bot', $2, NOW(), NOW(), NOW()
           ) RETURNING id`,
-          [clientId]
+          [clientId, hostUsername]
         );
         convId = newConv[0].id;
       }
