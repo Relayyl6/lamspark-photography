@@ -55,13 +55,116 @@ export async function GET() {
   }
 }
 
-// POST: send reply message to client
+// POST: send reply message to client OR simulate inbound messages
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const body = await req.json();
+
+    // 1. Simulation Handler: allows Studio Owner to test WhatsApp & Instagram DM ingestion
+    if (body.action === "simulate_inbound") {
+      const {
+        channel = "whatsapp",
+        sender_name,
+        sender_phone,
+        message,
+        intent_tag,
+      } = body;
+
+      if (!sender_name || !message?.trim()) {
+        return NextResponse.json({ error: "sender_name and message are required" }, { status: 400 });
+      }
+
+      // Normalize identifier
+      const cleanPhone = sender_phone?.trim() || `sim-${Date.now()}`;
+
+      // Find or create client
+      const client = await sql.query(
+        `SELECT id, name, whatsapp_e164 FROM client WHERE whatsapp_e164 = $1 OR name = $2 LIMIT 1`,
+        [cleanPhone, sender_name.trim()]
+      );
+
+      let clientId: string;
+      if (client.length > 0) {
+        clientId = client[0].id;
+      } else {
+        const newClient = await sql.query(
+          `INSERT INTO client (
+            id, name, whatsapp_e164, instagram_handle, source_first, messaging_consent, created_at, updated_at
+          ) VALUES (
+            gen_random_uuid(), $1, $2, $3, $4, true, NOW(), NOW()
+          ) RETURNING id`,
+          [
+            sender_name.trim(),
+            cleanPhone,
+            channel === "instagram" ? sender_phone.replace("@", "") : null,
+            channel,
+          ]
+        );
+        clientId = newClient[0].id;
+      }
+
+      // Find or create conversation
+      const conv = await sql.query(
+        `SELECT id, state FROM conversation WHERE client_id = $1 AND channel = $2 LIMIT 1`,
+        [clientId, channel]
+      );
+
+      let convId: string;
+      if (conv.length > 0) {
+        convId = conv[0].id;
+      } else {
+        const newConv = await sql.query(
+          `INSERT INTO conversation (
+            id, client_id, channel, state, last_inbound_at, created_at, updated_at
+          ) VALUES (
+            gen_random_uuid(), $1, $2, 'bot', NOW(), NOW(), NOW()
+          ) RETURNING id`,
+          [clientId, channel]
+        );
+        convId = newConv[0].id;
+      }
+
+      // Generate AI triage
+      let label = intent_tag;
+      let draft = "";
+      try {
+        const triage = await triageInboundMessage(message.trim(), "Maitama Abuja Photography");
+        if (triage) {
+          label = label || triage.primaryIntent || "General Inquiry";
+          draft = triage.suggestedReply || "";
+        }
+      } catch {
+        label = label || "General Inquiry";
+      }
+
+      // Insert inbound message
+      const inserted = await sql.query(
+        `INSERT INTO message (
+          id, conversation_id, direction, body, status, ai_label, ai_draft, created_at, updated_at
+        ) VALUES (
+          gen_random_uuid(), $1, 'inbound', $2, 'delivered', $3, $4, NOW(), NOW()
+        ) RETURNING *`,
+        [convId, message.trim(), label, draft]
+      );
+
+      // Update conversation timestamp
+      await sql.query(
+        `UPDATE conversation SET last_inbound_at = NOW(), updated_at = NOW() WHERE id = $1`,
+        [convId]
+      );
+
+      return NextResponse.json({
+        success: true,
+        action: "simulated_inbound",
+        conversation: { id: convId, clientName: sender_name, channel },
+        message: inserted[0],
+      });
+    }
+
+    // 2. Normal Outbound Reply Dispatch
     const { conversationId, text, channel = "whatsapp" } = body;
 
     if (!conversationId || !text?.trim()) {
@@ -80,7 +183,7 @@ export async function POST(req: NextRequest) {
       [conversationId, text.trim(), admin.name]
     );
 
-    // Update conversation timestamp
+    // Update conversation timestamp & set to human takeover
     await sql.query(
       `UPDATE conversation
        SET state = 'human', updated_at = NOW()
@@ -95,12 +198,12 @@ export async function POST(req: NextRequest) {
     if (token && phoneId) {
       try {
         const clientRow = await sql.query(
-          `SELECT c.phone FROM client c
+          `SELECT c.whatsapp_e164 FROM client c
            JOIN conversation conv ON conv.client_id = c.id
            WHERE conv.id = $1`,
           [conversationId]
         );
-        const recipientPhone = clientRow[0]?.phone?.replace(/[^0-9]/g, "");
+        const recipientPhone = clientRow[0]?.whatsapp_e164?.replace(/[^0-9]/g, "");
         if (recipientPhone) {
           await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
             method: "POST",
@@ -118,6 +221,37 @@ export async function POST(req: NextRequest) {
         }
       } catch (waErr) {
         console.warn("[Meta WhatsApp Dispatch Warning]", waErr);
+      }
+    }
+
+    // If Meta Instagram Messaging is configured and channel is instagram
+    const igToken = process.env.INSTAGRAM_PAGE_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
+    if (igToken) {
+      try {
+        const convRow = await sql.query(
+          `SELECT c.whatsapp_e164, conv.channel FROM client c
+           JOIN conversation conv ON conv.client_id = c.id
+           WHERE conv.id = $1`,
+          [conversationId]
+        );
+        const channel = convRow[0]?.channel;
+        const rawHandle = convRow[0]?.whatsapp_e164;
+        if (channel === "instagram" && rawHandle?.startsWith("ig:")) {
+          const igUserId = rawHandle.replace("ig:", "");
+          await fetch(`https://graph.facebook.com/v19.0/me/messages`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${igToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              recipient: { id: igUserId },
+              message: { text: text.trim() },
+            }),
+          });
+        }
+      } catch (igErr) {
+        console.warn("[Meta Instagram Dispatch Warning]", igErr);
       }
     }
 

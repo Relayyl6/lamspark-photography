@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   Inbox,
   MessageCircle,
+  Instagram,
   Sparkles,
   User,
   Phone,
@@ -16,6 +17,8 @@ import {
   ExternalLink,
   ChevronRight,
   Info,
+  Radio,
+  Plus,
 } from "lucide-react";
 
 interface MessageItem {
@@ -46,6 +49,85 @@ export function HumanInbox() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // Channel filter
+  const [channelFilter, setChannelFilter] = useState<"all" | "whatsapp" | "instagram">("all");
+
+  // Inbound Pipeline Simulator Modal
+  const [showSimModal, setShowSimModal] = useState(false);
+  const [simChannel, setSimChannel] = useState<"whatsapp" | "instagram">("whatsapp");
+  const [simSender, setSimSender] = useState("Amina Bello");
+  const [simPhone, setSimPhone] = useState("+234 803 123 4567");
+  const [simText, setSimText] = useState("Hello! I would love to book an unhurried toddler session in Maitama studio next week.");
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  async function handleSimulateInbound(e: React.FormEvent) {
+    e.preventDefault();
+    if (!simText.trim()) return;
+
+    setIsSimulating(true);
+    try {
+      const endpoint = simChannel === "whatsapp" ? "/api/webhooks/whatsapp" : "/api/webhooks/instagram";
+      let payload: any;
+
+      if (simChannel === "whatsapp") {
+        const cleanNumber = simPhone.replace(/\D/g, "") || "2348031234567";
+        payload = {
+          entry: [
+            {
+              changes: [
+                {
+                  value: {
+                    contacts: [{ profile: { name: simSender || "Client" } }],
+                    messages: [
+                      {
+                        from: cleanNumber,
+                        text: { body: simText.trim() },
+                        type: "text",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        };
+      } else {
+        payload = {
+          entry: [
+            {
+              messaging: [
+                {
+                  sender: { id: `ig_${Date.now()}` },
+                  message: { text: simText.trim() },
+                },
+              ],
+            },
+          ],
+        };
+      }
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setStatusMessage(
+          `Simulated ${simChannel.toUpperCase()} message received by webhook & saved to DB!`
+        );
+        setTimeout(() => setStatusMessage(null), 4000);
+        setShowSimModal(false);
+        setSimText("");
+        await loadInbox();
+      }
+    } catch (err) {
+      console.error("Simulation error:", err);
+    } finally {
+      setIsSimulating(false);
+    }
+  }
 
   async function loadInbox() {
     setIsLoading(true);
@@ -145,17 +227,28 @@ export function HumanInbox() {
 
   return (
     <div className="space-y-6 w-full max-w-full min-w-0 animate-in fade-in duration-200">
-      {/* Top Header */}
-      <div>
-        <span className="font-body text-xs uppercase tracking-label text-gold font-semibold block mb-1">
-          Concierge Communications &amp; Human-in-the-Loop Hub
-        </span>
-        <h1 className="font-display text-3xl sm:text-4xl text-deep font-normal">
-          Human Inbox
-        </h1>
-        <p className="font-body text-xs sm:text-sm text-brown/80 mt-1">
-          Meta WhatsApp Cloud API inbound hub with AI triage analysis. <strong>Strict luxury protocol:</strong> No message is ever sent without authorized human review.
-        </p>
+      {/* Top Header with Simulator Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="font-body text-xs uppercase tracking-label text-gold font-semibold block mb-1">
+            Concierge Communications &amp; Multi-Channel Hub
+          </span>
+          <h1 className="font-display text-3xl sm:text-4xl text-deep font-normal">
+            Human Inbox
+          </h1>
+          <p className="font-body text-xs sm:text-sm text-brown/80 mt-1">
+            Unified live inbox for <strong>WhatsApp (+234 906 498 2841)</strong> and <strong>Instagram Direct</strong>. No automated message leaves without human authorization.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowSimModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm shrink-0 self-start sm:self-auto"
+        >
+          <Plus className="w-3.5 h-3.5 text-gold" />
+          <span>Simulate Test Inbound Message</span>
+        </button>
       </div>
 
       {statusMessage && (
@@ -165,14 +258,24 @@ export function HumanInbox() {
         </div>
       )}
 
-      {/* WhatsApp Cloud API Architecture Summary Box */}
-      <div className="p-4 bg-warm-white rounded-2xl border border-line shadow-xs space-y-2">
-        <div className="flex items-center gap-2 text-xs font-semibold text-deep font-body uppercase tracking-wider">
-          <ShieldCheck className="w-4 h-4 text-gold" />
-          <span>WhatsApp Cloud API Architecture &amp; Business Integration</span>
+      {/* Multi-Channel Architecture Summary Box */}
+      <div className="p-4 bg-warm-white rounded-2xl border border-line shadow-xs space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-xs font-semibold text-deep font-body uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4 text-gold" />
+            <span>Multi-Channel Webhooks Active</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs font-mono">
+            <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              <MessageCircle className="w-3 h-3 text-emerald-600" /> WhatsApp Cloud API
+            </span>
+            <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+              <Instagram className="w-3 h-3 text-rose-600" /> Instagram Direct API
+            </span>
+          </div>
         </div>
         <p className="text-xs font-body text-brown/80 leading-relaxed">
-          Inbound client messages to <strong>+234 906 498 2841</strong> route through Meta&apos;s Webhook (<code className="bg-cream px-1.5 py-0.5 rounded text-[11px] font-mono">/api/webhooks/whatsapp</code>). Background AI classifies client sentiment, draft suggestions in Osemene&apos;s calm tone, and highlights any urgent reschedule or transfer screenshot.
+          Inbound client messages route directly to <code className="bg-cream px-1.5 py-0.5 rounded text-[11px] font-mono">/api/webhooks/whatsapp</code> and <code className="bg-cream px-1.5 py-0.5 rounded text-[11px] font-mono">/api/webhooks/instagram</code>. Background AI evaluates intent, suggests replies, and tags VIP inquiries.
         </p>
       </div>
 
@@ -187,45 +290,85 @@ export function HumanInbox() {
           <Inbox className="w-10 h-10 text-gold mx-auto mb-3 opacity-60" />
           <h3 className="font-display text-2xl text-deep font-medium">Inbox Clear</h3>
           <p className="font-body text-xs text-muted mt-1">
-            No active client conversation threads pending human response.
+            No active client conversation threads. Click &ldquo;Simulate Test Inbound Message&rdquo; to test the pipeline live.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 bg-warm-white rounded-2xl border border-line shadow-sm overflow-hidden min-h-[620px]">
-          {/* Left Pane: Conversation List */}
-          <div className="border-b lg:border-b-0 lg:border-r border-line p-3 sm:p-4 space-y-2">
-            <span className="font-body text-[10px] uppercase tracking-wider text-muted font-bold px-2 block mb-1">
-              Active Client Threads ({conversations.length})
-            </span>
-            <div className="space-y-1.5">
-              {conversations.map((conv) => {
-                const isSelected = conv.id === activeConv?.id;
-                const lastMsg = conv.messages[conv.messages.length - 1];
+          {/* Left Pane: Conversation List with Channel Switcher */}
+          <div className="border-b lg:border-b-0 lg:border-r border-line p-3 sm:p-4 space-y-3">
+            {/* Channel Filter Tabs */}
+            <div className="flex items-center gap-1 p-1 bg-cream rounded-lg border border-line text-xs font-body">
+              <button
+                type="button"
+                onClick={() => setChannelFilter("all")}
+                className={`flex-1 py-1 rounded text-center font-semibold transition-all ${
+                  channelFilter === "all" ? "bg-deep text-warm-white shadow-xs" : "text-muted hover:text-deep"
+                }`}
+              >
+                All ({conversations.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setChannelFilter("whatsapp")}
+                className={`flex-1 py-1 rounded text-center font-semibold transition-all flex items-center justify-center gap-1 ${
+                  channelFilter === "whatsapp" ? "bg-emerald-700 text-white shadow-xs" : "text-muted hover:text-deep"
+                }`}
+              >
+                <MessageCircle className="w-3 h-3" />
+                <span>WA ({conversations.filter((c) => c.channel === "whatsapp").length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setChannelFilter("instagram")}
+                className={`flex-1 py-1 rounded text-center font-semibold transition-all flex items-center justify-center gap-1 ${
+                  channelFilter === "instagram" ? "bg-gradient-to-r from-purple-600 to-rose-600 text-white shadow-xs" : "text-muted hover:text-deep"
+                }`}
+              >
+                <Instagram className="w-3 h-3" />
+                <span>IG ({conversations.filter((c) => c.channel === "instagram").length})</span>
+              </button>
+            </div>
 
-                return (
-                  <button
-                    key={conv.id}
-                    onClick={() => setSelectedConvId(conv.id)}
-                    className={`w-full text-left p-3 rounded-xl transition-all border ${
-                      isSelected
-                        ? "bg-cream/80 border-gold shadow-xs"
-                        : "bg-warm-white hover:bg-cream/40 border-line/60"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-display text-sm font-semibold text-deep truncate">
-                        {conv.clientName}
-                      </h4>
-                      <span
-                        className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full font-bold ${
-                          conv.state === "human"
-                            ? "bg-amber-100 text-amber-900 border border-amber-300"
-                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        }`}
-                      >
-                        {conv.state === "human" ? "Human" : "AI Mode"}
-                      </span>
-                    </div>
+            <div className="space-y-1.5 max-h-[520px] overflow-y-auto">
+              {conversations
+                .filter((c) => channelFilter === "all" || c.channel?.toLowerCase() === channelFilter)
+                .map((conv) => {
+                  const isSelected = conv.id === activeConv?.id;
+                  const isInstagram = conv.channel?.toLowerCase() === "instagram";
+                  const lastMsg = conv.messages && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+
+                  return (
+                    <button
+                      key={conv.id}
+                      onClick={() => setSelectedConvId(conv.id)}
+                      className={`w-full text-left p-3 rounded-xl transition-all border ${
+                        isSelected
+                          ? "bg-cream/80 border-gold shadow-xs"
+                          : "bg-warm-white hover:bg-cream/40 border-line/60"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5 truncate">
+                          {isInstagram ? (
+                            <Instagram className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          ) : (
+                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          )}
+                          <h4 className="font-display text-sm font-semibold text-deep truncate">
+                            {conv.clientName}
+                          </h4>
+                        </div>
+                        <span
+                          className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full font-bold ${
+                            conv.state === "human"
+                              ? "bg-amber-100 text-amber-900 border border-amber-300"
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          }`}
+                        >
+                          {conv.state === "human" ? "Human" : "AI Mode"}
+                        </span>
+                      </div>
 
                     <p className="font-body text-xs text-brown/80 line-clamp-1 mb-1">
                       {lastMsg ? lastMsg.body : "No messages yet"}
@@ -347,6 +490,125 @@ export function HumanInbox() {
               </form>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Simulator Modal */}
+      {showSimModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-warm-white rounded-2xl border border-line max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div>
+                <h3 className="font-display text-lg text-deep font-semibold">
+                  Simulate Live Inbound Message
+                </h3>
+                <p className="font-body text-xs text-muted">
+                  Triggers the actual webhook to test pipeline, AI triage &amp; database ingest.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSimModal(false)}
+                className="text-muted hover:text-deep"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSimulateInbound} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1">
+                  Channel
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSimChannel("whatsapp")}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      simChannel === "whatsapp"
+                        ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                        : "bg-cream text-brown border-line hover:border-gold"
+                    }`}
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSimChannel("instagram")}
+                    className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      simChannel === "instagram"
+                        ? "bg-gradient-to-r from-purple-600 to-rose-600 text-white border-purple-600 shadow-xs"
+                        : "bg-cream text-brown border-line hover:border-gold"
+                    }`}
+                  >
+                    <Instagram className="w-3.5 h-3.5" />
+                    <span>Instagram DM</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-deep uppercase tracking-wider mb-1">
+                    Client Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={simSender}
+                    onChange={(e) => setSimSender(e.target.value)}
+                    placeholder="e.g. Amina Bello"
+                    className="w-full px-3 py-2 rounded-lg border border-line bg-cream/30 text-xs font-body text-deep"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-deep uppercase tracking-wider mb-1">
+                    {simChannel === "whatsapp" ? "Phone Number" : "IG Handle"}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={simPhone}
+                    onChange={(e) => setSimPhone(e.target.value)}
+                    placeholder={simChannel === "whatsapp" ? "+234 803 123 4567" : "@amina_bello"}
+                    className="w-full px-3 py-2 rounded-lg border border-line bg-cream/30 text-xs font-body text-deep font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-deep uppercase tracking-wider mb-1">
+                  Inbound Message Body
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={simText}
+                  onChange={(e) => setSimText(e.target.value)}
+                  placeholder="Type an inquiry (e.g. Can we book a luxury toddler session for Saturday?)..."
+                  className="w-full p-3 rounded-lg border border-line bg-cream/30 text-xs font-body text-deep"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-line flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSimModal(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-body text-muted hover:text-deep"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSimulating}
+                  className="px-5 py-2 rounded-lg bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm"
+                >
+                  {isSimulating ? "Ingesting..." : "Fire Live Webhook"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
