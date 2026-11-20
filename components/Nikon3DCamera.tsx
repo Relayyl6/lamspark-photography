@@ -13,19 +13,19 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
   const [shutterFlash, setShutterFlash] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
 
-  // Interaction refs
+  // Interaction & Visibility refs
   const isDragging = useRef(false);
-  const isIntersecting = useRef(true);
+  const isVisible = useRef(true);
   const lastMousePos = useRef({ x: 0, y: 0 });
   const rotTarget = useRef({ x: 0.12, y: -0.42 });
   const rotCurrent = useRef({ x: 0.12, y: -0.42 });
 
-  // Stringent contingency: only activate 3D WebGL engine on desktop with hover capability
+  // Stringent contingency: Strictly desktop-only (>= 1024px) & non-touch devices
   useEffect(() => {
     const checkEnvironment = () => {
-      const isLargeScreen = window.innerWidth >= 1024;
+      const isLarge = window.innerWidth >= 1024;
       const canHover = window.matchMedia("(hover: hover)").matches;
-      setIsDesktop(isLargeScreen && canHover);
+      setIsDesktop(isLarge && canHover);
     };
     checkEnvironment();
     window.addEventListener("resize", checkEnvironment);
@@ -42,12 +42,66 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
     let isDisposed = false;
 
     // --- Scene, Camera, Renderer ---
-    const width = container.clientWidth || 300;
-    const height = container.clientHeight || 300;
+    const width = container.clientWidth || 360;
+    const height = container.clientHeight || 360;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(36, width / height, 1, 2000);
     camera.position.set(0, 8, 410);
+
+    const EXPLODE_TRAVEL = {
+      x: 20,
+      y: 18,
+      zBack: 72,
+      zFront: 118,
+    };
+
+    const BASE_DISTANCE = 410;
+    const BASE_FOV = 36;
+
+    const fitCameraToModel = () => {
+      const w = container.clientWidth || 360;
+      const h = container.clientHeight || 360;
+
+      const savedRot = cameraGroup.rotation.clone();
+      const savedPos = cameraGroup.position.clone();
+      cameraGroup.rotation.set(0, 0, 0);
+      cameraGroup.position.set(0, 0, 0);
+      const box = new THREE.Box3().setFromObject(cameraGroup);
+      cameraGroup.rotation.copy(savedRot);
+      cameraGroup.position.copy(savedPos);
+
+      if (box.isEmpty()) return;
+
+      box.min.x -= EXPLODE_TRAVEL.x;
+      box.max.x += EXPLODE_TRAVEL.x;
+      box.min.y -= EXPLODE_TRAVEL.y;
+      box.max.y += EXPLODE_TRAVEL.y;
+      box.min.z -= EXPLODE_TRAVEL.zBack;
+      box.max.z += EXPLODE_TRAVEL.zFront;
+
+      const radius =
+        Math.hypot(
+          Math.max(Math.abs(box.min.x), Math.abs(box.max.x)),
+          Math.max(Math.abs(box.min.y), Math.abs(box.max.y)),
+          Math.max(Math.abs(box.min.z), Math.abs(box.max.z))
+        ) + 4;
+
+      const halfHeightAtBase = BASE_DISTANCE * Math.tan(THREE.MathUtils.degToRad(BASE_FOV / 2));
+      const scale = Math.max(1, radius / halfHeightAtBase);
+
+      camera.fov = THREE.MathUtils.radToDeg(
+        2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(BASE_FOV / 2)) * scale)
+      );
+      camera.aspect = w / h;
+      camera.position.z = BASE_DISTANCE;
+      camera.updateProjectionMatrix();
+
+      cameraGroup.userData.centerOffsetZ = (EXPLODE_TRAVEL.zFront - EXPLODE_TRAVEL.zBack) / 2;
+      renderer.setSize(w * scale, h * scale);
+      renderer.domElement.style.marginLeft = `${-((w * scale - w) / 2)}px`;
+      renderer.domElement.style.marginTop = `${-((h * scale - h) / 2)}px`;
+    };
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -106,7 +160,7 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
     shadowMesh.position.y = -50;
     scene.add(shadowMesh);
 
-    // --- Materials for Assembled Parts ---
+    // --- Fine Materials ---
     const bodyMaterial = new THREE.MeshStandardMaterial({
       color: 0x181614,
       roughness: 0.42,
@@ -131,7 +185,7 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
       metalness: 0.6,
     });
 
-    // Front Optical Element
+    // Optical Glass Front Element (Multi-coated photographic glass)
     const glassGeo = new THREE.CylinderGeometry(31.8, 31.8, 1.8, 32);
     const glassMat = new THREE.MeshPhysicalMaterial({
       color: 0x0a1420,
@@ -168,17 +222,16 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
     goldRingMesh.position.set(0, 0, 73.0);
     cameraGroup.add(goldRingMesh);
 
-    // --- Ultra-Efficient Procedural Camera Components (0 network latency) ---
+    // --- High-Precision Pure Procedural Assembly (0ms, 0 Network Overhead) ---
     const proceduralParts: { [key: string]: THREE.Mesh } = {};
 
-    // 1. Camera Body Box
+    // 1. Camera Body Box & Top Viewfinder Housing
     const bodyGeo = new THREE.BoxGeometry(82, 64, 46);
     const bodyMesh = new THREE.Mesh(bodyGeo, bodyMaterial);
     bodyMesh.position.set(0, 0, 0);
     cameraGroup.add(bodyMesh);
     proceduralParts["body"] = bodyMesh;
 
-    // Viewfinder Top Housing
     const prismGeo = new THREE.CylinderGeometry(18, 24, 16, 4);
     prismGeo.rotateY(Math.PI / 4);
     const prismMesh = new THREE.Mesh(prismGeo, bodyMaterial);
@@ -192,22 +245,29 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
     cameraGroup.add(filmBackBodyMesh);
     proceduralParts["filmBackBody"] = filmBackBodyMesh;
 
-    // 3. Film Back Slide
+    // 3. Film Back Front Flange
+    const filmBackFrontGeo = new THREE.BoxGeometry(80, 60, 6);
+    const filmBackFrontMesh = new THREE.Mesh(filmBackFrontGeo, bodyMaterial);
+    filmBackFrontMesh.position.set(0, 0, -20);
+    cameraGroup.add(filmBackFrontMesh);
+    proceduralParts["filmBackFront"] = filmBackFrontMesh;
+
+    // 4. Dark Slide Steel Blade
     const slideGeo = new THREE.BoxGeometry(6, 68, 20);
     const slideMesh = new THREE.Mesh(slideGeo, slideMaterial);
-    slideMesh.position.set(43, 0, -32);
+    slideMesh.position.set(43, 0, -22);
     cameraGroup.add(slideMesh);
     proceduralParts["filmBackSlide"] = slideMesh;
 
-    // 4. Lens Outer Barrel
+    // 5. Lens Outer Barrel
     const lensOuterGeo = new THREE.CylinderGeometry(34, 35, 18, 32);
     lensOuterGeo.rotateX(Math.PI / 2);
     const lensOuterMesh = new THREE.Mesh(lensOuterGeo, lensGoldMaterial);
-    lensOuterMesh.position.set(0, 0, 30);
+    lensOuterMesh.position.set(0, 0, 28);
     cameraGroup.add(lensOuterMesh);
     proceduralParts["lensOuter"] = lensOuterMesh;
 
-    // 5. Lens Mid Barrel
+    // 6. Lens Mid Barrel
     const lensMidGeo = new THREE.CylinderGeometry(30, 31, 24, 32);
     lensMidGeo.rotateX(Math.PI / 2);
     const lensMidMesh = new THREE.Mesh(lensMidGeo, lensGoldMaterial);
@@ -215,33 +275,43 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
     cameraGroup.add(lensMidMesh);
     proceduralParts["lensMid"] = lensMidMesh;
 
-    // 6. Lens Cap Bezel
+    // 7. Lens Inner Barrel
+    const lensInnerGeo = new THREE.CylinderGeometry(28, 28, 20, 32);
+    lensInnerGeo.rotateX(Math.PI / 2);
+    const lensInnerMesh = new THREE.Mesh(lensInnerGeo, lensGoldMaterial);
+    lensInnerMesh.position.set(0, 0, 60);
+    cameraGroup.add(lensInnerMesh);
+    proceduralParts["lensInner"] = lensInnerMesh;
+
+    // 8. Lens Cap Bezel
     const lensCapGeo = new THREE.CylinderGeometry(34, 34, 6, 32);
     lensCapGeo.rotateX(Math.PI / 2);
     const lensCapMesh = new THREE.Mesh(lensCapGeo, lensCapMaterial);
-    lensCapMesh.position.set(0, 0, 66);
+    lensCapMesh.position.set(0, 0, 70);
     cameraGroup.add(lensCapMesh);
     proceduralParts["lensCap"] = lensCapMesh;
 
-    // --- Visibility Observer (Pause render loop when scrolled offscreen) ---
+    fitCameraToModel();
+
+    // --- Performance Controller: Auto-pause when scrolled away or tab hidden ---
     const intersectionObserver = new IntersectionObserver(
       ([entry]) => {
-        isIntersecting.current = entry.isIntersecting;
+        isVisible.current = entry.isIntersecting;
       },
       { threshold: 0.05 }
     );
     intersectionObserver.observe(container);
 
-    // --- Resize Handler ---
-    const handleResize = () => {
-      if (!container || isDisposed) return;
-      const w = container.clientWidth || 300;
-      const h = container.clientHeight || 300;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+    const handleVisibilityChange = () => {
+      isVisible.current = !document.hidden;
     };
-    window.addEventListener("resize", handleResize);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (!container || isDisposed) return;
+      fitCameraToModel();
+    });
+    resizeObserver.observe(container);
 
     // --- Mouse Rotation Controls ---
     const onMouseDown = (e: MouseEvent) => {
@@ -262,30 +332,82 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
       isDragging.current = false;
     };
 
+    const domEl = renderer.domElement;
+    domEl.style.pointerEvents = "none";
+
     const dragTarget = container.parentElement ?? container;
     dragTarget.addEventListener("mousedown", onMouseDown);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
 
-    // --- Gentle Float & Render Loop ---
+    // --- Smooth 12-Second Optical Disassembly & Reassembly Cycle ---
+    const getExplodeFactor = (t: number) => {
+      const period = 12;
+      const cycleTime = t % period;
+      const progress = cycleTime / period;
+
+      if (progress < 0.25) return 0;
+      if (progress < 0.5) {
+        const p = (progress - 0.25) / 0.25;
+        return 0.5 - 0.5 * Math.cos(p * Math.PI);
+      }
+      if (progress < 0.75) return 1;
+      const p = (progress - 0.75) / 0.25;
+      return 0.5 + 0.5 * Math.cos(p * Math.PI);
+    };
+
+    // --- High-Efficiency Render Loop ---
     let time = 0;
     const animate = () => {
       animId = requestAnimationFrame(animate);
       if (isDisposed) return;
 
-      // Heavy efficiency: do not render or calculate if scrolled offscreen
-      if (!isIntersecting.current) return;
+      // Heavy efficiency: Completely pause WebGL computations and draw calls when offscreen
+      if (!isVisible.current) return;
 
       time += 0.016;
 
-      // Smooth damping rotation
-      rotCurrent.current.x += (rotTarget.current.x - rotCurrent.current.x) * 0.08;
-      rotCurrent.current.y += (rotTarget.current.y - rotCurrent.current.y) * 0.08;
+      // 1. Calculate disassembly factor
+      const factor = getExplodeFactor(time);
 
-      // Gentle floating animation
-      cameraGroup.position.y = Math.sin(time * 1.2) * 4;
-      cameraGroup.rotation.x = rotCurrent.current.x + Math.cos(time * 0.9) * 0.03;
-      cameraGroup.rotation.y = rotCurrent.current.y + Math.sin(time * 0.7) * 0.04;
+      // 2. Animate exploded positions along optical Z axis with balanced spacing
+      if (proceduralParts.lensOuter) proceduralParts.lensOuter.position.z = 28 + 28 * factor;
+      if (proceduralParts.lensMid) proceduralParts.lensMid.position.z = 48 + 58 * factor;
+      if (proceduralParts.lensInner) proceduralParts.lensInner.position.z = 60 + 88 * factor;
+      if (proceduralParts.lensCap) proceduralParts.lensCap.position.z = 70 + 118 * factor;
+
+      glassMesh.position.z = 72.0 + 118 * factor;
+      goldRingMesh.position.z = 73.0 + 118 * factor;
+      irisMesh.position.z = 54.0 + 74 * factor;
+
+      if (proceduralParts.filmBackFront) proceduralParts.filmBackFront.position.z = -20 - 36 * factor;
+      if (proceduralParts.filmBackBody) proceduralParts.filmBackBody.position.z = -35 - 72 * factor;
+      if (proceduralParts.filmBackSlide) {
+        proceduralParts.filmBackSlide.position.z = -22 - 22 * factor;
+        proceduralParts.filmBackSlide.position.y = 18 * factor;
+      }
+
+      // Camera depth and shadow scale during exploded state
+      camera.position.z = 410 + 40 * factor;
+      shadowMesh.scale.set(1 + 0.2 * factor, 1 + 0.3 * factor, 1);
+
+      // 3. Smooth inertial damping & gentle idle float
+      if (!isDragging.current) {
+        const idleX = Math.sin(time * 0.6) * 0.035;
+        const idleY = Math.cos(time * 0.45) * 0.055;
+        rotCurrent.current.x += (rotTarget.current.x + idleX - rotCurrent.current.x) * 0.06;
+        rotCurrent.current.y += (rotTarget.current.y + idleY - rotCurrent.current.y) * 0.06;
+      } else {
+        rotCurrent.current.x += (rotTarget.current.x - rotCurrent.current.x) * 0.15;
+        rotCurrent.current.y += (rotTarget.current.y - rotCurrent.current.y) * 0.15;
+      }
+
+      cameraGroup.rotation.x = rotCurrent.current.x;
+      cameraGroup.rotation.y = rotCurrent.current.y;
+      cameraGroup.position.y = Math.sin(time * 0.8) * 3.5;
+
+      const offsetZ = ((EXPLODE_TRAVEL.zFront - EXPLODE_TRAVEL.zBack) / 2) * factor;
+      cameraGroup.position.z = -offsetZ;
 
       renderer.render(scene, camera);
     };
@@ -295,14 +417,15 @@ export function Nikon3DCamera({ className = "" }: Nikon3DCameraProps) {
       isDisposed = true;
       cancelAnimationFrame(animId);
       intersectionObserver.disconnect();
-      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
 
       dragTarget.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
 
-      if (container && renderer.domElement.parentNode === container) {
-        container.removeChild(renderer.domElement);
+      if (container && domEl.parentNode === container) {
+        container.removeChild(domEl);
       }
       renderer.dispose();
       bodyMaterial.dispose();
