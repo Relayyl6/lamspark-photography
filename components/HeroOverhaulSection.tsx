@@ -202,18 +202,18 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
 
       <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center shrink-0">
         {/* --- 1. EYEBROW KICKER WITH FLANKING ACCENT LINES (CENTERED) --- */}
-        <div className="flex items-center justify-center gap-3 mb-2 sm:mb-3 animate-fade-down delay-100">
-          <span className="w-8 sm:w-12 h-[1.5px] bg-[#D93829]" />
-          <span className="font-sans text-[11px] sm:text-xs uppercase tracking-[0.28em] text-[#D93829] font-bold">
+        <div className="flex items-center justify-center gap-3 sm:gap-4 mb-2.5 sm:mb-3.5 animate-fade-down delay-100">
+          <span className="w-10 sm:w-16 h-[2px] bg-[#D93829] rounded-full shrink-0" />
+          <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] text-[#D93829] font-black sm:font-bold whitespace-nowrap">
             {heroCopy.kicker}
           </span>
-          <span className="w-8 sm:w-12 h-[1.5px] bg-[#D93829]" />
+          <span className="w-10 sm:w-16 h-[2px] bg-[#D93829] rounded-full shrink-0" />
         </div>
 
         {/* --- 2. MASTER DISPLAY TITLE WITH NESTLED 3D CAMERA ANCHOR --- */}
         <div className="relative inline-block max-w-3xl mx-auto mb-2 sm:mb-3 animate-fade-down delay-200">
           {/* Main Two-Line Ultra-Bold Condensed Sans Headline (Matching Reference 100%) */}
-          <h1 className="font-headline uppercase tracking-tight text-[#111111] font-black text-[clamp(1.9rem,min(6vw,8svh),4.5rem)] leading-[1.05] select-none text-center px-2">
+          <h1 className="font-headline uppercase tracking-tight text-[#111111] font-black text-[clamp(2.35rem,10.8vw,3.2rem)] sm:text-[clamp(3.5rem,6vw,5.5rem)] leading-[0.96] sm:leading-[1.02] select-none text-center px-1 sm:px-2">
             <span className="block drop-shadow-sm whitespace-nowrap">
               {heroCopy.headline.includes(".") ? heroCopy.headline.split(".")[0] : heroCopy.headline}
             </span>
