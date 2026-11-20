@@ -53,7 +53,9 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
 
   // Responsive 3D Geometry
   const angleStep = isMobile ? 22 : 15;
-  const cardHeight = Math.round(Math.min(Math.max(wheelH * 0.72, 150), isMobile ? 300 : 360));
+  const cardHeight = isMobile
+    ? Math.round(Math.min(Math.max(wheelH * 0.82, 260), 305))
+    : Math.round(Math.min(Math.max(wheelH * 0.72, 150), 360));
   const cardWidth = Math.round(cardHeight * 0.705);
   const spacing = cardWidth * (isMobile ? 1.04 : 1.08);
   const cylinderRadius = spacing / Math.sin((angleStep * Math.PI) / 180);
@@ -195,25 +197,25 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
   return (
     <section
       style={{ height: `calc(100svh - ${navH}px)` }}
-      className="relative w-full min-h-[520px] flex flex-col overflow-hidden pt-4 sm:pt-8 pb-3 sm:pb-5 select-none bg-[#FAF7F2] border-b border-[#E8E2D8]"
+      className="relative w-full min-h-[520px] flex flex-col overflow-hidden pt-2 sm:pt-8 pb-2 sm:pb-5 select-none bg-[#FAF7F2] border-b border-[#E8E2D8]"
     >
       {/* Background Ambience: Subtle warm ivory canvas */}
       <div className="absolute inset-0 bg-[#FAF7F2] pointer-events-none -z-10" />
 
-      <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center shrink-0">
+      <div className="relative w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 text-center shrink-0">
         {/* --- 1. EYEBROW KICKER WITH FLANKING ACCENT LINES (CENTERED) --- */}
-        <div className="flex items-center justify-center gap-3 sm:gap-4 mb-2.5 sm:mb-3.5 animate-fade-down delay-100">
-          <span className="w-10 sm:w-16 h-[2px] bg-[#D93829] rounded-full shrink-0" />
-          <span className="font-sans text-xs sm:text-sm uppercase tracking-[0.22em] sm:tracking-[0.28em] text-[#D93829] font-black sm:font-bold whitespace-nowrap">
+        <div className="flex items-center justify-center gap-2.5 sm:gap-3 mb-1 sm:mb-3 animate-fade-down delay-100">
+          <span className="w-8 sm:w-12 h-[2px] sm:h-[1.5px] bg-[#D93829] rounded-full sm:rounded-none shrink-0" />
+          <span className="font-sans text-xs sm:text-xs uppercase tracking-[0.22em] sm:tracking-[0.28em] text-[#D93829] font-bold whitespace-nowrap">
             {heroCopy.kicker}
           </span>
-          <span className="w-10 sm:w-16 h-[2px] bg-[#D93829] rounded-full shrink-0" />
+          <span className="w-8 sm:w-12 h-[2px] sm:h-[1.5px] bg-[#D93829] rounded-full sm:rounded-none shrink-0" />
         </div>
 
         {/* --- 2. MASTER DISPLAY TITLE WITH NESTLED 3D CAMERA ANCHOR --- */}
-        <div className="relative inline-block max-w-3xl mx-auto mb-2 sm:mb-3 animate-fade-down delay-200">
-          {/* Main Two-Line Ultra-Bold Condensed Sans Headline (Matching Reference 100%) */}
-          <h1 className="font-headline uppercase tracking-tight text-[#111111] font-black text-[clamp(2.35rem,10.8vw,3.2rem)] sm:text-[clamp(3.5rem,6vw,5.5rem)] leading-[0.96] sm:leading-[1.02] select-none text-center px-1 sm:px-2">
+        <div className="relative inline-block max-w-3xl mx-auto mb-1.5 sm:mb-3 animate-fade-down delay-200">
+          {/* Main Two-Line Ultra-Bold Condensed Sans Headline (Mobile-only larger scale, untouched desktop/tab) */}
+          <h1 className="font-headline uppercase tracking-tight text-[#111111] font-black text-[clamp(2.15rem,9.6vw,2.9rem)] sm:text-[clamp(1.9rem,min(6vw,8svh),4.5rem)] leading-[0.93] sm:leading-[1.05] select-none text-center px-1 sm:px-2">
             <span className="block drop-shadow-sm whitespace-nowrap">
               {heroCopy.headline.includes(".") ? heroCopy.headline.split(".")[0] : heroCopy.headline}
             </span>
@@ -420,7 +422,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
 
         <Link
           href="/portfolio"
-          className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#111111] hover:bg-[#D93829] text-white px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] transition-colors"
+          className="mt-2 sm:mt-3 inline-flex items-center gap-2 rounded-full bg-[#111111] hover:bg-[#D93829] text-white px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] transition-colors"
         >
           View Portfolio
           <ArrowRight className="w-3.5 h-3.5" />
