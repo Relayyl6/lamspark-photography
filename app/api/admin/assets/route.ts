@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     const asset = assetResult[0];
 
-    // If a galleryId was provided, link it
+    // If a galleryId was provided, link it to gallery_item
     if (galleryId && asset) {
       const maxOrderResult = await sql.query(
         `SELECT COALESCE(MAX(display_order), 0) as max_order FROM gallery_item WHERE gallery_id = $1`,
@@ -86,9 +86,15 @@ export async function POST(req: NextRequest) {
       const nextOrder = (maxOrderResult[0]?.max_order ?? 0) + 1;
 
       await sql.query(
-        `INSERT INTO gallery_item (id, gallery_id, asset_id, display_order, created_at, updated_at)
-         VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())`,
-        [galleryId, asset.id, nextOrder]
+        `INSERT INTO gallery_item (id, gallery_id, asset_id, caption, display_order, created_at, updated_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW(), NOW())`,
+        [galleryId, asset.id, altText || null, nextOrder]
+      );
+
+      // Auto-set as gallery cover if not set yet
+      await sql.query(
+        `UPDATE gallery SET cover_asset_id = COALESCE(cover_asset_id, $1), updated_at = NOW() WHERE id = $2`,
+        [asset.id, galleryId]
       );
     }
 
