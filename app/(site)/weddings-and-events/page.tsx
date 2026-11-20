@@ -24,8 +24,8 @@ export default function WeddingsAndEventsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
           <div className="aspect-[4/3] rounded-photo overflow-hidden border border-line shadow-editorial">
             <img
-              src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80"
-              alt="Bespoke wedding photography Abuja"
+              src="/images/client/weddings/weddings_1.jpg"
+              alt="Bespoke luxury Nigerian wedding photography Abuja - LamSparks"
               className="w-full h-full object-cover"
             />
           </div>

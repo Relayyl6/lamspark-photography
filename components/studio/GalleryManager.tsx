@@ -509,12 +509,16 @@ export function GalleryManager() {
                     onChange={(e) => setGalleryForm({ ...galleryForm, sessionType: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep"
                   >
-                    <option value="weddings">Weddings</option>
-                    <option value="corporate">Corporate / Executive</option>
-                    <option value="events">Events & Galas</option>
-                    <option value="portraits">Studio Portraits</option>
+                    <option value="official-portrait">Official Portrait / Executive Bilateral</option>
+                    <option value="wedding">Weddings & Sacred Unions</option>
+                    <option value="event">Grand Galas & Banquets</option>
+                    <option value="cultural">Cultural Gala & Heritage</option>
+                    <option value="memorial">Memorial Celebration of Life</option>
+                    <option value="commercial">Commercial Brand & Retail</option>
+                    <option value="milestones">Academic Milestone & Birthday</option>
+                    <option value="maternity">Maternity & Motherhood Glow</option>
                     <option value="toddler">Toddler & Children</option>
-                    <option value="maternity">Maternity</option>
+                    <option value="portraits">Studio Atelier Portraits</option>
                   </select>
                 </div>
               </div>

@@ -11,59 +11,68 @@ export async function GET(req: Request) {
 
     const sql = neon(process.env.DATABASE_URL!);
 
-    // Query all galleries from Neon DB
-    const allGalleries = await sql.query(
-      `SELECT id, slug, title, description, session_type, display_order, cover_asset_id
-       FROM gallery
-       ORDER BY display_order ASC`
+    // Single unified query to avoid N+1 network round trips
+    const rows = await sql.query(
+      `SELECT 
+         g.id as "galleryId",
+         g.slug as "gallerySlug",
+         g.title as "galleryTitle",
+         g.description as "galleryDescription",
+         g.session_type as "gallerySessionType",
+         g.display_order as "galleryDisplayOrder",
+         g.cover_asset_id as "coverAssetId",
+         gi.id as "itemId",
+         gi.caption as "caption",
+         gi.display_order as "itemDisplayOrder",
+         a.id as "assetId",
+         a.storage_key as "storageKey",
+         a.session_type as "sessionType",
+         a.alt_text as "altText"
+       FROM gallery g
+       LEFT JOIN gallery_item gi ON gi.gallery_id = g.id
+       LEFT JOIN asset a ON gi.asset_id = a.id
+       ORDER BY g.display_order ASC, gi.display_order ASC`
     );
 
-    // Fetch items with joined assets
-    const result = await Promise.all(
-      allGalleries.map(async (gal: any) => {
-        const items = await sql.query(
-          `SELECT 
-             gi.id,
-             gi.caption,
-             gi.display_order as "displayOrder",
-             a.id as "assetId",
-             a.storage_key as "storageKey",
-             a.session_type as "sessionType",
-             a.alt_text as "altText"
-           FROM gallery_item gi
-           JOIN asset a ON gi.asset_id = a.id
-           WHERE gi.gallery_id = $1
-           ORDER BY gi.display_order ASC`,
-          [gal.id]
-        );
+    // Group rows by gallery
+    const galleryMap = new Map<string, any>();
 
-        return {
-          id: gal.id,
+    for (const r of rows) {
+      if (!galleryMap.has(r.galleryId)) {
+        galleryMap.set(r.galleryId, {
+          id: r.galleryId,
+          slug: r.gallerySlug,
+          title: r.galleryTitle,
+          description: r.galleryDescription,
+          sessionType: r.gallerySessionType,
+          displayOrder: r.galleryDisplayOrder,
+          coverAssetId: r.coverAssetId,
+          items: [],
+        });
+      }
+
+      if (r.itemId && r.storageKey) {
+        const gal = galleryMap.get(r.galleryId);
+        gal.items.push({
+          id: r.itemId,
+          src: r.storageKey,
+          alt: r.altText || gal.title,
+          caption: r.caption || gal.title,
+          sessionType: r.sessionType || gal.sessionType,
+          category: gal.title,
           slug: gal.slug,
-          title: gal.title,
-          description: gal.description,
-          sessionType: gal.session_type,
-          displayOrder: gal.display_order,
-          coverAssetId: gal.cover_asset_id,
-          items: items.map((item: any) => ({
-            id: item.id,
-            src: item.storageKey,
-            alt: item.altText || gal.title,
-            caption: item.caption || gal.title,
-            sessionType: item.sessionType,
-            category: gal.title,
-            slug: gal.slug,
-          })),
-        };
-      })
-    );
+        });
+      }
+    }
+
+    const result = Array.from(galleryMap.values());
 
     // If category specified, filter galleries
     const filtered =
       categoryFilter && categoryFilter !== "All"
         ? result.filter(
             (g) =>
-              g.slug === categoryFilter.toLowerCase() ||
+              g.slug.toLowerCase() === categoryFilter.toLowerCase() ||
               g.title.toLowerCase().includes(categoryFilter.toLowerCase())
           )
         : result;
@@ -87,3 +96,4 @@ export async function GET(req: Request) {
     );
   }
 }
+
