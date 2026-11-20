@@ -4,12 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 /* ------------------------------------------------------------------ */
-/*  Measured from the reference clip (1132x676, 30 fps, 159 frames)    */
-/*  - the whole scene is ONE horizontal strip; the camera pans on it   */
-/*  - the pan is rigid: text and photos move by the same distance      */
-/*  - the active photo is brought to about the centre of the screen,   */
-/*    so far photos give long pans (485px) and neighbours short ones   */
-/*  - fast start, long settle: ~0.35s core travel, tail to ~0.6s       */
+/*  Editorial Monograph: Pinned Horizontal Continuous Filmstrip       */
+/*  - Continuous camera pan: every pixel of scroll immediately moves  */
+/*    the horizontal strip so the user immediately perceives motion   */
+/*  - Fast, responsive travel: SCROLL_VH_PER_STEP reduced to 24vh     */
+/*  - Live progress bar + chapter navigation indicators for clarity   */
+/*  - 120fps direct DOM transforms without React re-render lag        */
 /* ------------------------------------------------------------------ */
 
 const BG = "#F5F3EF";
@@ -18,9 +18,8 @@ const MUTED = "#7A746C";
 const GOLD = "#B8893A";
 
 const PAD = 6; // white photo border, in design units
-const PAN_MS = 700;
 const PAN_EASE = "cubic-bezier(.22,1,.36,1)";
-const SCROLL_VH_PER_STEP = 70; // how much page scroll each photo takes
+const SCROLL_VH_PER_STEP = 24; // fast, responsive scroll per photo (reduced from 70vh)
 
 // Design canvases. 1 design unit = 1px at these widths, scaled by `u`.
 const DESKTOP = { W: 1132, H: 560, TRACK: 2790 };
@@ -30,7 +29,7 @@ type Pose = { x: number; y: number; w: number; rot: number };
 
 type Photo = {
   src: string;
-  ar: number; // width / height of the picture. Adjust to match your files.
+  ar: number;
   title: string;
   sub: string;
   cluster: number;
@@ -42,7 +41,81 @@ type Photo = {
 type TextBlock = { lead: string; body: string; x: number; cta?: boolean };
 type Note = { text: string; x: number; y: number; arrow?: "up" | "down" };
 
-// One text block per cluster. Reverted to exact canonical positions alternating with photo clusters
+// Canonical default photos loaded immediately with zero flash of loading skeleton
+const CANONICAL_PHOTOS: Photo[] = [
+  {
+    src: "/images/client/weddings/weddings_1.jpg",
+    ar: 0.72,
+    cluster: 0,
+    z: 3,
+    title: "Sacred Unions",
+    sub: "Wedding ceremonies",
+    d: { x: 30, y: 235, w: 200, rot: -3 },
+    m: { x: 12, y: 96, w: 118, rot: -3 },
+  },
+  {
+    src: "/images/client/weddings/weddings_2.jpg",
+    ar: 0.72,
+    cluster: 0,
+    z: 1,
+    title: "Cultural Heritage",
+    sub: "Aso-Oke & grace",
+    d: { x: 178, y: 90, w: 185, rot: 0.5 },
+    m: { x: 100, y: 20, w: 118, rot: 0.5 },
+  },
+  {
+    src: "/images/client/events/events_1.jpg",
+    ar: 0.72,
+    cluster: 0,
+    z: 2,
+    title: "Milestone Galas",
+    sub: "Unscripted warmth",
+    d: { x: 345, y: 150, w: 205, rot: 3 },
+    m: { x: 200, y: 110, w: 130, rot: 3 },
+  },
+  {
+    src: "/images/client/corporate/corporate_1.jpg",
+    ar: 0.72,
+    cluster: 1,
+    z: 2,
+    title: "Executive Gravitas",
+    sub: "Commanding presence",
+    d: { x: 960, y: 220, w: 210, rot: -2 },
+    m: { x: 20, y: 100, w: 130, rot: -2 },
+  },
+  {
+    src: "/images/client/events/events_3.jpg",
+    ar: 1.5,
+    cluster: 1,
+    z: 1,
+    title: "Authentic Moments",
+    sub: "Life, as it happens",
+    d: { x: 1210, y: 140, w: 220, rot: 2.5 },
+    m: { x: 180, y: 40, w: 140, rot: 2 },
+  },
+  {
+    src: "/images/client/corporate/corporate_3.jpg",
+    ar: 0.72,
+    cluster: 2,
+    z: 2,
+    title: "Dynasty & Legacy",
+    sub: "Portraits of honor",
+    d: { x: 1780, y: 220, w: 200, rot: -1.5 },
+    m: { x: 20, y: 110, w: 130, rot: -1.5 },
+  },
+  {
+    src: "/images/client/corporate/corporate_6.jpg",
+    ar: 0.72,
+    cluster: 2,
+    z: 1,
+    title: "Studio Dignity",
+    sub: "Tailored composure",
+    d: { x: 1990, y: 80, w: 195, rot: 2 },
+    m: { x: 170, y: 30, w: 130, rot: 2 },
+  },
+];
+
+// One text block per cluster
 const TEXTS: TextBlock[] = [
   {
     lead: "Capturing moments.",
@@ -60,6 +133,13 @@ const TEXTS: TextBlock[] = [
     x: 2300,
     cta: true,
   },
+];
+
+// 3 Chapters corresponding to the clusters
+const CHAPTERS = [
+  { index: 0, photoIdx: 0, label: "Capturing Moments", kicker: "Chapter I" },
+  { index: 1, photoIdx: 3, label: "Preserving Memories", kicker: "Chapter II" },
+  { index: 2, photoIdx: 5, label: "Sparkling Lives", kicker: "Chapter III" },
 ];
 
 // Handwritten annotations (desktop only), absolute on the track
@@ -95,20 +175,23 @@ function Arrow({ dir, s }: { dir: "up" | "down"; s: number }) {
 export function PhilosophyGallery() {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const mobileTextRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
   const wheelLock = useRef(0);
+  const idxRef = useRef(0);
 
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [photos, setPhotos] = useState<Photo[]>(CANONICAL_PHOTOS);
   const [idx, setIdx] = useState(0);
   const [size, setSize] = useState<{ w: number; h: number }>({
     w: typeof window !== "undefined" ? window.innerWidth : 1200,
     h: 560,
   });
-  const [navH, setNavH] = useState(0);
+  const [navH, setNavH] = useState(64);
   const [reduceMotion, setReduceMotion] = useState(false);
 
-  // Fetch live photos from Neon DB
+  // Fetch live photos from Neon DB (with canonical fallbacks)
   useEffect(() => {
     fetch("/api/content?key=philosophy_photos")
       .then((res) => res.json())
@@ -117,8 +200,7 @@ export function PhilosophyGallery() {
           setPhotos(data.value);
         }
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => {});
   }, []);
 
   const n = Math.max(1, photos.length);
@@ -150,72 +232,7 @@ export function PhilosophyGallery() {
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [loading, photos.length]);
-
-  /* ---------- page scroll -> active photo (single source of truth) ---------- */
-  useEffect(() => {
-    let raf = 0;
-    const update = () => {
-      const el = sectionRef.current;
-      if (!el) return;
-      const scrollable = el.offsetHeight - (window.innerHeight - navH);
-      if (scrollable <= 0) return;
-      const p = (navH - el.getBoundingClientRect().top) / scrollable;
-      setIdx(Math.min(n - 1, Math.max(0, Math.round(p * (n - 1)))));
-    };
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      cancelAnimationFrame(raf);
-    };
-  }, [navH, n]);
-
-  /* ---------- jump to a photo (thumbnail, swipe, keys) ---------- */
-  const goTo = useCallback(
-    (i: number) => {
-      const el = sectionRef.current;
-      if (!el) return;
-      const t = Math.min(n - 1, Math.max(0, i));
-      const scrollable = el.offsetHeight - (window.innerHeight - navH);
-      const top =
-        el.getBoundingClientRect().top + window.scrollY - navH + (scrollable * t) / (n - 1);
-      // Instant jump: the CSS transition below draws the pan, like the clip.
-      window.scrollTo({ top, behavior: "instant" as ScrollBehavior });
-    },
-    [navH, n]
-  );
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    dragRef.current = { x: e.clientX, y: e.clientY };
-  };
-  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    const s = dragRef.current;
-    dragRef.current = null;
-    if (!s) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      goTo(idx + (dx < 0 ? 1 : -1));
-    }
-  };
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (Math.abs(e.deltaX) < 24 || Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
-    const now = performance.now();
-    if (now - wheelLock.current < 650) return;
-    wheelLock.current = now;
-    goTo(idx + (e.deltaX > 0 ? 1 : -1));
-  };
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowRight") { e.preventDefault(); goTo(idx + 1); }
-    if (e.key === "ArrowLeft") { e.preventDefault(); goTo(idx - 1); }
-  };
+  }, [photos.length]);
 
   /* ---------- layout maths ---------- */
   const W = size.w;
@@ -230,18 +247,105 @@ export function PhilosophyGallery() {
   const top = Math.max(0, (H - designH * u) / 2);
   const trackW = isMobile ? MOBILE.TRACK : DESKTOP.TRACK;
   const viewW = W / u;
+  const maxCam = Math.max(0, trackW - viewW);
 
   const poseOf = (p: Photo): Pose =>
     isMobile ? { ...p.m, x: p.cluster * MOBILE.W + p.m.x } : p.d;
 
-  // Bring the active photo to the centre, clamped to the strip.
   const currentPhoto = photos[idx] || photos[0];
-  const a = currentPhoto ? poseOf(currentPhoto) : { x: 30, y: 235, w: 200, rot: -3 };
-  const cx = a.x + (a.w + PAD * 2) / 2;
-  const cam = Math.min(Math.max(0, trackW - viewW), Math.max(0, cx - viewW * 0.5));
-
-  const pan = reduceMotion ? "none" : `transform ${PAN_MS}ms ${PAN_EASE}`;
   const activeCluster = currentPhoto?.cluster ?? 0;
+
+  /* ---------- continuous page scroll -> real-time camera position ---------- */
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      const el = sectionRef.current;
+      if (!el) return;
+      const scrollable = el.offsetHeight - (window.innerHeight - navH);
+      if (scrollable <= 0) return;
+
+      const rawP = (navH - el.getBoundingClientRect().top) / scrollable;
+      const p = Math.min(1, Math.max(0, rawP));
+
+      const currentTrackW = isMobile ? MOBILE.TRACK : DESKTOP.TRACK;
+      const currentViewW = W / u;
+      const currentMaxCam = Math.max(0, currentTrackW - currentViewW);
+      const cam = p * currentMaxCam;
+
+      // Direct hardware-accelerated transform without React re-render churn
+      if (trackRef.current) {
+        trackRef.current.style.transform = `translate3d(${-cam * u}px,0,0)`;
+      }
+
+      if (progressBarRef.current) {
+        progressBarRef.current.style.width = `${Math.min(100, Math.max(4, p * 100))}%`;
+      }
+
+      const newIdx = Math.min(n - 1, Math.max(0, Math.round(p * (n - 1))));
+      if (newIdx !== idxRef.current) {
+        idxRef.current = newIdx;
+        setIdx(newIdx);
+      }
+
+      if (isMobile && mobileTextRef.current) {
+        const cluster = photos[newIdx]?.cluster ?? Math.min(2, Math.floor(p * 3));
+        mobileTextRef.current.style.transform = `translate3d(${-cluster * MOBILE.W * u}px,0,0)`;
+      }
+    };
+
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [navH, n, isMobile, W, u, photos]);
+
+  /* ---------- jump to a photo (thumbnail, chapter buttons, swipe, keys) ---------- */
+  const goTo = useCallback(
+    (i: number) => {
+      const el = sectionRef.current;
+      if (!el) return;
+      const t = Math.min(n - 1, Math.max(0, i));
+      const scrollable = el.offsetHeight - (window.innerHeight - navH);
+      const targetTop =
+        el.getBoundingClientRect().top + window.scrollY - navH + (scrollable * t) / (n - 1);
+      window.scrollTo({ top: targetTop, behavior: "smooth" });
+    },
+    [navH, n]
+  );
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current = { x: e.clientX, y: e.clientY };
+  };
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const s = dragRef.current;
+    dragRef.current = null;
+    if (!s) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      goTo(idx + (dx < 0 ? 1 : -1));
+    }
+  };
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(e.deltaX) < 20 || Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+    const now = performance.now();
+    if (now - wheelLock.current < 400) return;
+    wheelLock.current = now;
+    goTo(idx + (e.deltaX > 0 ? 1 : -1));
+  };
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight") { e.preventDefault(); goTo(idx + 1); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); goTo(idx - 1); }
+  };
 
   /* ---------- filmstrip maths ---------- */
   const THUMB_H = 28;
@@ -259,7 +363,7 @@ export function PhilosophyGallery() {
   const renderText = (t: TextBlock, width: number, fs: number) => (
     <div style={{ width: width * u }}>
       <p className="font-serif" style={{ fontSize: fs * u, lineHeight: 1.32, margin: 0 }}>
-        <span className="block" style={{ color: INK }}>{t.lead}</span>
+        <span className="block font-medium" style={{ color: INK }}>{t.lead}</span>
         <span style={{ color: MUTED }}>{t.body}</span>
       </p>
       {t.cta && (
@@ -327,7 +431,7 @@ export function PhilosophyGallery() {
       ref={sectionRef}
       tabIndex={0}
       onKeyDown={onKeyDown}
-      aria-label="The philosophy: a gallery of photographs"
+      aria-label="The philosophy: an editorial gallery of photographs"
       className="relative w-full outline-none"
       style={{
         background: BG,
@@ -336,7 +440,7 @@ export function PhilosophyGallery() {
     >
       <style>{`
         @keyframes lsCap {
-          from { opacity: 0; transform: translate3d(0, 8px, 0); }
+          from { opacity: 0; transform: translate3d(0, 6px, 0); }
           to   { opacity: 1; transform: translate3d(0, 0, 0); }
         }
       `}</style>
@@ -345,140 +449,176 @@ export function PhilosophyGallery() {
         className="sticky flex flex-col overflow-hidden"
         style={{ top: navH, height: `calc(100svh - ${navH}px)` }}
       >
+        {/* ---------------- top editorial chapter & horizontal progress bar ---------------- */}
+        <div className="shrink-0 w-full px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 flex items-center justify-between border-b border-[#EAE5DC]/80 bg-[#F5F3EF]/95 backdrop-blur-sm z-20">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {CHAPTERS.map((chap) => {
+              const isActive = activeCluster === chap.index;
+              return (
+                <button
+                  key={chap.index}
+                  type="button"
+                  onClick={() => goTo(chap.photoIdx)}
+                  className={`px-2.5 sm:px-3.5 py-1 rounded-full text-[10px] sm:text-[11px] font-sans tracking-wider uppercase transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? "bg-[#2B2927] text-[#F5F3EF] font-bold shadow-xs"
+                      : "text-[#7A746C] hover:text-[#2B2927] hover:bg-[#EAE5DC]"
+                  }`}
+                  aria-current={isActive ? "true" : undefined}
+                >
+                  <span className="hidden sm:inline mr-1 opacity-70">{chap.kicker}:</span>
+                  <span>{chap.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2.5 sm:gap-4">
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-[#7A746C]">
+              <span>Scroll</span>
+              <span className="text-[#B8893A] font-bold animate-pulse">↔</span>
+              <span>to pan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-sans text-[11px] font-semibold text-[#2B2927] tabular-nums">
+                0{idx + 1}
+              </span>
+              <div className="w-14 sm:w-20 h-1 bg-[#E2DCCE] rounded-full overflow-hidden">
+                <div
+                  ref={progressBarRef}
+                  className="h-full bg-[#B8893A] transition-all duration-150 origin-left"
+                  style={{ width: `${Math.min(100, Math.max(4, ((idx + 1) / n) * 100))}%` }}
+                />
+              </div>
+              <span className="font-sans text-[11px] text-[#8B857D] tabular-nums">
+                0{n}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* ---------------- stage ---------------- */}
         <div
           ref={stageRef}
-          className="relative flex-1 min-h-0 w-full overflow-hidden select-none"
+          className="relative flex-1 min-h-0 w-full overflow-hidden select-none cursor-grab active:cursor-grabbing"
           style={{ touchAction: "pan-y" }}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
           onPointerCancel={() => (dragRef.current = null)}
           onWheel={onWheel}
         >
-          {loading || photos.length === 0 ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 animate-pulse z-10">
-              <div className="w-48 h-5 bg-[#E2DCCE] rounded mb-6" />
-              <div className="flex items-center justify-center gap-6 w-full max-w-4xl overflow-hidden">
-                <div className="w-48 sm:w-60 h-64 sm:h-72 bg-[#E2DCCE] rounded-lg shadow-sm -rotate-3" />
-                <div className="w-56 sm:w-68 h-72 sm:h-84 bg-[#DBD4C4] rounded-lg shadow-md z-10" />
-                <div className="w-48 sm:w-60 h-64 sm:h-72 bg-[#E2DCCE] rounded-lg shadow-sm rotate-3" />
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* mobile: text band, panned by cluster */}
-              {isMobile && (
+          {/* mobile: text band, panned by cluster */}
+          {isMobile && (
+            <div
+              ref={mobileTextRef}
+              className="absolute left-0"
+              style={{
+                top,
+                width: trackW * u,
+                height: MOBILE.TEXT_H * u,
+                transform: `translate3d(${-activeCluster * MOBILE.W * u}px,0,0)`,
+                transition: reduceMotion ? "none" : "transform 350ms cubic-bezier(.22,1,.36,1)",
+                willChange: "transform",
+              }}
+            >
+              {TEXTS.map((t, k) => (
                 <div
-                  className="absolute left-0"
+                  key={t.lead}
+                  className="absolute"
+                  style={{ left: (k * MOBILE.W + 20) * u, top: 28 * u }}
+                  aria-hidden={k !== activeCluster}
+                >
+                  {renderText(t, MOBILE.W - 40, 23)}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* photo strip: continuous hardware-accelerated pan with zero input lag */}
+          <div
+            ref={trackRef}
+            className="absolute left-0"
+            style={{
+              top: isMobile ? top + MOBILE.TEXT_H * u : top,
+              width: trackW * u,
+              height: (isMobile ? MOBILE.PHOTO_H : DESKTOP.H) * u,
+              transform: "translate3d(0,0,0)",
+              willChange: "transform",
+            }}
+          >
+            {photoCards}
+
+            {!isMobile &&
+              NOTES.map((nt) => (
+                <div
+                  key={nt.text}
+                  className="absolute pointer-events-none"
                   style={{
-                    top,
-                    width: trackW * u,
-                    height: MOBILE.TEXT_H * u,
-                    transform: `translate3d(${-activeCluster * MOBILE.W * u}px,0,0)`,
-                    transition: pan,
-                    willChange: "transform",
+                    left: nt.x * u,
+                    top: nt.y * u,
+                    fontFamily: HAND,
+                    fontSize: 17 * u,
+                    color: "#2B2927",
+                    lineHeight: 1.1,
                   }}
                 >
-                  {TEXTS.map((t, k) => (
-                    <div
-                      key={t.lead}
-                      className="absolute"
-                      style={{ left: (k * MOBILE.W + 20) * u, top: 28 * u }}
-                      aria-hidden={k !== activeCluster}
-                    >
-                      {renderText(t, MOBILE.W - 40, 23)}
-                    </div>
-                  ))}
+                  {nt.arrow === "up" && <Arrow dir="up" s={u} />}
+                  <span className="block whitespace-nowrap">{nt.text}</span>
+                  {nt.arrow === "down" && <Arrow dir="down" s={u} />}
                 </div>
-              )}
+              ))}
 
-              {/* photo strip: everything on it pans rigidly together */}
-              <div
-                className="absolute left-0"
-                style={{
-                  top: isMobile ? top + MOBILE.TEXT_H * u : top,
-                  width: trackW * u,
-                  height: (isMobile ? MOBILE.PHOTO_H : DESKTOP.H) * u,
-                  transform: `translate3d(${-cam * u}px,0,0)`,
-                  transition: pan,
-                  willChange: "transform",
-                }}
-              >
-                {photoCards}
-
-                {!isMobile &&
-                  NOTES.map((nt) => (
-                    <div
-                      key={nt.text}
-                      className="absolute pointer-events-none"
-                      style={{
-                        left: nt.x * u,
-                        top: nt.y * u,
-                        fontFamily: HAND,
-                        fontSize: 17 * u,
-                        color: "#2B2927",
-                        lineHeight: 1.1,
-                      }}
-                    >
-                      {nt.arrow === "up" && <Arrow dir="up" s={u} />}
-                      <span className="block whitespace-nowrap">{nt.text}</span>
-                      {nt.arrow === "down" && <Arrow dir="down" s={u} />}
-                    </div>
-                  ))}
-
-                {!isMobile &&
-                  TEXTS.map((t) => (
-                    <div
-                      key={t.lead}
-                      className="absolute flex items-center"
-                      style={{ left: t.x * u, top: 0, height: DESKTOP.H * u }}
-                    >
-                      {renderText(t, 300, 25)}
-                    </div>
-                  ))}
-              </div>
-            </>
-          )}
+            {!isMobile &&
+              TEXTS.map((t) => (
+                <div
+                  key={t.lead}
+                  className="absolute flex items-center"
+                  style={{ left: t.x * u, top: 0, height: DESKTOP.H * u }}
+                >
+                  {renderText(t, 300, 25)}
+                </div>
+              ))}
+          </div>
         </div>
 
         {/* ---------------- caption + filmstrip ---------------- */}
-        <div className="shrink-0 flex flex-col items-center pt-2 pb-4 sm:pb-5">
+        <div className="shrink-0 flex flex-col items-center pt-2 pb-3 sm:pb-4 border-t border-[#EAE5DC]/60 bg-[#F5F3EF]">
           {currentPhoto ? (
             <div
               key={idx}
               className="text-center"
-              style={{ animation: reduceMotion ? "none" : "lsCap 420ms cubic-bezier(.22,1,.36,1) both" }}
+              style={{ animation: reduceMotion ? "none" : "lsCap 300ms cubic-bezier(.22,1,.36,1) both" }}
             >
-              <p className="font-serif text-[15px] leading-tight" style={{ color: INK }}>
+              <p className="font-serif text-[14px] sm:text-[15px] font-medium leading-tight" style={{ color: INK }}>
                 {currentPhoto.title}
               </p>
-              <p className="font-serif italic text-[14px] leading-tight mt-0.5" style={{ color: "#8B857D" }}>
+              <p className="font-serif italic text-[12px] sm:text-[13px] leading-tight mt-0.5" style={{ color: "#8B857D" }}>
                 {currentPhoto.sub}
               </p>
             </div>
           ) : (
-            <div className="h-9 flex items-center justify-center animate-pulse">
+            <div className="h-8 flex items-center justify-center animate-pulse">
               <div className="w-32 h-4 bg-[#E2DCCE] rounded" />
             </div>
           )}
 
-          <div className="w-px h-2.5 my-1.5" style={{ background: "#BDB6AB" }} />
+          <div className="w-px h-2 my-1" style={{ background: "#BDB6AB" }} />
 
           <div
             className="relative w-full max-w-[560px] overflow-hidden"
             style={{
-              height: THUMB_H_ACTIVE + 10,
-              WebkitMaskImage: "linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent)",
-              maskImage: "linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent)",
+              height: THUMB_H_ACTIVE + 6,
+              WebkitMaskImage: "linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent)",
+              maskImage: "linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent)",
             }}
           >
-            {photos.length > 0 ? (
+            {photos.length > 0 && (
               <div
                 className="absolute left-1/2 top-0 bottom-0 flex items-center"
                 style={{
                   gap: GAP,
                   transform: `translateX(${-stripCenter}px)`,
-                  transition: reduceMotion ? "none" : `transform 520ms ${PAN_EASE}`,
+                  transition: reduceMotion ? "none" : `transform 400ms ${PAN_EASE}`,
                 }}
               >
                 {photos.map((p, i) => {
@@ -491,7 +631,7 @@ export function PhilosophyGallery() {
                       onClick={() => goTo(i)}
                       aria-label={`${p.title}, ${p.sub}`}
                       aria-current={active}
-                      className="flex-none overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[#B8893A]"
+                      className="flex-none overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[#B8893A] cursor-pointer"
                       style={{
                         height: h,
                         width: h * p.ar,
@@ -503,7 +643,7 @@ export function PhilosophyGallery() {
                         opacity: active ? 1 : 0.82,
                         transition: reduceMotion
                           ? "none"
-                          : `height 520ms ${PAN_EASE}, width 520ms ${PAN_EASE}, opacity 300ms`,
+                          : `height 400ms ${PAN_EASE}, width 400ms ${PAN_EASE}, opacity 250ms`,
                       }}
                     >
                       <img
@@ -515,12 +655,6 @@ export function PhilosophyGallery() {
                     </button>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2 h-full animate-pulse">
-                {[1, 2, 3, 4, 5, 6, 7].map((k) => (
-                  <div key={k} className="w-8 h-7 bg-[#E2DCCE] rounded" />
-                ))}
               </div>
             )}
           </div>
