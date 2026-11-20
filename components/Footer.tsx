@@ -70,9 +70,9 @@ export function Footer() {
 
       {/* Top Section: Brand Info + 4 Link Columns */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 sm:pb-16">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-10 lg:gap-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-10 lg:gap-12" data-stagger="true">
           {/* Brand Left Column */}
-          <div className="col-span-2 md:col-span-2 lg:col-span-2 space-y-4">
+          <div className="reveal-up col-span-2 md:col-span-2 lg:col-span-2 space-y-4">
             <Link href="/" className="inline-block group">
               <span className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-deep group-hover:text-gold transition-colors">
                 LamSparks.
@@ -128,7 +128,7 @@ export function Footer() {
           </div>
 
           {/* Column 1: Sessions */}
-          <div className="col-span-1 md:col-span-1 lg:col-span-1">
+          <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
             <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-4">
               Sessions
             </h4>
@@ -162,7 +162,7 @@ export function Footer() {
           </div>
 
           {/* Column 2: Studio */}
-          <div className="col-span-1 md:col-span-1 lg:col-span-1">
+          <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
             <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-4">
               Studio
             </h4>
@@ -191,7 +191,7 @@ export function Footer() {
           </div>
 
           {/* Column 3: Resources */}
-          <div className="col-span-1 md:col-span-1 lg:col-span-1">
+          <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
             <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-4">
               Resources
             </h4>
@@ -215,7 +215,7 @@ export function Footer() {
           </div>
 
           {/* Column 4: Legal */}
-          <div className="col-span-1 md:col-span-1 lg:col-span-1">
+          <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
             <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-4">
               Legal
             </h4>

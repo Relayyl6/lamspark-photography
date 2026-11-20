@@ -202,7 +202,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
 
       <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center shrink-0">
         {/* --- 1. EYEBROW KICKER WITH FLANKING ACCENT LINES (CENTERED) --- */}
-        <div className="flex items-center justify-center gap-3 mb-2 sm:mb-3 animate-in fade-in duration-700">
+        <div className="flex items-center justify-center gap-3 mb-2 sm:mb-3 animate-fade-down delay-100">
           <span className="w-8 sm:w-12 h-[1.5px] bg-[#D93829]" />
           <span className="font-sans text-[11px] sm:text-xs uppercase tracking-[0.28em] text-[#D93829] font-bold">
             {heroCopy.kicker}
@@ -211,7 +211,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
         </div>
 
         {/* --- 2. MASTER DISPLAY TITLE WITH NESTLED 3D CAMERA ANCHOR --- */}
-        <div className="relative inline-block max-w-3xl mx-auto mb-2 sm:mb-3">
+        <div className="relative inline-block max-w-3xl mx-auto mb-2 sm:mb-3 animate-fade-down delay-200">
           {/* Main Two-Line Ultra-Bold Condensed Sans Headline (Matching Reference 100%) */}
           <h1 className="font-headline uppercase tracking-tight text-[#111111] font-black text-[clamp(1.9rem,min(6vw,8svh),4.5rem)] leading-[1.05] select-none text-center px-2">
             <span className="block drop-shadow-sm whitespace-nowrap">
@@ -225,7 +225,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
           </h1>
 
           {/* Floating 3D Nikon Camera (Upper-Right Shoulder on Desktop, Zero Mobile Overhead) */}
-          <div className="hidden lg:block absolute -top-8 lg:-top-12 -right-24 lg:-right-32 xl:-right-40 w-[160px] lg:w-[190px] h-[160px] lg:h-[190px] pointer-events-auto z-20 cursor-grab active:cursor-grabbing">
+          <div className="hidden lg:block absolute -top-8 lg:-top-12 -right-24 lg:-right-32 xl:-right-40 w-[160px] lg:w-[190px] h-[160px] lg:h-[190px] pointer-events-auto z-20 cursor-grab active:cursor-grabbing animate-blur-in delay-300">
             <div className="absolute inset-0 rounded-full bg-gold/15 blur-2xl -z-10 pointer-events-none transform scale-90" />
             <Nikon3DCamera />
           </div>
@@ -378,7 +378,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
       </div>
 
       {/* --- 6. CURVED / ARCHED CATEGORY TRAJECTORY WITH RED DOTS --- */}
-      <div className="relative max-w-5xl w-full mx-auto mt-2 sm:mt-3 text-center shrink-0">
+      <div className="relative max-w-5xl w-full mx-auto mt-2 sm:mt-3 text-center shrink-0 animate-fade-up delay-400">
         <div className="flex items-center justify-center gap-1.5 sm:gap-3 md:gap-5 text-[8px] sm:text-[11px] font-sans uppercase tracking-[0.2em] text-[#6E6359] flex-wrap md:flex-nowrap px-2">
           {loading || cards.length === 0 ? (
             [1, 2, 3, 4, 5, 6, 7].map((i) => (

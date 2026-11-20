@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { WelcomeIntro } from "@/components/WelcomeIntro";
+import { ScrollRevealObserver } from "@/components/ScrollRevealObserver";
 
 export const metadata: Metadata = {
   title: "LamSparks Photography | Bespoke Portrait & Event Studio | Abuja, Nigeria",
@@ -41,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-cream text-deep antialiased selection:bg-gold-light selection:text-deep flex flex-col font-sans">
+        <ScrollRevealObserver />
         <WelcomeIntro />
         {children}
       </body>

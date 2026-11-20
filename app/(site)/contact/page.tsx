@@ -141,7 +141,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#121110] overflow-y-auto">
       <Nav />
-      <main className="flex-1 text-warm-white px-4 sm:px-6 lg:px-8 relative py-6 sm:py-10">
+      <main className="flex-1 text-warm-white px-4 sm:px-6 lg:px-8 relative py-6 sm:py-10 page-enter">
         {/* Subtle Background Grain Texture */}
         <div
           className="absolute inset-0 opacity-[0.035] pointer-events-none"
@@ -156,7 +156,7 @@ export default function ContactPage() {
           {/* Main 2-Column Split Editorial Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start flex-1">
             {/* Left Column: Headline, Editorial Copy, Studio Concierge Details */}
-            <div className="lg:col-span-6 space-y-5 sm:space-y-10">
+            <div className="lg:col-span-6 space-y-5 sm:space-y-10 reveal-down">
               {/* Bold Editorial Headline with Red Accent Bar */}
               <div>
                 <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-medium tracking-tight uppercase leading-[0.92] text-warm-white">
@@ -304,7 +304,7 @@ export default function ContactPage() {
 
             {/* Right Column: Refined Dark Luxury Inquiry Form */}
             <div className="lg:col-span-6">
-              <div className="bg-[#181615]/95 backdrop-blur-2xl p-4 sm:p-6 rounded-photo border border-white/10 shadow-2xl relative overflow-hidden">
+              <div className="reveal-up delay-100 bg-[#181615]/95 backdrop-blur-2xl p-4 sm:p-6 rounded-photo border border-white/10 shadow-2xl relative overflow-hidden">
                 {/* Thin Red Accent Border Line across the top */}
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-red-600 to-transparent" />
 

@@ -450,7 +450,7 @@ export function PhilosophyGallery() {
         style={{ top: navH, height: `calc(100svh - ${navH}px)` }}
       >
         {/* ---------------- top editorial chapter & horizontal progress bar ---------------- */}
-        <div className="shrink-0 w-full px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 flex items-center justify-between border-b border-[#EAE5DC]/80 bg-[#F5F3EF]/95 backdrop-blur-sm z-20">
+        <div className="shrink-0 w-full px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 flex items-center justify-between border-b border-[#EAE5DC]/80 bg-[#F5F3EF]/95 backdrop-blur-sm z-20 reveal-down">
           <div className="flex items-center gap-1.5 sm:gap-2">
             {CHAPTERS.map((chap) => {
               const isActive = activeCluster === chap.index;
@@ -582,7 +582,7 @@ export function PhilosophyGallery() {
         </div>
 
         {/* ---------------- caption + filmstrip ---------------- */}
-        <div className="shrink-0 flex flex-col items-center pt-2 pb-3 sm:pb-4 border-t border-[#EAE5DC]/60 bg-[#F5F3EF]">
+        <div className="shrink-0 flex flex-col items-center pt-2 pb-3 sm:pb-4 border-t border-[#EAE5DC]/60 bg-[#F5F3EF] reveal-up">
           {currentPhoto ? (
             <div
               key={idx}

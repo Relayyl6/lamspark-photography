@@ -50,8 +50,8 @@ export default async function LoveNotesPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mb-16">
+      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 page-enter">
+        <div className="max-w-3xl mb-16 reveal-down">
           <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-3">
             Social Proof & Words of Warmth
           </span>
@@ -63,7 +63,7 @@ export default async function LoveNotesPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8" data-stagger="true">
           {testimonials.map((t, idx) => (
             <TestimonialCard
               key={idx}

@@ -35,7 +35,7 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
   return (
     <>
       <Nav />
-      <main className="flex-1 pb-24">
+      <main className="flex-1 pb-24 page-enter">
         {/* 1. Hero Image & One-Line Promise */}
         <div className="relative w-full bg-deep text-warm-white py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
           <div className="absolute inset-0 opacity-25">
@@ -45,7 +45,7 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
               className="w-full h-full object-cover object-center filter blur-sm"
             />
           </div>
-          <div className="relative max-w-4xl mx-auto text-center space-y-4">
+          <div className="relative max-w-4xl mx-auto text-center space-y-4 reveal-down">
             <span className="font-body text-xs uppercase tracking-[0.26em] text-gold font-semibold block">
               {session.category === "studio" ? "Abuja Studio Session" : session.category === "events" ? "Event Coverage" : "Editorial Portraiture"}
             </span>
@@ -63,7 +63,7 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
             {/* Left 2 Cols: Editorial Details */}
             <div className="lg:col-span-2 space-y-16">
               {/* 2. Who it is for */}
-              <section className="space-y-4">
+              <section className="space-y-4 reveal-up">
                 <span className="font-body text-xs uppercase tracking-[0.2em] text-gold font-semibold block">
                   The Experience
                 </span>
@@ -104,11 +104,11 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-stagger="true">
                   {packages.map((pkg) => (
                     <div
                       key={pkg.id}
-                      className="bg-warm-white pt-8 sm:pt-9 px-7 sm:px-8 pb-7 rounded-photo-mobile sm:rounded-photo border border-line shadow-editorial flex flex-col justify-between"
+                      className="reveal-up bg-warm-white pt-8 sm:pt-9 px-7 sm:px-8 pb-7 rounded-photo-mobile sm:rounded-photo border border-line shadow-editorial flex flex-col justify-between"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-4 mb-2.5">
@@ -164,7 +164,7 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                 <h2 className="font-display text-3xl sm:text-4xl text-deep font-normal">
                   How Your Session Unfolds
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" data-stagger="true">
                   {[
                     {
                       title: "1. Consultation & Date Selection",
@@ -183,7 +183,7 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                       desc: `Your portraits undergo signature colour grading. Delivered via private soft-copy gallery within ${session.standardDeliveryDays}.`,
                     },
                   ].map((step, idx) => (
-                    <div key={idx} className="p-5 bg-warm-white rounded-lg border border-line flex items-start gap-4">
+                    <div key={idx} className="reveal-up p-5 bg-warm-white rounded-lg border border-line flex items-start gap-4">
                       <div className="w-8 h-8 rounded-full bg-gold/20 text-deep flex items-center justify-center font-display font-semibold shrink-0">
                         {idx + 1}
                       </div>

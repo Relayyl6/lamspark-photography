@@ -88,7 +88,7 @@ export function EditorialCameraShowcaseCTA() {
       </div>
 
       {/* Top Editorial Typography Header */}
-      <div className="relative z-10 text-center max-w-2xl mx-auto px-4 mb-8 sm:mb-12">
+      <div className="relative z-10 text-center max-w-2xl mx-auto px-4 mb-8 sm:mb-12 reveal-down">
         <span className="font-body text-[10px] sm:text-xs uppercase tracking-[0.26em] text-gold-light/90 font-semibold block mb-3">
           Begin Your Journey · Abuja Studio & Location
         </span>
@@ -99,7 +99,7 @@ export function EditorialCameraShowcaseCTA() {
       </div>
 
       {/* Center Stage: Symmetrical Flanking Arrows & Vintage Camera */}
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-8 flex items-center justify-between gap-4">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-8 flex items-center justify-between gap-4 reveal-up delay-100">
         {/* Left Arrow Button */}
         <button
           type="button"
@@ -176,7 +176,7 @@ export function EditorialCameraShowcaseCTA() {
       </div>
 
       {/* Bottom Editorial Bar: Subtext & Dual Action Hub */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 mt-10 sm:mt-14 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 mt-10 sm:mt-14 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6 reveal-up delay-200">
         {/* Bottom Left Subtext */}
         <div className="text-center sm:text-left max-w-xs min-h-[3rem] flex items-center">
           {loading || !current ? (

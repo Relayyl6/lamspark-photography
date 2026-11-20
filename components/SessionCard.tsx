@@ -9,7 +9,7 @@ interface SessionCardProps {
 
 export function SessionCard({ session }: SessionCardProps) {
   return (
-    <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-deep shadow-[0_8px_32px_rgba(24,20,17,0.22)] hover:shadow-[0_16px_48px_rgba(24,20,17,0.36)] transition-all duration-500 cursor-pointer">
+    <article className="reveal-up group relative overflow-hidden rounded-xl sm:rounded-2xl bg-deep shadow-[0_8px_32px_rgba(24,20,17,0.22)] hover:shadow-[0_16px_48px_rgba(24,20,17,0.36)] transition-all duration-500 cursor-pointer">
       <Link href={`/sessions/${session.slug}`} className="block">
         {/* Full-bleed Image */}
         <div className="relative aspect-[3/4] sm:aspect-[2/3] w-full overflow-hidden">

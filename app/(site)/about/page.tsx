@@ -67,11 +67,11 @@ export default async function AboutPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 bg-cream py-14 sm:py-24 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 bg-cream py-14 sm:py-24 px-4 sm:px-6 lg:px-8 page-enter">
         <div className="max-w-7xl mx-auto">
           {/* Top Story Section: Osemene & Lametu Heritage */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center mb-20 sm:mb-28">
-            <div className="lg:col-span-7 space-y-6">
+            <div className="lg:col-span-7 space-y-6 reveal-down">
               <span className="font-body text-xs uppercase tracking-[0.26em] text-gold font-bold block">
                 The Founder & Artist
               </span>
@@ -110,7 +110,7 @@ export default async function AboutPage() {
             </div>
 
             {/* Osemene's Portrait */}
-            <div className="lg:col-span-5 relative">
+            <div className="lg:col-span-5 relative reveal-up delay-150">
               <div className="aspect-[4/5] rounded-photo overflow-hidden border border-line shadow-floating bg-cream">
                 <img
                   src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1200&q=80"
@@ -131,7 +131,7 @@ export default async function AboutPage() {
 
           {/* "WHY CHOOSE US" STATS SECTION (RESPONSIVE: grid-cols-2 ON MOBILE) */}
           <div className="border-t border-line pt-16 sm:pt-20 mb-20 sm:mb-28">
-            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 reveal-down">
               <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-bold block mb-2">
                 Why Families Trust Us
               </span>
@@ -143,12 +143,12 @@ export default async function AboutPage() {
               </p>
             </div>
 
-            {/* Responsive: 2 columns on mobile, 4 columns on desktop */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            {/* Responsive: 2 columns on mobile, 4 columns on desktop with staggered reveals */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6" data-stagger="true">
               {stats.map((s, idx) => {
                 const IconComponent = ICON_MAP[s.iconName || "Sparkles"] || Sparkles;
                 return (
-                  <LiquidGlassCard key={idx} className="p-5 sm:p-7 flex flex-col justify-between">
+                  <LiquidGlassCard key={idx} className="reveal-up p-5 sm:p-7 flex flex-col justify-between">
                     <div>
                       <div className="w-9 h-9 rounded-full bg-gold/15 flex items-center justify-center text-gold mb-4 border border-gold/30">
                         <IconComponent className="w-4 h-4" />

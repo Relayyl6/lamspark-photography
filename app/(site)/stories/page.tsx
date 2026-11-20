@@ -99,10 +99,10 @@ export default function StoriesPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 bg-[#FAF8F5] py-10 sm:py-16 px-4 sm:px-6 lg:px-8 selection:bg-gold-light selection:text-deep">
+      <main className="flex-1 bg-[#FAF8F5] py-10 sm:py-16 px-4 sm:px-6 lg:px-8 selection:bg-gold-light selection:text-deep page-enter">
         <div className="max-w-7xl mx-auto">
           {/* Header Block */}
-          <div className="max-w-3xl mb-10 sm:mb-14">
+          <div className="max-w-3xl mb-10 sm:mb-14 reveal-down">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-warm-white border border-line text-[11px] font-body uppercase tracking-[0.24em] text-gold font-bold mb-3 shadow-editorial">
               <Sparkles className="w-3.5 h-3.5 text-gold" />
               <span>Real Abuja Families · The Living Chronicles</span>
@@ -127,7 +127,7 @@ export default function StoriesPage() {
           ) : (
             <div className="space-y-10 sm:space-y-12">
               {/* Top Navigation & Chronicle Index Bar */}
-              <div className="bg-warm-white p-4 sm:p-5 rounded-photo border border-line shadow-editorial flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="reveal-up bg-warm-white p-4 sm:p-5 rounded-photo border border-line shadow-editorial flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <span className="font-display text-2xl sm:text-3xl text-gold font-light tracking-wider">
                     {current.number}
@@ -187,7 +187,7 @@ export default function StoriesPage() {
 
               {/* Master Feature Spread: Left Visual & Right Narrative */}
               <div
-                className={`grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch transition-opacity duration-200 ${
+                className={`reveal-up delay-150 grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch transition-opacity duration-200 ${
                   isChanging ? "opacity-40" : "opacity-100"
                 }`}
               >

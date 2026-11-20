@@ -126,14 +126,14 @@ export default function PortfolioPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 bg-cream text-deep">
+      <main className="flex-1 bg-cream text-deep page-enter">
         {/* CURATED GALLERY SECTION */}
         <section
           id="gallery-section"
           className="pb-14 pt-6 sm:pb-20 sm:pt-10 lg:pt-12 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         >
           {/* Header & Filter Controls */}
-          <div className="flex flex-col gap-5 mb-8 pb-6 border-b border-line">
+          <div className="flex flex-col gap-5 mb-8 pb-6 border-b border-line reveal-down">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
@@ -232,7 +232,7 @@ export default function PortfolioPage() {
 
           {/* RESPONSIVE GALLERY GRID: 2-Tap on Mobile, Hover on Desktop */}
           {!loading && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6" data-stagger="true">
               {filteredImages.map((img, idx) => {
                 const isMobileActive = activeCardId === img.id;
 
@@ -260,7 +260,7 @@ export default function PortfolioPage() {
                         setActiveImageIndex(idx);
                       }
                     }}
-                    className={`group relative aspect-[3/4] rounded-photo-mobile sm:rounded-photo overflow-hidden cursor-pointer bg-warm-white border transition-all duration-300 shadow-editorial hover:shadow-floating ${
+                    className={`reveal-up group relative aspect-[3/4] rounded-photo-mobile sm:rounded-photo overflow-hidden cursor-pointer bg-warm-white border transition-all duration-300 shadow-editorial hover:shadow-floating ${
                       isMobileActive ? "ring-2 ring-gold border-gold scale-[1.01]" : "border-line"
                     }`}
                     role="button"
@@ -357,7 +357,7 @@ export default function PortfolioPage() {
           )}
 
           {/* Bottom Summary Bar */}
-          <div className="mt-12 pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-body text-muted">
+          <div className="reveal-up mt-12 pt-6 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-body text-muted">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>

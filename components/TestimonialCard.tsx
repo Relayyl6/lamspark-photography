@@ -15,7 +15,7 @@ export function TestimonialCard({
   location = "Abuja",
 }: TestimonialCardProps) {
   return (
-    <div className="bg-warm-white/90 backdrop-blur-md rounded-2xl border border-gold/30 p-5 sm:p-7 shadow-editorial hover:shadow-floating transition-all flex flex-col justify-between">
+    <div className="reveal-up bg-warm-white/90 backdrop-blur-md rounded-2xl border border-gold/30 p-5 sm:p-7 shadow-editorial hover:shadow-floating transition-all flex flex-col justify-between">
       <div>
         <Quote className="w-5 h-5 text-gold/50 mb-3 stroke-1" />
         <p className="font-serif italic text-sm sm:text-base text-deep/90 leading-relaxed font-normal">

@@ -15,9 +15,9 @@ export default async function SessionsIndexPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 page-enter">
         {/* Editorial Header */}
-        <div className="max-w-3xl mb-16">
+        <div className="max-w-3xl mb-16 reveal-down">
           <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-3">
             Collections & Inclusions
           </span>
@@ -30,14 +30,14 @@ export default async function SessionsIndexPage() {
         </div>
 
         {/* Sessions Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" data-stagger="true">
           {sessions.map((session) => (
             <SessionCard key={session.slug} session={session} />
           ))}
         </div>
 
         {/* Two-Step Pricing Notice */}
-        <div className="mt-20 p-8 sm:p-10 rounded-photo bg-warm-white border border-line shadow-editorial max-w-4xl mx-auto">
+        <div className="reveal-up mt-20 p-8 sm:p-10 rounded-photo bg-warm-white border border-line shadow-editorial max-w-4xl mx-auto">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div>
               <span className="font-body text-xs uppercase tracking-[0.2em] text-gold font-semibold block mb-1">

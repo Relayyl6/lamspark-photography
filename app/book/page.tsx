@@ -272,7 +272,7 @@ function BookingWizard() {
 
         {/* STEP 1: Choose Session */}
         {step === 1 && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-fade-up">
             <div>
               <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-1">
                 Step 1 of 5
@@ -341,7 +341,7 @@ function BookingWizard() {
 
         {/* STEP 2: About the Person (Before Any Price) */}
         {step === 2 && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-fade-up">
             <div>
               <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-1">
                 Step 2 of 5
@@ -407,7 +407,7 @@ function BookingWizard() {
 
         {/* STEP 3: Session Specifics & Add-ons */}
         {step === 3 && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-fade-up">
             <div>
               <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-1">
                 Step 3 of 5
@@ -634,7 +634,7 @@ function BookingWizard() {
 
         {/* STEP 4: Name & Contact Details */}
         {step === 4 && (
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-fade-up">
             <div>
               <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-1">
                 Step 4 of 5
@@ -717,7 +717,7 @@ function BookingWizard() {
 
         {/* STEP 5: Itemised Estimate, Agreement & WhatsApp Hand-off */}
         {step === 5 && (
-          <div className="space-y-8 animate-in fade-in duration-300">
+          <div className="space-y-8 animate-fade-up">
             <div>
               <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-1">
                 Step 5 of 5 · Official Estimate

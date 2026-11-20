@@ -59,7 +59,7 @@ export function Nav() {
   ];
 
   return (
-    <header className={`sticky top-0 z-50 border-b border-line transition-all ${
+    <header className={`sticky top-0 z-50 border-b border-line transition-all animate-fade-down ${
       mobileMenuOpen ? "bg-[#FAF8F5]" : "bg-cream/85 backdrop-blur-md"
     }`}>
       <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-14 sm:h-16 lg:h-18 flex items-center justify-between gap-2.5 sm:gap-4">

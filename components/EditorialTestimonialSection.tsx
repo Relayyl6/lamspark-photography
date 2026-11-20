@@ -139,7 +139,7 @@ export function EditorialTestimonialSection({
       <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 min-h-[440px] lg:min-h-[500px] items-stretch">
         
         {/* LEFT COLUMN: Numeric Index, Author Details, Navigation Trigger, Avatars (md:col-span-3) */}
-        <div className="md:col-span-3 flex flex-col justify-between pr-2 sm:pr-4 border-b md:border-b-0 border-deep/10 pb-6 md:pb-0">
+        <div className="md:col-span-3 flex flex-col justify-between pr-2 sm:pr-4 border-b md:border-b-0 border-deep/10 pb-6 md:pb-0 reveal-down">
           <div>
             {/* Index Counter 01 /08 */}
             <div className="flex items-baseline">
@@ -212,7 +212,7 @@ export function EditorialTestimonialSection({
         </div>
 
         {/* RIGHT / MAIN QUOTE COLUMN: Tag, Giant Display Serif Statement, Bottom Controls (md:col-span-9) */}
-        <div className="md:col-span-9 flex flex-col justify-between pl-0 md:pl-6 lg:pl-10">
+        <div className="md:col-span-9 flex flex-col justify-between pl-0 md:pl-6 lg:pl-10 reveal-up delay-100">
           
           {/* Header Row: Category Tag [Testimonial] & Circular Dark Quotation Seal */}
           <div className="flex items-center justify-between pb-4 sm:pb-6">

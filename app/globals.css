@@ -109,3 +109,205 @@
 .animate-progress {
   animation: progress linear forwards;
 }
+
+/* ========================================================================= */
+/* LUXURY EDITORIAL REVEALS, FADE-UPS & FADE-DOWNS SYSTEM                   */
+/* ========================================================================= */
+
+/* Instant Entry Animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes blurIn {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translate3d(0, 20px, 0);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pageFadeUp {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-down {
+  animation: fadeDown 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-blur-in {
+  animation: blurIn 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.page-enter {
+  animation: pageFadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Progressive Enhancement: Only activate scroll-reveal hidden state when JS is initialized */
+html.js-ready .reveal,
+html.js-ready .reveal-up,
+html.js-ready .reveal-down,
+html.js-ready .reveal-left,
+html.js-ready .reveal-right,
+html.js-ready .reveal-scale,
+html.js-ready .reveal-blur,
+html.js-ready [data-reveal] {
+  opacity: 0;
+  will-change: transform, opacity, filter;
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Directional Offsets */
+html.js-ready .reveal-up,
+html.js-ready [data-reveal="up"] {
+  transform: translate3d(0, 32px, 0);
+}
+
+html.js-ready .reveal-down,
+html.js-ready [data-reveal="down"] {
+  transform: translate3d(0, -28px, 0);
+}
+
+html.js-ready .reveal-left,
+html.js-ready [data-reveal="left"] {
+  transform: translate3d(-32px, 0, 0);
+}
+
+html.js-ready .reveal-right,
+html.js-ready [data-reveal="right"] {
+  transform: translate3d(32px, 0, 0);
+}
+
+html.js-ready .reveal-scale,
+html.js-ready [data-reveal="scale"] {
+  transform: scale(0.95);
+}
+
+html.js-ready .reveal-blur,
+html.js-ready [data-reveal="blur"] {
+  filter: blur(10px);
+  transform: translate3d(0, 24px, 0);
+}
+
+/* Revealed State: Silky Snap into Position */
+html.js-ready .is-revealed,
+html.js-ready [data-revealed="true"] {
+  opacity: 1 !important;
+  transform: translate3d(0, 0, 0) scale(1) !important;
+  filter: blur(0) !important;
+}
+
+/* Duration Modifiers */
+html.js-ready .duration-fast {
+  transition-duration: 0.5s !important;
+}
+html.js-ready .duration-normal {
+  transition-duration: 0.85s !important;
+}
+html.js-ready .duration-slow {
+  transition-duration: 1.25s !important;
+}
+
+/* Stagger Utilities */
+.delay-75 { transition-delay: 75ms !important; animation-delay: 75ms !important; }
+.delay-100 { transition-delay: 100ms !important; animation-delay: 100ms !important; }
+.delay-150 { transition-delay: 150ms !important; animation-delay: 150ms !important; }
+.delay-200 { transition-delay: 200ms !important; animation-delay: 200ms !important; }
+.delay-250 { transition-delay: 250ms !important; animation-delay: 250ms !important; }
+.delay-300 { transition-delay: 300ms !important; animation-delay: 300ms !important; }
+.delay-350 { transition-delay: 350ms !important; animation-delay: 350ms !important; }
+.delay-400 { transition-delay: 400ms !important; animation-delay: 400ms !important; }
+.delay-500 { transition-delay: 500ms !important; animation-delay: 500ms !important; }
+.delay-600 { transition-delay: 600ms !important; animation-delay: 600ms !important; }
+.delay-700 { transition-delay: 700ms !important; animation-delay: 700ms !important; }
+.delay-800 { transition-delay: 800ms !important; animation-delay: 800ms !important; }
+
+/* Automatic Grid/List Child Staggering */
+[data-stagger="true"] > *:nth-child(1) { transition-delay: 40ms; animation-delay: 40ms; }
+[data-stagger="true"] > *:nth-child(2) { transition-delay: 110ms; animation-delay: 110ms; }
+[data-stagger="true"] > *:nth-child(3) { transition-delay: 180ms; animation-delay: 180ms; }
+[data-stagger="true"] > *:nth-child(4) { transition-delay: 250ms; animation-delay: 250ms; }
+[data-stagger="true"] > *:nth-child(5) { transition-delay: 320ms; animation-delay: 320ms; }
+[data-stagger="true"] > *:nth-child(6) { transition-delay: 390ms; animation-delay: 390ms; }
+[data-stagger="true"] > *:nth-child(7) { transition-delay: 460ms; animation-delay: 460ms; }
+[data-stagger="true"] > *:nth-child(8) { transition-delay: 530ms; animation-delay: 530ms; }
+[data-stagger="true"] > *:nth-child(9) { transition-delay: 600ms; animation-delay: 600ms; }
+[data-stagger="true"] > *:nth-child(10) { transition-delay: 670ms; animation-delay: 670ms; }
+[data-stagger="true"] > *:nth-child(11) { transition-delay: 740ms; animation-delay: 740ms; }
+[data-stagger="true"] > *:nth-child(12) { transition-delay: 810ms; animation-delay: 810ms; }
+
+/* Reduced Motion Safety */
+@media (prefers-reduced-motion: reduce) {
+  html.js-ready .reveal,
+  html.js-ready .reveal-up,
+  html.js-ready .reveal-down,
+  html.js-ready .reveal-left,
+  html.js-ready .reveal-right,
+  html.js-ready .reveal-scale,
+  html.js-ready .reveal-blur,
+  html.js-ready [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  .page-enter,
+  .animate-fade-up,
+  .animate-fade-down,
+  .animate-fade-in,
+  .animate-blur-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

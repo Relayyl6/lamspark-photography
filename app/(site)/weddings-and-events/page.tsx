@@ -8,8 +8,8 @@ export default function WeddingsAndEventsPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mb-16">
+      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 page-enter">
+        <div className="max-w-3xl mb-16 reveal-down">
           <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-3">
             Bespoke Coverage · Abuja & Beyond
           </span>
@@ -22,14 +22,14 @@ export default function WeddingsAndEventsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-          <div className="aspect-[4/3] rounded-photo overflow-hidden border border-line shadow-editorial">
+          <div className="reveal-up aspect-[4/3] rounded-photo overflow-hidden border border-line shadow-editorial">
             <img
               src="/images/client/weddings/weddings_1.jpg"
               alt="Bespoke luxury Nigerian wedding photography Abuja - LamSparks"
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="space-y-6">
+          <div className="reveal-up delay-100 space-y-6">
             <h2 className="font-display text-3xl sm:text-4xl text-deep font-normal">
               What Coverage Includes
             </h2>
