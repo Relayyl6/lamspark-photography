@@ -324,9 +324,9 @@ export function ServicesEditor() {
                     </div>
                   )}
                   {!session.promoPrice && session.hasOverride && (
-                    <div className="absolute top-3 right-3 bg-gold text-deep font-bold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                    <div className="absolute top-3 right-3 bg-gold text-deep font-bold px-2.5 py-0.5 rounded-full text-[9px] uppercase tracking-wider flex items-center gap-1 shadow-sm" title="Custom studio rates & deliverables configured in Studio OS">
                       <Sparkles className="w-2.5 h-2.5" />
-                      <span>Live DB Override</span>
+                      <span>Custom Rates Active</span>
                     </div>
                   )}
                 </div>

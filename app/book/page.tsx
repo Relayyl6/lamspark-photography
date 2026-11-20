@@ -143,6 +143,8 @@ function BookingWizard() {
     return calculateEstimate(sessionType, answers, packageId);
   }, [sessionType, answers, packageId]);
 
+  const isBespoke = estimate.quoteRequired || estimate.total === 0;
+
   // Handle any answer change -> clears price agreed state per Hard Rule #5
   function handleAnswerChange<T>(setter: React.Dispatch<React.SetStateAction<T>>, val: T) {
     setter(val);
@@ -778,35 +780,52 @@ function BookingWizard() {
                 </div>
               </div>
 
-              {/* Total & Deposit Breakdown */}
-              <div className="bg-cream/60 p-6 rounded-lg border border-line/80 space-y-3">
-                <div className="flex items-center justify-between font-body text-base sm:text-lg font-bold text-deep">
-                  <span>Total Investment:</span>
-                  <span className="font-display text-2xl sm:text-3xl font-semibold">
-                    ₦{estimate.total.toLocaleString()}
-                  </span>
+              {/* Total & Deposit Breakdown: Dual-mode for Fixed Packages vs Bespoke Consultations */}
+              {isBespoke ? (
+                <div className="bg-cream/60 p-6 rounded-lg border border-line/80 space-y-3">
+                  <div className="flex items-center justify-between font-body text-base sm:text-lg font-bold text-deep">
+                    <span>Investment Scope:</span>
+                    <span className="font-display text-xl sm:text-2xl font-semibold text-gold">
+                      Custom Proposal
+                    </span>
+                  </div>
+                  <div className="pt-2 text-xs font-body text-brown/90 leading-relaxed border-t border-line/60">
+                    Because bespoke commissions (executive delegations, diplomatic bilaterals, weddings, and multi-day celebrations) require personalized logistical curation, pricing and deliverables are personally tailored by Osemene upon enquiry review.
+                  </div>
+                  <div className="pt-1 text-[11px] font-mono text-muted">
+                    No initial deposit is required today. Deposit &amp; payment schedule will be established upon quote approval.
+                  </div>
                 </div>
+              ) : (
+                <div className="bg-cream/60 p-6 rounded-lg border border-line/80 space-y-3">
+                  <div className="flex items-center justify-between font-body text-base sm:text-lg font-bold text-deep">
+                    <span>Total Investment:</span>
+                    <span className="font-display text-2xl sm:text-3xl font-semibold">
+                      ₦{estimate.total.toLocaleString()}
+                    </span>
+                  </div>
 
-                <div className="pt-3 border-t border-line/80 flex items-center justify-between font-body text-xs sm:text-sm text-brown">
-                  <span>
-                    Non-Refundable Booking Deposit ({estimate.depositPercent}% to secure date):
-                  </span>
-                  <span className="font-semibold text-deep">
-                    ₦{estimate.depositAmount.toLocaleString()}
-                  </span>
-                </div>
+                  <div className="pt-3 border-t border-line/80 flex items-center justify-between font-body text-xs sm:text-sm text-brown">
+                    <span>
+                      Non-Refundable Booking Deposit ({estimate.depositPercent}% to secure date):
+                    </span>
+                    <span className="font-semibold text-deep">
+                      ₦{estimate.depositAmount.toLocaleString()}
+                    </span>
+                  </div>
 
-                <div className="flex items-center justify-between font-body text-xs sm:text-sm text-brown">
-                  <span>Balance Due on Shoot Day (30%):</span>
-                  <span className="font-semibold text-deep">
-                    ₦{estimate.balanceAmount.toLocaleString()}
-                  </span>
-                </div>
+                  <div className="flex items-center justify-between font-body text-xs sm:text-sm text-brown">
+                    <span>Balance Due on Shoot Day (30%):</span>
+                    <span className="font-semibold text-deep">
+                      ₦{estimate.balanceAmount.toLocaleString()}
+                    </span>
+                  </div>
 
-                <div className="pt-2 text-[11px] text-muted font-body leading-relaxed border-t border-line/40">
-                  {estimate.termsNote}
+                  <div className="pt-2 text-[11px] text-muted font-body leading-relaxed border-t border-line/40">
+                    {estimate.termsNote}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Hard Rules Agreement Checkboxes */}
               <div className="pt-4 border-t border-line space-y-4">
@@ -819,10 +838,20 @@ function BookingWizard() {
                   />
                   <div>
                     <span className="font-body text-sm font-semibold text-deep block">
-                      &ldquo;This price looks right to me.&rdquo; <span className="text-gold">*</span>
+                      {isBespoke ? (
+                        <>
+                          &ldquo;I confirm my details for this bespoke consultation request.&rdquo; <span className="text-gold">*</span>
+                        </>
+                      ) : (
+                        <>
+                          &ldquo;This price looks right to me.&rdquo; <span className="text-gold">*</span>
+                        </>
+                      )}
                     </span>
                     <span className="font-body text-xs text-muted block">
-                      Confirms you have reviewed the itemised breakdown. (Note: changing any answer clears this tick).
+                      {isBespoke
+                        ? "Confirms your dates, location, and coverage requirements are accurate for proposal drafting."
+                        : "Confirms you have reviewed the itemised breakdown. (Note: changing any answer clears this tick)."}
                     </span>
                   </div>
                 </label>
@@ -862,105 +891,136 @@ function BookingWizard() {
                 </label>
               </div>
 
-              {/* Direct Bank Transfer Details Card */}
-              <div className="pt-6 border-t border-line">
-                <div className="bg-warm-white p-5 sm:p-6 rounded-photo border border-line shadow-sm space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-line">
-                    <div>
-                      <span className="font-body text-[10px] uppercase tracking-wider text-gold font-semibold block">
-                        Direct Bank Transfer
-                      </span>
-                      <h4 className="font-display text-lg text-deep font-medium">Studio Deposit Account</h4>
-                    </div>
-                    <span className="text-xs font-semibold text-deep bg-gold/15 px-3 py-1 rounded-full border border-gold/30">
-                      ₦{estimate.depositAmount.toLocaleString()} Due
+              {/* Bespoke Roadmap OR Direct Bank Transfer Details */}
+              {isBespoke ? (
+                <div className="pt-6 border-t border-line">
+                  <div className="bg-warm-white p-5 sm:p-6 rounded-photo border border-line shadow-sm space-y-4">
+                    <span className="font-body text-[10px] uppercase tracking-wider text-gold font-bold block">
+                      Bespoke Concierge Workflow
                     </span>
+                    <h4 className="font-display text-lg text-deep font-semibold">What Happens Next</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-body">
+                      <div className="bg-cream/60 p-3.5 rounded-xl border border-line/60 space-y-1">
+                        <span className="w-5 h-5 rounded-full bg-gold/20 text-deep text-[11px] font-mono font-bold flex items-center justify-center">1</span>
+                        <strong className="text-deep font-semibold block pt-1">Brief Review</strong>
+                        <p className="text-muted text-[11px] leading-relaxed">Osemene personally reviews your date availability, venue logistics, and photographic vision.</p>
+                      </div>
+                      <div className="bg-cream/60 p-3.5 rounded-xl border border-line/60 space-y-1">
+                        <span className="w-5 h-5 rounded-full bg-gold/20 text-deep text-[11px] font-mono font-bold flex items-center justify-center">2</span>
+                        <strong className="text-deep font-semibold block pt-1">Custom Quote</strong>
+                        <p className="text-muted text-[11px] leading-relaxed">You receive a formal, itemised proposal on WhatsApp or Email within 24 hours.</p>
+                      </div>
+                      <div className="bg-cream/60 p-3.5 rounded-xl border border-line/60 space-y-1">
+                        <span className="w-5 h-5 rounded-full bg-gold/20 text-deep text-[11px] font-mono font-bold flex items-center justify-center">3</span>
+                        <strong className="text-deep font-semibold block pt-1">Date Securing</strong>
+                        <p className="text-muted text-[11px] leading-relaxed">Lock your date securely on the atelier calendar with the agreed deposit once approved.</p>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-body">
-                    <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
-                      <span className="text-muted block text-[10px] uppercase tracking-wider">Bank</span>
-                      <strong className="text-deep font-semibold text-sm">Fidelity Bank</strong>
-                    </div>
-                    <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
-                      <span className="text-muted block text-[10px] uppercase tracking-wider">Account Number</span>
-                      <strong className="text-deep font-semibold text-sm tracking-wider">5601662438</strong>
-                    </div>
-                    <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
-                      <span className="text-muted block text-[10px] uppercase tracking-wider">Account Name</span>
-                      <strong className="text-deep font-semibold text-xs leading-snug block">Lamsparks Photography</strong>
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-muted font-body">
-                    Please use reference <strong className="text-deep">{referenceCode}</strong> in the transfer remarks. Once transferred, you can share your receipt on WhatsApp or upload it directly below.
-                  </p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Direct Bank Transfer Details Card */}
+                  <div className="pt-6 border-t border-line">
+                    <div className="bg-warm-white p-5 sm:p-6 rounded-photo border border-line shadow-sm space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-line">
+                        <div>
+                          <span className="font-body text-[10px] uppercase tracking-wider text-gold font-semibold block">
+                            Direct Bank Transfer
+                          </span>
+                          <h4 className="font-display text-lg text-deep font-medium">Studio Deposit Account</h4>
+                        </div>
+                        <span className="text-xs font-semibold text-deep bg-gold/15 px-3 py-1 rounded-full border border-gold/30">
+                          ₦{estimate.depositAmount.toLocaleString()} Due
+                        </span>
+                      </div>
 
-              {/* Client Receipt Upload Zone */}
-              <div className="pt-4 border-t border-line/60">
-                <div className="p-5 rounded-2xl bg-[#F8F5F0] border border-line space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-body text-[10px] uppercase tracking-wider text-gold font-bold block">
-                        Direct Receipt Upload (Optional or Immediate)
-                      </span>
-                      <h4 className="font-display text-base text-deep font-semibold">
-                        Already completed your transfer?
-                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-body">
+                        <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
+                          <span className="text-muted block text-[10px] uppercase tracking-wider">Bank</span>
+                          <strong className="text-deep font-semibold text-sm">Fidelity Bank</strong>
+                        </div>
+                        <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
+                          <span className="text-muted block text-[10px] uppercase tracking-wider">Account Number</span>
+                          <strong className="text-deep font-semibold text-sm tracking-wider">5601662438</strong>
+                        </div>
+                        <div className="bg-cream/60 p-3 rounded-lg border border-line/60">
+                          <span className="text-muted block text-[10px] uppercase tracking-wider">Account Name</span>
+                          <strong className="text-deep font-semibold text-xs leading-snug block">Lamsparks Photography</strong>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-muted font-body">
+                        Please use reference <strong className="text-deep">{referenceCode}</strong> in the transfer remarks. Once transferred, you can share your receipt on WhatsApp or upload it directly below.
+                      </p>
                     </div>
-                    {depositReportedSuccess && (
-                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono uppercase font-bold px-2.5 py-1 rounded-full border border-emerald-300 flex items-center gap-1">
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Deposit Reported</span>
-                      </span>
-                    )}
                   </div>
 
-                  {depositReportedSuccess && receiptUrl ? (
-                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs font-body text-emerald-900 space-y-2">
-                      <p className="font-semibold">
-                        ✓ Proof of transfer received for Ref: {referenceCode}.
-                      </p>
-                      <p className="text-[11px] text-emerald-800 leading-relaxed">
-                        Your deposit has entered the LamSparks Studio Verification Queue. Our team will verify it directly against our Fidelity Bank statement and confirm your date.
-                      </p>
-                      <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-deep hover:text-gold font-semibold underline pt-1">
-                        <span>Upload a different receipt screenshot</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={isUploadingReceipt}
-                          className="hidden"
-                          onChange={handleUploadBookingReceipt}
-                        />
-                      </label>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <p className="text-xs font-body text-brown/85 leading-relaxed max-w-md">
-                        Upload your bank transfer screenshot now to fast-track date verification, or share it directly on WhatsApp.
-                      </p>
-                      <label className="cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all shadow-sm shrink-0">
-                        {isUploadingReceipt ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-gold" />
-                        ) : (
-                          <UploadCloud className="w-4 h-4 text-gold" />
+                  {/* Client Receipt Upload Zone */}
+                  <div className="pt-4 border-t border-line/60">
+                    <div className="p-5 rounded-2xl bg-[#F8F5F0] border border-line space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-body text-[10px] uppercase tracking-wider text-gold font-bold block">
+                            Direct Receipt Upload (Optional or Immediate)
+                          </span>
+                          <h4 className="font-display text-base text-deep font-semibold">
+                            Already completed your transfer?
+                          </h4>
+                        </div>
+                        {depositReportedSuccess && (
+                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono uppercase font-bold px-2.5 py-1 rounded-full border border-emerald-300 flex items-center gap-1">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Deposit Reported</span>
+                          </span>
                         )}
-                        <span>{isUploadingReceipt ? "Uploading..." : "Upload Transfer Receipt"}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={isUploadingReceipt}
-                          className="hidden"
-                          onChange={handleUploadBookingReceipt}
-                        />
-                      </label>
+                      </div>
+
+                      {depositReportedSuccess && receiptUrl ? (
+                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs font-body text-emerald-900 space-y-2">
+                          <p className="font-semibold">
+                            ✓ Proof of transfer received for Ref: {referenceCode}.
+                          </p>
+                          <p className="text-[11px] text-emerald-800 leading-relaxed">
+                            Your deposit has entered the LamSparks Studio Verification Queue. Our team will verify it directly against our Fidelity Bank statement and confirm your date.
+                          </p>
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-deep hover:text-gold font-semibold underline pt-1">
+                            <span>Upload a different receipt screenshot</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={isUploadingReceipt}
+                              className="hidden"
+                              onChange={handleUploadBookingReceipt}
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <p className="text-xs font-body text-brown/85 leading-relaxed max-w-md">
+                            Upload your bank transfer screenshot now to fast-track date verification, or share it directly on WhatsApp.
+                          </p>
+                          <label className="cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all shadow-sm shrink-0">
+                            {isUploadingReceipt ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-gold" />
+                            ) : (
+                              <UploadCloud className="w-4 h-4 text-gold" />
+                            )}
+                            <span>{isUploadingReceipt ? "Uploading..." : "Upload Transfer Receipt"}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={isUploadingReceipt}
+                              className="hidden"
+                              onChange={handleUploadBookingReceipt}
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+                </>
+              )}
 
               {/* Hand-off Action Buttons */}
               <div className="pt-6 border-t border-line flex flex-col sm:flex-row items-center gap-4">

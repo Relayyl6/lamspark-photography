@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Image as ImageIcon,
   Plus,
@@ -91,6 +91,10 @@ export function GalleryManager() {
   const [isSavingEventType, setIsSavingEventType] = useState(false);
   const [quickChangeTypeGalleryId, setQuickChangeTypeGalleryId] = useState<string | null>(null);
 
+  // Event Type Drawer Scroll & Focus Refs
+  const eventTypeDrawerScrollRef = useRef<HTMLDivElement>(null);
+  const eventTypeNameInputRef = useRef<HTMLInputElement>(null);
+
   // Gallery Modal
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [editingGallery, setEditingGallery] = useState<Gallery | null>(null);
@@ -101,6 +105,7 @@ export function GalleryManager() {
     sessionType: "official-portrait",
     coverImage: "",
   });
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   // Photo Edit Modal
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
@@ -246,6 +251,35 @@ export function GalleryManager() {
       }
     } catch (err) {
       console.error("Failed to delete event type:", err);
+    }
+  }
+
+  // Upload a new gallery cover image directly
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url || data.storageKey) {
+        setGalleryForm((prev) => ({
+          ...prev,
+          coverImage: data.url || data.storageKey,
+        }));
+      }
+    } catch (err) {
+      console.error("Cover upload failed:", err);
+    } finally {
+      setIsUploadingCover(false);
+      e.target.value = "";
     }
   }
 
@@ -808,13 +842,28 @@ export function GalleryManager() {
             </div>
 
             {/* Modal Scrollable Body: Create/Edit Form + Event Types List */}
-            <div className="overflow-y-auto no-scrollbar py-4 space-y-6 flex-1">
+            <div ref={eventTypeDrawerScrollRef} className="overflow-y-auto no-scrollbar py-4 space-y-6 flex-1">
               {/* Form: Add or Edit Event Type */}
-              <form onSubmit={handleSaveEventType} className="bg-cream/50 p-4 rounded-2xl border border-line space-y-3">
+              <form
+                onSubmit={handleSaveEventType}
+                className={`p-4 rounded-2xl border transition-all duration-300 space-y-3 ${
+                  editingEventType
+                    ? "bg-amber-50/70 border-gold/70 shadow-md ring-2 ring-gold/20"
+                    : "bg-cream/50 border-line"
+                }`}
+              >
                 <div className="flex items-center justify-between">
-                  <span className="font-body text-xs font-semibold uppercase tracking-wider text-deep">
-                    {editingEventType ? `Edit Event Type: ${editingEventType.name}` : "+ Add New Picture Event Type"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-body text-xs font-semibold uppercase tracking-wider text-deep">
+                      {editingEventType ? "Edit Event Type" : "+ Add New Picture Event Type"}
+                    </span>
+                    {editingEventType && (
+                      <span className="bg-gold text-deep font-bold px-2 py-0.5 rounded-full text-[10px] font-mono flex items-center gap-1 shadow-2xs">
+                        <Edit2 className="w-2.5 h-2.5" />
+                        <span>Editing: {editingEventType.name}</span>
+                      </span>
+                    )}
+                  </div>
                   {editingEventType && (
                     <button
                       type="button"
@@ -841,6 +890,7 @@ export function GalleryManager() {
                       Event Type Name *
                     </label>
                     <input
+                      ref={eventTypeNameInputRef}
                       required
                       type="text"
                       value={eventTypeForm.name}
@@ -977,9 +1027,14 @@ export function GalleryManager() {
                                 badgeColor: t.badgeColor || "#B8893A",
                                 displayOrder: t.displayOrder || 99,
                               });
+                              eventTypeDrawerScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                              setTimeout(() => {
+                                eventTypeNameInputRef.current?.focus();
+                                eventTypeNameInputRef.current?.select();
+                              }, 150);
                             }}
                             className="p-1.5 text-muted hover:text-deep rounded-lg hover:bg-cream"
-                            title="Edit this event type"
+                            title="Edit this event type (scrolls to top)"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -1104,17 +1159,94 @@ export function GalleryManager() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1">
-                  Cover Image URL (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={galleryForm.coverImage}
-                  onChange={(e) => setGalleryForm({ ...galleryForm, coverImage: e.target.value })}
-                  placeholder="https://... or /images/client/corporate_1.jpg"
-                  className="w-full px-3 py-2 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep"
-                />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-deep uppercase tracking-wider">
+                    Cover Image
+                  </label>
+                  {galleryForm.coverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setGalleryForm((prev) => ({ ...prev, coverImage: "" }))}
+                      className="text-[11px] text-red-600 hover:underline font-body"
+                    >
+                      Clear Cover
+                    </button>
+                  )}
+                </div>
+
+                {/* Cover Image Preview */}
+                {galleryForm.coverImage && (
+                  <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden border border-line bg-cream/60 group">
+                    <img
+                      src={galleryForm.coverImage}
+                      alt="Gallery Cover Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-deep/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-3">
+                      <span className="text-[11px] text-warm-white font-mono bg-deep/80 px-2.5 py-1 rounded-md truncate max-w-full">
+                        {galleryForm.coverImage}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Direct Upload + URL Input */}
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all shadow-xs shrink-0">
+                    {isUploadingCover ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-gold" />
+                    ) : (
+                      <UploadCloud className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isUploadingCover ? "Uploading..." : "Upload File"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploadingCover}
+                      className="hidden"
+                      onChange={handleCoverUpload}
+                    />
+                  </label>
+
+                  <input
+                    type="text"
+                    value={galleryForm.coverImage}
+                    onChange={(e) => setGalleryForm({ ...galleryForm, coverImage: e.target.value })}
+                    placeholder="Or provide URL (https://... or /images/...)"
+                    className="flex-1 px-3 py-2 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep"
+                  />
+                </div>
+
+                {/* Select from existing gallery photos */}
+                {selectedGallery && galleryAssets.length > 0 && editingGallery?.id === selectedGallery.id && (
+                  <div className="pt-2 border-t border-line/60">
+                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold block mb-1.5">
+                      Or select from photos in this gallery ({galleryAssets.length}):
+                    </span>
+                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                      {galleryAssets.slice(0, 10).map((asset) => (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          onClick={() => setGalleryForm((prev) => ({ ...prev, coverImage: asset.storage_key }))}
+                          className={`relative shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                            galleryForm.coverImage === asset.storage_key
+                              ? "border-gold ring-2 ring-gold/40 scale-105"
+                              : "border-line opacity-70 hover:opacity-100"
+                          }`}
+                          title={asset.alt_text || "Set as cover"}
+                        >
+                          <img
+                            src={asset.storage_key}
+                            alt={asset.alt_text || "Photo"}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-line flex justify-end gap-2">
