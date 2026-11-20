@@ -4,6 +4,9 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 
 type IntroStage = "check" | "video" | "pulse_dot" | "typing" | "fading_out" | "done";
 
+// Exact timestamp where the camera mode dial scene fades to a pure black screen
+const INTRO_VIDEO_CUT_TIME = 7.75;
+
 export function WelcomeIntro() {
   const [stage, setStage] = useState<IntroStage>("check");
   const [typedText, setTypedText] = useState("");
@@ -72,6 +75,33 @@ export function WelcomeIntro() {
     setStage("pulse_dot");
   }, []);
 
+  const handleTimeUpdate = useCallback(() => {
+    const vid = videoRef.current;
+    if (vid && vid.currentTime >= INTRO_VIDEO_CUT_TIME) {
+      vid.pause();
+      handleVideoEnd();
+    }
+  }, [handleVideoEnd]);
+
+  // Frame-accurate monitor to cut video precisely on the black screen (t = 7.75s)
+  useEffect(() => {
+    if (stage !== "video") return;
+
+    let animId: number;
+    const checkFrame = () => {
+      const vid = videoRef.current;
+      if (vid && !vid.paused && vid.currentTime >= INTRO_VIDEO_CUT_TIME) {
+        vid.pause();
+        handleVideoEnd();
+        return;
+      }
+      animId = requestAnimationFrame(checkFrame);
+    };
+
+    animId = requestAnimationFrame(checkFrame);
+    return () => cancelAnimationFrame(animId);
+  }, [stage, handleVideoEnd]);
+
   const startFadeOut = useCallback(() => {
     try {
       sessionStorage.setItem("lamsparks_intro_session_seen", "true");
@@ -117,10 +147,10 @@ export function WelcomeIntro() {
       vid.addEventListener("loadeddata", tryPlay, { once: true });
     }
 
-    // Safety timeout: only transition after 12s if video stalls completely
+    // Safety timeout: transition after 9s if video stalls
     const safetyTimer = setTimeout(() => {
       handleVideoEnd();
-    }, 12000);
+    }, 9000);
 
     return () => {
       clearTimeout(safetyTimer);
@@ -209,6 +239,7 @@ export function WelcomeIntro() {
               setVideoStarted(true);
               setAutoplayBlocked(false);
             }}
+            onTimeUpdate={handleTimeUpdate}
             onEnded={handleVideoEnd}
             onError={(e) => {
               console.warn("[WelcomeIntro video load notice]", e);
