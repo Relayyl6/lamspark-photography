@@ -11,20 +11,70 @@ export function WelcomeIntro() {
 
   useEffect(() => {
     try {
-      const lastSeen = localStorage.getItem("lamsparks_intro_last_seen");
-      if (lastSeen) {
-        const timePassed = Date.now() - parseInt(lastSeen, 10);
-        // 1 hour = 3600000 ms
-        if (timePassed < 3600000) {
-          setStage("done");
-          return;
-        }
+      // 1. Never show intro on studio admin routes
+      if (typeof window !== "undefined" && window.location.pathname.startsWith("/studio")) {
+        setStage("done");
+        return;
       }
+
+      // 2. Clear legacy 1-hour localStorage lockout to unblock returning users
+      localStorage.removeItem("lamsparks_intro_last_seen");
+
+      // 3. Check for explicit ?intro query parameter
+      const hasIntroQuery = new URLSearchParams(window.location.search).has("intro");
+
+      // 4. Check sessionStorage (plays once per browser tab/session, or always if ?intro)
+      const sessionSeen = sessionStorage.getItem("lamsparks_intro_session_seen");
+      if (sessionSeen && !hasIntroQuery) {
+        setStage("done");
+        return;
+      }
+
       setStage("video");
     } catch {
       setStage("done");
     }
   }, []);
+
+  // Background asset preloader: Warm up hero images, database content & 3D assets while intro plays
+  useEffect(() => {
+    if (stage === "video") {
+      try {
+        const criticalAssets = [
+          "/images/client/weddings/weddings_1.jpg",
+          "/images/client/weddings/weddings_2.jpg",
+          "/images/client/events/events_1.jpg",
+          "/images/client/corporate/corporate_1.jpg",
+          "/images/client/curated_master/master_01.jpg",
+        ];
+
+        criticalAssets.forEach((src) => {
+          const img = new Image();
+          img.src = src;
+        });
+
+        fetch("/api/content?key=philosophy_photos").catch(() => {});
+        fetch("/api/content?key=hero_wheel_cards").catch(() => {});
+      } catch (_) {}
+    }
+  }, [stage]);
+
+  // Robust video autoplay enforcement
+  useEffect(() => {
+    if (stage === "video" && videoRef.current) {
+      const vid = videoRef.current;
+      vid.muted = true;
+      vid.defaultMuted = true;
+      vid.playsInline = true;
+
+      const playPromise = vid.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn("[WelcomeIntro autoplay note]", err);
+        });
+      }
+    }
+  }, [stage]);
 
   function handleVideoEnd() {
     setStage("pulse_dot");
@@ -36,7 +86,7 @@ export function WelcomeIntro() {
 
   function startFadeOut() {
     try {
-      localStorage.setItem("lamsparks_intro_last_seen", Date.now().toString());
+      sessionStorage.setItem("lamsparks_intro_session_seen", "true");
     } catch {}
     setStage("fading_out");
     setTimeout(() => {
@@ -44,29 +94,28 @@ export function WelcomeIntro() {
     }, 1000);
   }
 
-  // Stage 1: Shortened video playback (Max 4 seconds)
+  // Stage 1: Play dramatic camera intro video for ~5 seconds
   useEffect(() => {
     if (stage === "video") {
-      // Limit video playback to a punchy 4 seconds so it does not drag
       const timer = setTimeout(() => {
         handleVideoEnd();
-      }, 4000);
+      }, 5200);
 
       return () => clearTimeout(timer);
     }
   }, [stage]);
 
-  // Stage 2: Pulsating dot (1.5 seconds)
+  // Stage 2: Camera autofocus indicator (1.2 seconds)
   useEffect(() => {
     if (stage === "pulse_dot") {
       const timer = setTimeout(() => {
         setStage("typing");
-      }, 1500);
+      }, 1200);
       return () => clearTimeout(timer);
     }
   }, [stage]);
 
-  // Stage 3: Typing 'LamSparks' -> Smooth fade out into page
+  // Stage 3: Typing 'LamSparks' -> Smooth fade out into fully-loaded page
   useEffect(() => {
     if (stage === "typing") {
       const fullText = "LamSparks";
@@ -79,12 +128,11 @@ export function WelcomeIntro() {
           currentIndex++;
         } else {
           clearInterval(interval);
-          // Pause briefly for appreciation, then initiate silky fade out
           setTimeout(() => {
             startFadeOut();
           }, 450);
         }
-      }, 85);
+      }, 80);
 
       return () => clearInterval(interval);
     }
@@ -98,7 +146,7 @@ export function WelcomeIntro() {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] bg-black flex items-center justify-center overflow-hidden transition-all duration-1000 ease-in-out ${
+      className={`fixed inset-0 z-[100] bg-[#0E0C0A] flex items-center justify-center overflow-hidden transition-all duration-1000 ease-in-out ${
         isFading ? "opacity-0 pointer-events-none scale-102" : "opacity-100"
       }`}
     >
@@ -106,15 +154,16 @@ export function WelcomeIntro() {
       {!isFading && (
         <button
           onClick={handleSkip}
-          className="absolute top-6 right-6 z-20 font-body text-xs uppercase tracking-widest text-warm-white/70 hover:text-gold bg-white/10 hover:bg-white/20 px-3.5 py-1.5 rounded-full border border-white/20 backdrop-blur-md transition-all"
+          className="absolute top-6 right-6 z-20 font-body text-xs uppercase tracking-widest text-warm-white/80 hover:text-gold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 backdrop-blur-md transition-all cursor-pointer shadow-lg"
+          aria-label="Skip introductory video"
         >
           Skip Intro ↗
         </button>
       )}
 
-      {/* Stage 1: Short Video Clip */}
+      {/* Stage 1: Dramatic Camera Lens Intro Video */}
       {stage === "video" && (
-        <div className="relative w-full h-full flex items-center justify-center animate-in fade-in duration-500">
+        <div className="relative w-full h-full flex items-center justify-center animate-in fade-in duration-700">
           <video
             ref={videoRef}
             src="/videos/welcome-intro.mp4"
@@ -122,7 +171,7 @@ export function WelcomeIntro() {
             playsInline
             muted
             onTimeUpdate={() => {
-              if (videoRef.current && videoRef.current.currentTime >= 3.5) {
+              if (videoRef.current && videoRef.current.currentTime >= 5.0) {
                 handleVideoEnd();
               }
             }}
@@ -130,28 +179,35 @@ export function WelcomeIntro() {
             onError={() => setStage("pulse_dot")}
             className="w-full h-full object-cover"
           />
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 font-body text-xs text-warm-white/60 tracking-wider">
-            LamSparks · Abuja
+          {/* Subtle vignette overlay */}
+          <div className="absolute inset-0 bg-radial from-transparent via-black/30 to-black/80 pointer-events-none" />
+
+          {/* Lower editorial signature */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 font-body text-[11px] uppercase tracking-[0.28em] text-warm-white/70">
+            <span>LamSparks</span>
+            <span className="text-gold">•</span>
+            <span>Abuja Atelier</span>
           </div>
         </div>
       )}
 
-      {/* Stage 2: Pulsating Dot (1.5 seconds) */}
+      {/* Stage 2: Camera Focus Ring & Pulsating Dot */}
       {stage === "pulse_dot" && (
-        <div className="flex flex-col items-center justify-center animate-in fade-in duration-300">
+        <div className="flex flex-col items-center justify-center animate-in fade-in duration-400">
           <div className="relative flex items-center justify-center">
-            {/* Pulsating outer halo */}
-            <span className="absolute w-14 h-14 rounded-full bg-gold/30 animate-ping"></span>
-            {/* Glowing core dot */}
-            <span className="w-5 h-5 rounded-full bg-gold shadow-[0_0_30px_rgba(202,138,4,1)] animate-pulse"></span>
+            {/* Camera optical focus ring */}
+            <span className="absolute w-20 h-20 rounded-full border border-gold/40 animate-ping"></span>
+            <span className="absolute w-12 h-12 rounded-full border border-gold/60"></span>
+            {/* Glowing gold focal core */}
+            <span className="w-4 h-4 rounded-full bg-gold shadow-[0_0_30px_rgba(201,169,110,1)] animate-pulse"></span>
           </div>
-          <span className="mt-8 font-body text-[11px] uppercase tracking-[0.3em] text-gold/80">
-            Abuja, Nigeria
+          <span className="mt-8 font-body text-[10px] uppercase tracking-[0.32em] text-gold/90 font-medium">
+            Calibrating Optics · Abuja
           </span>
         </div>
       )}
 
-      {/* Stage 3 & 4: Typing Indicator & Smooth Fade Out */}
+      {/* Stage 3 & 4: Typing Brand Monograph & Silky Crossfade */}
       {(stage === "typing" || stage === "fading_out") && (
         <div
           className={`flex flex-col items-center justify-center transition-all duration-1000 ${
@@ -159,14 +215,14 @@ export function WelcomeIntro() {
           }`}
         >
           <div className="flex items-center">
-            <span className="font-display text-4xl sm:text-6xl md:text-7xl font-semibold text-warm-white tracking-tight drop-shadow-[0_0_25px_rgba(202,138,4,0.4)]">
+            <span className="font-display text-4xl sm:text-6xl md:text-7xl font-semibold text-warm-white tracking-tight drop-shadow-[0_0_30px_rgba(201,169,110,0.4)]">
               {typedText}
             </span>
             {!isFading && (
-              <span className="w-1 sm:w-1.5 h-10 sm:h-14 bg-gold ml-2 animate-pulse shadow-[0_0_15px_rgba(202,138,4,0.9)]"></span>
+              <span className="w-1 sm:w-1.5 h-10 sm:h-14 bg-gold ml-2 animate-pulse shadow-[0_0_15px_rgba(201,169,110,0.9)]"></span>
             )}
           </div>
-          <span className="mt-4 font-body text-xs sm:text-sm tracking-[0.26em] uppercase text-gold font-medium">
+          <span className="mt-4 font-body text-xs sm:text-sm tracking-[0.28em] uppercase text-gold font-medium">
             Photography · Preserving Memories
           </span>
         </div>
