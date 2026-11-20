@@ -12,21 +12,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const { id } = params;
     const body = await req.json();
-    const { title, description, coverImage, sessionType, displayOrder } = body;
+    const { title, slug, description, coverImage, sessionType, displayOrder, cascadeToAssets } = body;
 
     const result = await sql.query(
       `UPDATE gallery
        SET
          title = COALESCE($1, title),
-         description = COALESCE($2, description),
-         cover_asset_id = COALESCE($3, cover_asset_id),
-         session_type = COALESCE($4, session_type),
-         display_order = COALESCE($5, display_order),
+         slug = COALESCE($2, slug),
+         description = COALESCE($3, description),
+         cover_asset_id = COALESCE($4, cover_asset_id),
+         session_type = COALESCE($5, session_type),
+         display_order = COALESCE($6, display_order),
          updated_at = NOW()
-       WHERE id = $6
+       WHERE id = $7
        RETURNING *`,
       [
         title ?? null,
+        slug ?? null,
         description ?? null,
         coverImage ?? null,
         sessionType ?? null,
@@ -37,6 +39,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     if (result.length === 0) {
       return NextResponse.json({ error: "Gallery not found" }, { status: 404 });
+    }
+
+    // Cascade session_type to all assets in this gallery if requested or if sessionType changed
+    if (sessionType) {
+      await sql.query(
+        `UPDATE asset
+         SET session_type = $1, updated_at = NOW()
+         WHERE id IN (SELECT asset_id FROM gallery_item WHERE gallery_id = $2)`,
+        [sessionType, id]
+      );
     }
 
     return NextResponse.json({ gallery: result[0] });

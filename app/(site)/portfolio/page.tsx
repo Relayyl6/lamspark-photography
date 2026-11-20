@@ -22,6 +22,8 @@ interface NeonGalleryItem {
   alt: string;
   caption: string;
   sessionType: string;
+  eventTypeName?: string;
+  eventTypeBadgeColor?: string;
   category: string;
   slug: string;
 }
@@ -32,6 +34,8 @@ interface NeonGallery {
   title: string;
   description: string;
   sessionType: string;
+  eventTypeName?: string;
+  eventTypeBadgeColor?: string;
   displayOrder: number;
   coverAssetId: string | null;
   items: NeonGalleryItem[];
@@ -79,6 +83,8 @@ export default function PortfolioPage() {
                 category: gal.title,
                 title: item.caption.split(" — ")[0] || gal.title,
                 sessionSlug: gal.slug,
+                eventTypeName: item.eventTypeName || gal.eventTypeName,
+                eventTypeBadgeColor: item.eventTypeBadgeColor || gal.eventTypeBadgeColor,
               });
             });
           });
@@ -285,8 +291,14 @@ export default function PortfolioPage() {
                     >
                       {/* Top Bar with Category & Inspect Icon */}
                       <div className="flex items-center justify-between gap-1">
-                        <span className="font-body text-[8px] sm:text-[10px] uppercase tracking-wider text-gold font-bold px-2 py-0.5 rounded-full bg-deep/70 border border-gold/40 backdrop-blur-sm truncate max-w-[130px] sm:max-w-none">
-                          {img.category}
+                        <span
+                          className="font-body text-[8px] sm:text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-deep/80 border backdrop-blur-sm truncate max-w-[130px] sm:max-w-none"
+                          style={{
+                            borderColor: `${img.eventTypeBadgeColor || "#B8893A"}50`,
+                            color: img.eventTypeBadgeColor || "#B8893A",
+                          }}
+                        >
+                          {img.eventTypeName || img.category}
                         </span>
                         <button
                           type="button"

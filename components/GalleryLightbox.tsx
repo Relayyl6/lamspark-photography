@@ -11,6 +11,8 @@ export interface GalleryImage {
   category: string;
   title: string;
   sessionSlug?: string;
+  eventTypeName?: string;
+  eventTypeBadgeColor?: string;
 }
 
 interface GalleryLightboxProps {
@@ -94,8 +96,15 @@ export function GalleryLightbox({
         <div className="sm:hidden flex flex-col gap-1.5">
           {/* Top Line: Badge + Counter + Close Button */}
           <div className="flex items-center justify-between gap-2">
-            <span className="font-body text-[10px] text-gold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-gold/40 bg-gold/10 truncate max-w-[210px] font-semibold">
-              {current.category}
+            <span
+              className="font-body text-[10px] uppercase tracking-wider px-2.5 py-0.5 rounded-full border truncate max-w-[210px] font-semibold"
+              style={{
+                borderColor: `${current.eventTypeBadgeColor || "#B8893A"}60`,
+                color: current.eventTypeBadgeColor || "#B8893A",
+                backgroundColor: `${current.eventTypeBadgeColor || "#B8893A"}18`,
+              }}
+            >
+              {current.eventTypeName || current.category}
             </span>
             <div className="flex items-center gap-2 shrink-0">
               <span className="font-mono text-[11px] text-warm-white/70 bg-white/10 px-2 py-0.5 rounded-full">
@@ -122,8 +131,15 @@ export function GalleryLightbox({
             <h3 className="font-display text-xl text-warm-white font-medium truncate max-w-md">
               {current.title}
             </h3>
-            <span className="font-body text-xs text-gold uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-gold/40 shrink-0">
-              {current.category}
+            <span
+              className="font-body text-xs uppercase tracking-widest px-2.5 py-0.5 rounded-full border shrink-0 font-semibold"
+              style={{
+                borderColor: `${current.eventTypeBadgeColor || "#B8893A"}60`,
+                color: current.eventTypeBadgeColor || "#B8893A",
+                backgroundColor: `${current.eventTypeBadgeColor || "#B8893A"}18`,
+              }}
+            >
+              {current.eventTypeName || current.category}
             </span>
           </div>
           <div className="flex items-center gap-4 shrink-0">

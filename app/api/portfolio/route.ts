@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
     const sql = neon(process.env.DATABASE_URL!);
 
-    // Single unified query to avoid N+1 network round trips
+    // Single unified query to avoid N+1 network round trips, joining dynamic event_type
     const rows = await sql.query(
       `SELECT 
          g.id as "galleryId",
@@ -21,6 +21,8 @@ export async function GET(req: Request) {
          g.session_type as "gallerySessionType",
          g.display_order as "galleryDisplayOrder",
          g.cover_asset_id as "coverAssetId",
+         et.name as "eventTypeName",
+         et.badge_color as "eventTypeBadgeColor",
          gi.id as "itemId",
          gi.caption as "caption",
          gi.display_order as "itemDisplayOrder",
@@ -29,6 +31,7 @@ export async function GET(req: Request) {
          a.session_type as "sessionType",
          a.alt_text as "altText"
        FROM gallery g
+       LEFT JOIN event_type et ON et.slug = g.session_type
        LEFT JOIN gallery_item gi ON gi.gallery_id = g.id
        LEFT JOIN asset a ON gi.asset_id = a.id
        ORDER BY g.display_order ASC, gi.display_order ASC`
@@ -45,6 +48,8 @@ export async function GET(req: Request) {
           title: r.galleryTitle,
           description: r.galleryDescription,
           sessionType: r.gallerySessionType,
+          eventTypeName: r.eventTypeName || r.gallerySessionType,
+          eventTypeBadgeColor: r.eventTypeBadgeColor || "#B8893A",
           displayOrder: r.galleryDisplayOrder,
           coverAssetId: r.coverAssetId,
           items: [],
@@ -59,6 +64,8 @@ export async function GET(req: Request) {
           alt: r.altText || gal.title,
           caption: r.caption || gal.title,
           sessionType: r.sessionType || gal.sessionType,
+          eventTypeName: r.eventTypeName || gal.eventTypeName,
+          eventTypeBadgeColor: r.eventTypeBadgeColor || gal.eventTypeBadgeColor,
           category: gal.title,
           slug: gal.slug,
         });
