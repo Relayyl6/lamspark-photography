@@ -246,7 +246,18 @@ export function Footer() {
       </div>
 
       {/* Middle & Lower Stage: Pure Handcrafted Animated Rolling Wave Landscape + Typographic Brand */}
-      <div className="relative w-full overflow-hidden select-none bg-gradient-to-b from-warm-white via-[#1A1410] to-[#100C09] pt-8 sm:pt-14 pb-8 sm:pb-12">
+      <div
+        className="relative w-full overflow-hidden select-none pt-12 sm:pt-20 pb-8 sm:pb-12"
+        style={{
+          background: "linear-gradient(180deg, #FDFCFA 0%, #F5F0E6 12%, #E8DCBE80 26%, #C8B29650 42%, #6E533F35 60%, #2A1D16 76%, #18110D 90%, #100C09 100%)",
+        }}
+      >
+        {/* Bespoke Horizon Twilight Glow & Subtle Gradient Hairline */}
+        <div className="absolute top-0 inset-x-0 h-32 pointer-events-none overflow-hidden z-10">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-24 bg-gradient-to-b from-[#C9A96E]/15 via-[#C9A96E]/5 to-transparent blur-2xl" />
+          <div className="w-full h-px bg-gradient-to-r from-transparent via-[#C9A96E]/25 to-transparent" />
+        </div>
+
         {/* Warm Atelier Ambient Glows (Warm Gold & Amber - Zero neon purple/pink) */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 bg-amber-700/10 rounded-full blur-[110px] animate-wave-glow" />
@@ -255,10 +266,16 @@ export function Footer() {
         </div>
 
         {/* Back Wave Layer: Deep Velvety Obsidian Espresso (Behind text) */}
-        <div className="absolute inset-x-0 bottom-0 h-48 sm:h-64 md:h-80 z-0 pointer-events-none overflow-hidden opacity-90">
+        <div
+          className="absolute inset-x-0 bottom-0 h-56 sm:h-72 md:h-96 z-0 pointer-events-none overflow-hidden opacity-90"
+          style={{
+            maskImage: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 18%, black 45%, black 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 18%, black 45%, black 100%)",
+          }}
+        >
           <div className="w-[200%] h-full animate-wave-3">
             <svg
-              viewBox="0 0 2400 240"
+              viewBox="0 0 2400 320"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
               className="w-full h-full preserve-3d"
@@ -272,7 +289,7 @@ export function Footer() {
                 </linearGradient>
               </defs>
               <path
-                d="M 0 80 C 200 40, 400 120, 600 90 C 800 60, 1000 120, 1200 80 C 1400 40, 1600 120, 1800 90 C 2000 60, 2200 120, 2400 80 L 2400 240 L 0 240 Z"
+                d="M 0 120 C 200 80, 400 160, 600 130 C 800 100, 1000 160, 1200 120 C 1400 80, 1600 160, 1800 130 C 2000 100, 2200 160, 2400 120 L 2400 320 L 0 320 Z"
                 fill="url(#ls-wave-deep)"
               />
             </svg>
@@ -287,12 +304,18 @@ export function Footer() {
         </div>
 
         {/* Front Multi-Layer Rolling Wave Dunes (Cohesive Warm Bronze, Satin Gold & Deep Velvet Noir) */}
-        <div className="absolute inset-x-0 bottom-0 h-40 sm:h-56 md:h-72 z-20 pointer-events-none overflow-hidden">
+        <div
+          className="absolute inset-x-0 bottom-0 h-48 sm:h-64 md:h-80 z-20 pointer-events-none overflow-hidden"
+          style={{
+            maskImage: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 15%, black 38%, black 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 15%, black 38%, black 100%)",
+          }}
+        >
           {/* Layer 1: Warm Espresso & Tobacco Bronze Dune */}
           <div className="absolute inset-0 animate-wave-float">
             <div className="w-[200%] h-full animate-wave-2 opacity-90">
               <svg
-                viewBox="0 0 2400 240"
+                viewBox="0 0 2400 320"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 className="w-full h-full"
@@ -308,7 +331,7 @@ export function Footer() {
                   </linearGradient>
                 </defs>
                 <path
-                  d="M 0 110 C 150 150, 300 150, 450 80 C 600 10, 600 10, 750 40 C 900 70, 1050 70, 1200 110 C 1350 150, 1500 150, 1650 80 C 1800 10, 1800 10, 1950 40 C 2100 70, 2250 70, 2400 110 L 2400 240 L 0 240 Z"
+                  d="M 0 150 C 150 190, 300 190, 450 120 C 600 50, 600 50, 750 80 C 900 110, 1050 110, 1200 150 C 1350 190, 1500 190, 1650 120 C 1800 50, 1800 50, 1950 80 C 2100 110, 2250 110, 2400 150 L 2400 320 L 0 320 Z"
                   fill="url(#ls-wave-bronze)"
                   fillOpacity="0.88"
                 />
@@ -320,7 +343,7 @@ export function Footer() {
           <div className="absolute inset-0 animate-wave-float" style={{ animationDelay: "-3s" }}>
             <div className="w-[200%] h-full animate-wave-1 opacity-90">
               <svg
-                viewBox="0 0 2400 240"
+                viewBox="0 0 2400 320"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 className="w-full h-full"
@@ -336,7 +359,7 @@ export function Footer() {
                   </linearGradient>
                 </defs>
                 <path
-                  d="M 0 90 C 150 60, 300 150, 450 120 C 600 90, 750 30, 900 60 C 1050 90, 1050 120, 1200 90 C 1350 60, 1500 150, 1650 120 C 1800 90, 1950 30, 2100 60 C 2250 90, 2250 120, 2400 90 L 2400 240 L 0 240 Z"
+                  d="M 0 130 C 150 100, 300 190, 450 160 C 600 130, 750 70, 900 100 C 1050 130, 1050 160, 1200 130 C 1350 100, 1500 190, 1650 160 C 1800 130, 1950 70, 2100 100 C 2250 130, 2250 160, 2400 130 L 2400 320 L 0 320 Z"
                   fill="url(#ls-wave-gold)"
                   fillOpacity="0.85"
                 />
@@ -348,7 +371,7 @@ export function Footer() {
           <div className="absolute inset-0 animate-wave-float" style={{ animationDelay: "-5s" }}>
             <div className="w-[200%] h-full animate-wave-3 opacity-95">
               <svg
-                viewBox="0 0 2400 240"
+                viewBox="0 0 2400 320"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 className="w-full h-full"
@@ -364,7 +387,7 @@ export function Footer() {
                   </linearGradient>
                 </defs>
                 <path
-                  d="M 0 130 C 150 110, 300 70, 450 85 C 600 100, 750 160, 900 145 C 1050 130, 1050 150, 1200 130 C 1350 110, 1500 70, 1650 85 C 1800 100, 1950 160, 2100 145 C 2250 130, 2250 150, 2400 130 L 2400 240 L 0 240 Z"
+                  d="M 0 170 C 150 150, 300 110, 450 125 C 600 140, 750 200, 900 185 C 1050 170, 1050 190, 1200 170 C 1350 150, 1500 110, 1650 125 C 1800 140, 1950 200, 2100 185 C 2250 170, 2250 190, 2400 170 L 2400 320 L 0 320 Z"
                   fill="url(#ls-wave-noir)"
                   fillOpacity="0.94"
                 />
