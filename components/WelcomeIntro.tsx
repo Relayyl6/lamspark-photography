@@ -1,18 +1,30 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 
 type IntroStage = "check" | "video" | "pulse_dot" | "typing" | "fading_out" | "done";
 
 export function WelcomeIntro() {
   const [stage, setStage] = useState<IntroStage>("check");
   const [typedText, setTypedText] = useState("");
+  const [videoStarted, setVideoStarted] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     try {
-      // 1. Never show intro on studio admin routes
-      if (typeof window !== "undefined" && window.location.pathname.startsWith("/studio")) {
+      if (typeof window === "undefined") {
+        setStage("done");
+        return;
+      }
+
+      const path = window.location.pathname;
+      const search = window.location.search;
+      const hasIntroQuery = new URLSearchParams(search).has("intro");
+
+      // 1. Never show intro on studio admin routes or subpages
+      // The cinematic intro is strictly for the root landing "/" or when ?intro is passed
+      if (path.startsWith("/studio") || (path !== "/" && !hasIntroQuery)) {
         setStage("done");
         return;
       }
@@ -20,10 +32,7 @@ export function WelcomeIntro() {
       // 2. Clear legacy 1-hour localStorage lockout to unblock returning users
       localStorage.removeItem("lamsparks_intro_last_seen");
 
-      // 3. Check for explicit ?intro query parameter
-      const hasIntroQuery = new URLSearchParams(window.location.search).has("intro");
-
-      // 4. Check sessionStorage (plays once per browser tab/session, or always if ?intro)
+      // 3. Check session seen (allows replay on ?intro, or on fresh session)
       const sessionSeen = sessionStorage.getItem("lamsparks_intro_session_seen");
       if (sessionSeen && !hasIntroQuery) {
         setStage("done");
@@ -45,7 +54,7 @@ export function WelcomeIntro() {
           "/images/client/weddings/weddings_2.jpg",
           "/images/client/events/events_1.jpg",
           "/images/client/corporate/corporate_1.jpg",
-          "/images/client/curated_master/master_01.jpg",
+          "/images/client/curated_master/curated_master_1.jpg",
         ];
 
         criticalAssets.forEach((src) => {
@@ -59,32 +68,11 @@ export function WelcomeIntro() {
     }
   }, [stage]);
 
-  // Robust video autoplay enforcement
-  useEffect(() => {
-    if (stage === "video" && videoRef.current) {
-      const vid = videoRef.current;
-      vid.muted = true;
-      vid.defaultMuted = true;
-      vid.playsInline = true;
-
-      const playPromise = vid.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.warn("[WelcomeIntro autoplay note]", err);
-        });
-      }
-    }
-  }, [stage]);
-
-  function handleVideoEnd() {
+  const handleVideoEnd = useCallback(() => {
     setStage("pulse_dot");
-  }
+  }, []);
 
-  function handleSkip() {
-    startFadeOut();
-  }
-
-  function startFadeOut() {
+  const startFadeOut = useCallback(() => {
     try {
       sessionStorage.setItem("lamsparks_intro_session_seen", "true");
     } catch {}
@@ -92,18 +80,54 @@ export function WelcomeIntro() {
     setTimeout(() => {
       setStage("done");
     }, 1000);
-  }
+  }, []);
 
-  // Stage 1: Play dramatic camera intro video for ~5 seconds
+  const handleSkip = useCallback(() => {
+    startFadeOut();
+  }, [startFadeOut]);
+
+  // Robust video autoplay enforcement with readyState checks and user gesture fallback
   useEffect(() => {
-    if (stage === "video") {
-      const timer = setTimeout(() => {
-        handleVideoEnd();
-      }, 5200);
+    if (stage !== "video") return;
 
-      return () => clearTimeout(timer);
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    vid.muted = true;
+    vid.defaultMuted = true;
+    vid.playsInline = true;
+
+    const tryPlay = () => {
+      const p = vid.play();
+      if (p !== undefined) {
+        p.then(() => {
+          setVideoStarted(true);
+          setAutoplayBlocked(false);
+        }).catch((err) => {
+          console.warn("[WelcomeIntro autoplay notice]", err?.message || err);
+          setAutoplayBlocked(true);
+        });
+      }
+    };
+
+    if (vid.readyState >= 2) {
+      tryPlay();
+    } else {
+      vid.addEventListener("canplay", tryPlay, { once: true });
+      vid.addEventListener("loadeddata", tryPlay, { once: true });
     }
-  }, [stage]);
+
+    // Safety timeout: only transition after 12s if video stalls completely
+    const safetyTimer = setTimeout(() => {
+      handleVideoEnd();
+    }, 12000);
+
+    return () => {
+      clearTimeout(safetyTimer);
+      vid.removeEventListener("canplay", tryPlay);
+      vid.removeEventListener("loadeddata", tryPlay);
+    };
+  }, [stage, handleVideoEnd]);
 
   // Stage 2: Camera autofocus indicator (1.2 seconds)
   useEffect(() => {
@@ -136,7 +160,7 @@ export function WelcomeIntro() {
 
       return () => clearInterval(interval);
     }
-  }, [stage]);
+  }, [stage, startFadeOut]);
 
   if (stage === "done" || stage === "check") {
     return null;
@@ -146,6 +170,14 @@ export function WelcomeIntro() {
 
   return (
     <div
+      onClick={() => {
+        if (stage === "video" && videoRef.current && !videoStarted) {
+          videoRef.current.play().then(() => {
+            setVideoStarted(true);
+            setAutoplayBlocked(false);
+          }).catch(() => {});
+        }
+      }}
       className={`fixed inset-0 z-[100] bg-[#0E0C0A] flex items-center justify-center overflow-hidden transition-all duration-1000 ease-in-out ${
         isFading ? "opacity-0 pointer-events-none scale-102" : "opacity-100"
       }`}
@@ -153,8 +185,11 @@ export function WelcomeIntro() {
       {/* Skip button in corner */}
       {!isFading && (
         <button
-          onClick={handleSkip}
-          className="absolute top-6 right-6 z-20 font-body text-xs uppercase tracking-widest text-warm-white/80 hover:text-gold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 backdrop-blur-md transition-all cursor-pointer shadow-lg"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSkip();
+          }}
+          className="absolute top-6 right-6 z-30 font-body text-xs uppercase tracking-widest text-warm-white/80 hover:text-gold bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 backdrop-blur-md transition-all cursor-pointer shadow-lg active:scale-95"
           aria-label="Skip introductory video"
         >
           Skip Intro ↗
@@ -166,24 +201,43 @@ export function WelcomeIntro() {
         <div className="relative w-full h-full flex items-center justify-center animate-in fade-in duration-700">
           <video
             ref={videoRef}
-            src="/videos/welcome-intro.mp4"
             autoPlay
             playsInline
             muted
-            onTimeUpdate={() => {
-              if (videoRef.current && videoRef.current.currentTime >= 5.0) {
-                handleVideoEnd();
-              }
+            preload="auto"
+            onPlaying={() => {
+              setVideoStarted(true);
+              setAutoplayBlocked(false);
             }}
             onEnded={handleVideoEnd}
-            onError={() => setStage("pulse_dot")}
+            onError={(e) => {
+              console.warn("[WelcomeIntro video load notice]", e);
+              setStage("pulse_dot");
+            }}
             className="w-full h-full object-cover"
-          />
+          >
+            <source src="/videos/welcome-intro.mp4" type="video/mp4" />
+          </video>
+
+          {/* Autoplay blocked touch overlay */}
+          {autoplayBlocked && !videoStarted && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm cursor-pointer p-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-gold/20 border border-gold/40 flex items-center justify-center text-gold mb-3 animate-pulse">
+                <svg className="w-8 h-8 fill-current translate-x-0.5" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+              <span className="font-body text-xs uppercase tracking-[0.24em] text-warm-white font-semibold">
+                Tap Anywhere to Play Intro
+              </span>
+            </div>
+          )}
+
           {/* Subtle vignette overlay */}
-          <div className="absolute inset-0 bg-radial from-transparent via-black/30 to-black/80 pointer-events-none" />
+          <div className="absolute inset-0 bg-radial from-transparent via-black/25 to-black/75 pointer-events-none" />
 
           {/* Lower editorial signature */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 font-body text-[11px] uppercase tracking-[0.28em] text-warm-white/70">
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 font-body text-[11px] uppercase tracking-[0.28em] text-warm-white/70 pointer-events-none">
             <span>LamSparks</span>
             <span className="text-gold">•</span>
             <span>Abuja Atelier</span>

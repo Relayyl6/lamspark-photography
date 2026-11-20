@@ -247,15 +247,15 @@ export function Footer() {
 
       {/* Middle & Lower Stage: Pure Handcrafted Animated Rolling Wave Landscape + Typographic Brand */}
       <div
-        className="relative w-full overflow-hidden select-none pt-12 sm:pt-20 pb-8 sm:pb-12"
+        className="relative w-full overflow-hidden select-none pt-16 sm:pt-28 pb-8 sm:pb-12"
         style={{
-          background: "linear-gradient(180deg, #FDFCFA 0%, #F5F0E6 12%, #E8DCBE80 26%, #C8B29650 42%, #6E533F35 60%, #2A1D16 76%, #18110D 90%, #100C09 100%)",
+          background: "linear-gradient(180deg, #FAF7F2 0%, #F5EFE6 14%, #EADBCA 28%, #D4C1A8 42%, #9B7E62 58%, #573E2E 72%, #2B1D16 85%, #18100C 94%, #0D0907 100%)",
         }}
       >
-        {/* Bespoke Horizon Twilight Glow & Subtle Gradient Hairline */}
-        <div className="absolute top-0 inset-x-0 h-32 pointer-events-none overflow-hidden z-10">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-24 bg-gradient-to-b from-[#C9A96E]/15 via-[#C9A96E]/5 to-transparent blur-2xl" />
-          <div className="w-full h-px bg-gradient-to-r from-transparent via-[#C9A96E]/25 to-transparent" />
+        {/* Bespoke Horizon Twilight Glow & Seamless Feathered Blend (Zero Sharp Lines) */}
+        <div className="absolute top-0 inset-x-0 h-44 pointer-events-none overflow-hidden z-10">
+          <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-[#FAF7F2] via-[#FAF7F2]/60 to-transparent" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-36 bg-gradient-to-b from-[#C9A96E]/20 via-[#C9A96E]/5 to-transparent blur-3xl" />
         </div>
 
         {/* Warm Atelier Ambient Glows (Warm Gold & Amber - Zero neon purple/pink) */}
@@ -267,10 +267,10 @@ export function Footer() {
 
         {/* Back Wave Layer: Deep Velvety Obsidian Espresso (Behind text) */}
         <div
-          className="absolute inset-x-0 bottom-0 h-56 sm:h-72 md:h-96 z-0 pointer-events-none overflow-hidden opacity-90"
+          className="absolute inset-x-0 bottom-0 h-72 sm:h-96 md:h-[460px] z-0 pointer-events-none overflow-hidden opacity-90"
           style={{
-            maskImage: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 18%, black 45%, black 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 18%, black 45%, black 100%)",
+            maskImage: "linear-gradient(to bottom, transparent 0%, transparent 12%, rgba(0,0,0,0.15) 26%, rgba(0,0,0,0.6) 48%, black 75%, black 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, transparent 12%, rgba(0,0,0,0.15) 26%, rgba(0,0,0,0.6) 48%, black 75%, black 100%)",
           }}
         >
           <div className="w-[200%] h-full animate-wave-3">
@@ -305,10 +305,10 @@ export function Footer() {
 
         {/* Front Multi-Layer Rolling Wave Dunes (Cohesive Warm Bronze, Satin Gold & Deep Velvet Noir) */}
         <div
-          className="absolute inset-x-0 bottom-0 h-48 sm:h-64 md:h-80 z-20 pointer-events-none overflow-hidden"
+          className="absolute inset-x-0 bottom-0 h-64 sm:h-80 md:h-[400px] z-20 pointer-events-none overflow-hidden"
           style={{
-            maskImage: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 15%, black 38%, black 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 15%, black 38%, black 100%)",
+            maskImage: "linear-gradient(to bottom, transparent 0%, transparent 10%, rgba(0,0,0,0.12) 24%, rgba(0,0,0,0.55) 45%, black 72%, black 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, transparent 10%, rgba(0,0,0,0.12) 24%, rgba(0,0,0,0.55) 45%, black 72%, black 100%)",
           }}
         >
           {/* Layer 1: Warm Espresso & Tobacco Bronze Dune */}

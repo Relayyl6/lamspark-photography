@@ -108,18 +108,18 @@ export default function PortfolioPage() {
       ? allItems
       : allItems.filter((img) => img.category === selectedCategory);
 
-  // Concise label helper for clean pill display
+  // Concise label helper for clean pill display across all 9 distinct events
   function getPillDisplayLabel(cat: string) {
     if (cat === "All") return "All Events";
+    if (cat.includes("Jessica")) return "Jessica & Tunji";
     if (cat.includes("Woodhall")) return "Woodhall MOU";
     if (cat.includes("Studio Atelier")) return "Studio Atelier";
-    if (cat.includes("Galas") || cat.includes("Events Portfolio")) return "Grand Galas";
-    if (cat.includes("Unions") || cat.includes("Weddings")) return "Weddings";
-    if (cat.includes("Jessica")) return "Jessica & Tunji";
     if (cat.includes("EFKAS")) return "EFKAS 24'";
-    if (cat.includes("Igninake")) return "Memorial Tribute";
+    if (cat.includes("Igninake")) return "Memorial Celebration";
     if (cat.includes("Koye")) return "Koye Launch";
-    if (cat.includes("Bribena")) return "Milestones";
+    if (cat.includes("Bribena")) return "Milestones & Birthday";
+    if (cat.includes("Galas") || cat.includes("Events Portfolio")) return "Grand Galas";
+    if (cat.includes("Unions") || cat.includes("Weddings")) return "Sacred Unions";
     return cat;
   }
 

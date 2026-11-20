@@ -18,17 +18,28 @@ const sql = neon(process.env.DATABASE_URL!);
 
 async function getHeroData() {
   try {
-    const rows = await sql.query(
-      `SELECT key, value FROM settings WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')
-       UNION ALL
-       SELECT key, to_jsonb(value) as value FROM site_content WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')`
-    );
+    const [settingsRows, siteContentRows] = await Promise.all([
+      sql.query(
+        `SELECT key, value FROM settings WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')`
+      ).catch(() => []),
+      sql.query(
+        `SELECT key, value FROM site_content WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')`
+      ).catch(() => []),
+    ]);
+
     const map: Record<string, any> = {};
-    for (const r of rows) {
-      if (!map[r.key] || Array.isArray(r.value)) {
-        map[r.key] = r.value;
+    for (const r of [...siteContentRows, ...settingsRows]) {
+      if (r && r.key) {
+        let val = r.value;
+        if (typeof val === "string" && (val.startsWith("{") || val.startsWith("["))) {
+          try {
+            val = JSON.parse(val);
+          } catch {}
+        }
+        map[r.key] = val;
       }
     }
+
     return {
       cards: Array.isArray(map.hero_wheel_cards) ? map.hero_wheel_cards : null,
       copy: {
