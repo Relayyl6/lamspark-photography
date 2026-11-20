@@ -9,10 +9,6 @@ import { EditorialTestimonialSection } from "@/components/EditorialTestimonialSe
 import { EditorialCameraShowcaseCTA } from "@/components/EditorialCameraShowcaseCTA";
 import { SESSION_TYPES } from "@/lib/catalog/seed";
 import { getLiveSessionTypes } from "@/lib/catalog/live";
-import { BackgroundVideoLooper } from "@/components/BackgroundVideoLooper";
-import { Nikon3DCamera } from "@/components/Nikon3DCamera";
-import { LiquidLogo } from "@/components/LiquidLogo";
-import { ShaderGradient } from "@/components/ShaderGradient";
 import { PhilosophyGallery } from "@/components/PhilosophyGallery";
 import { neon } from "@neondatabase/serverless";
 
@@ -59,9 +55,6 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Dynamic Background Video Looper: Seamlessly loops 4 editorial reels all throughout scrolling */}
-      <BackgroundVideoLooper />
-
       {/* Editorial Navigation */}
       <Nav />
 

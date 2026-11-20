@@ -26,12 +26,12 @@ export async function POST(req: NextRequest) {
     const { action, phoneNumber, clearMessages } = body;
 
     if (action === "start") {
-      const status = await initWhatsApp({ phoneNumber });
+      const status = await initWhatsApp({ phoneNumber, forceRefresh: true });
       return NextResponse.json({ success: true, status });
     }
 
     if (action === "pair") {
-      const status = await initWhatsApp({ phoneNumber: phoneNumber || "+2348130847299" });
+      const status = await initWhatsApp({ phoneNumber: phoneNumber || "+2348130847299", forceRefresh: true });
       return NextResponse.json({ success: true, status });
     }
 

@@ -69,15 +69,22 @@ export function getWhatsAppStatus(): BaileysStatus {
   return g.__lamsparks_baileys!.status;
 }
 
-export async function initWhatsApp(options: { phoneNumber?: string } = {}): Promise<BaileysStatus> {
+export async function initWhatsApp(options: { phoneNumber?: string; forceRefresh?: boolean } = {}): Promise<BaileysStatus> {
   const stateRef = g.__lamsparks_baileys!;
 
-  if (stateRef.status.state === "connected" && stateRef.sock) {
+  if (stateRef.status.state === "connected" && stateRef.sock && !options.forceRefresh) {
     return stateRef.status;
   }
 
-  if (stateRef.isInitializing) {
+  if (stateRef.isInitializing && !options.forceRefresh) {
     return stateRef.status;
+  }
+
+  if (options.forceRefresh && stateRef.sock) {
+    try {
+      stateRef.sock.end(undefined);
+    } catch {}
+    stateRef.sock = null;
   }
 
   stateRef.isInitializing = true;
@@ -89,7 +96,7 @@ export async function initWhatsApp(options: { phoneNumber?: string } = {}): Prom
 
   try {
     // Authenticate with Neon PostgreSQL (No persistent disk required)
-    const { state, saveCreds } = await usePostgresAuthState();
+    const { state, saveCreds, clearAuth } = await usePostgresAuthState();
     const { version } = await fetchLatestBaileysVersion();
 
     const logger = pino({ level: "silent" });
@@ -145,16 +152,20 @@ export async function initWhatsApp(options: { phoneNumber?: string } = {}): Prom
       if (connection === "close") {
         const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
         const loggedOut = statusCode === DisconnectReason?.loggedOut;
+        const isUnauthorized = statusCode === 401 || statusCode === 405 || statusCode === 428;
+        const isFatalUnregistered = !state.creds.registered && (isUnauthorized || loggedOut || (lastDisconnect?.error as any)?.message?.includes("Connection Failure"));
+
         console.warn(`[Baileys Connection Closed] statusCode: ${statusCode}, loggedOut: ${loggedOut}`, lastDisconnect?.error);
 
         stateRef.sock = null;
         stateRef.isInitializing = false;
 
-        if (loggedOut) {
+        if (loggedOut || isFatalUnregistered) {
           stateRef.status.state = "disconnected";
           stateRef.status.qrCodeDataUrl = null;
           stateRef.status.pairingCode = null;
           stateRef.status.user = null;
+          await clearAuth().catch(() => {});
         } else if (state.creds.registered) {
           // Auto-reconnect only if device is already registered/linked
           stateRef.status.state = "connecting";

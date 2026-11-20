@@ -1,11 +1,10 @@
 import { neon } from "@neondatabase/serverless";
-import {
+import type {
   AuthenticationCreds,
   AuthenticationState,
   SignalDataTypeMap,
-  initAuthCreds,
-  BufferJSON,
 } from "@whiskeysockets/baileys";
+import { initAuthCreds, BufferJSON } from "@whiskeysockets/baileys";
 
 export async function usePostgresAuthState(): Promise<{
   state: AuthenticationState;
@@ -15,18 +14,19 @@ export async function usePostgresAuthState(): Promise<{
   const sql = neon(process.env.DATABASE_URL!);
 
   // Ensure auth session storage table exists in Neon Lakebase Postgres
-  await sql`
+  await sql.query(`
     CREATE TABLE IF NOT EXISTS whatsapp_auth_session (
       id TEXT PRIMARY KEY,
       data JSONB NOT NULL,
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
-  `;
+  `);
 
   // 1. Load or initialize credentials
-  const credsRow = await sql`
-    SELECT data FROM whatsapp_auth_session WHERE id = 'creds' LIMIT 1
-  `.catch(() => []);
+  const credsRow = await sql.query(
+    `SELECT data FROM whatsapp_auth_session WHERE id = $1 LIMIT 1`,
+    ["creds"]
+  ).catch(() => []);
 
   let creds: AuthenticationCreds;
   if (credsRow.length > 0 && credsRow[0].data) {
@@ -43,20 +43,21 @@ export async function usePostgresAuthState(): Promise<{
   const saveCreds = async () => {
     try {
       const serialized = JSON.parse(JSON.stringify(creds, BufferJSON.replacer));
-      await sql`
-        INSERT INTO whatsapp_auth_session (id, data, updated_at)
-        VALUES ('creds', ${JSON.stringify(serialized)}::jsonb, NOW())
-        ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
-      `;
+      await sql.query(
+        `INSERT INTO whatsapp_auth_session (id, data, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        ["creds", JSON.stringify(serialized)]
+      );
     } catch (err) {
       console.error("[PostgresAuthState] Failed to save creds:", err);
     }
   };
 
-  // 3. Clear auth keys (Used when unlinking device)
+  // 3. Clear auth keys (Used when unlinking device or resetting stale session)
   const clearAuth = async () => {
     try {
-      await sql`DELETE FROM whatsapp_auth_session`;
+      await sql.query(`DELETE FROM whatsapp_auth_session`);
       console.log("[PostgresAuthState] Cleared WhatsApp authentication session from Neon DB");
     } catch (err) {
       console.error("[PostgresAuthState] Failed to clear auth session:", err);
@@ -77,10 +78,11 @@ export async function usePostgresAuthState(): Promise<{
 
           try {
             const keyIds = ids.map((id) => `${type}-${id}`);
-            // Fetch batch of keys from Neon DB
-            const rows = await sql`
-              SELECT id, data FROM whatsapp_auth_session WHERE id = ANY(${keyIds})
-            `;
+            const placeholders = keyIds.map((_, i) => `$${i + 1}`).join(", ");
+            const rows = await sql.query(
+              `SELECT id, data FROM whatsapp_auth_session WHERE id IN (${placeholders})`,
+              keyIds
+            );
 
             for (const row of rows) {
               const rawId = row.id.replace(`${type}-`, "");
@@ -105,15 +107,17 @@ export async function usePostgresAuthState(): Promise<{
 
                 if (value) {
                   const serialized = JSON.parse(JSON.stringify(value, BufferJSON.replacer));
-                  await sql`
-                    INSERT INTO whatsapp_auth_session (id, data, updated_at)
-                    VALUES (${keyId}, ${JSON.stringify(serialized)}::jsonb, NOW())
-                    ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
-                  `;
+                  await sql.query(
+                    `INSERT INTO whatsapp_auth_session (id, data, updated_at)
+                     VALUES ($1, $2, NOW())
+                     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+                    [keyId, JSON.stringify(serialized)]
+                  );
                 } else {
-                  await sql`
-                    DELETE FROM whatsapp_auth_session WHERE id = ${keyId}
-                  `;
+                  await sql.query(
+                    `DELETE FROM whatsapp_auth_session WHERE id = $1`,
+                    [keyId]
+                  );
                 }
               }
             }

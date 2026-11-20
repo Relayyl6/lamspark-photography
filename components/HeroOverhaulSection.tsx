@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { ArrowRight, Camera } from "lucide-react";
-import { Nikon3DCamera } from "./Nikon3DCamera";
 
 interface WheelCard {
   id: string;
@@ -223,12 +222,6 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
               </span>
             )}
           </h1>
-
-          {/* Floating 3D Nikon Camera (Upper-Right Shoulder, Complete Clearance) */}
-          <div className="hidden sm:block absolute -top-6 sm:-top-8 lg:-top-12 -right-16 sm:-right-24 lg:-right-32 xl:-right-40 w-[130px] sm:w-[160px] lg:w-[190px] h-[130px] sm:h-[160px] lg:h-[190px] pointer-events-auto z-20 cursor-grab active:cursor-grabbing">
-            <div className="absolute inset-0 rounded-full bg-gold/15 blur-2xl -z-10 pointer-events-none transform scale-90" />
-            <Nikon3DCamera />
-          </div>
         </div>
       </div>
       
