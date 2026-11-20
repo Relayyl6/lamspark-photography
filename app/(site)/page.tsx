@@ -20,19 +20,21 @@ async function getHeroData() {
   try {
     const rows = await sql.query(
       `SELECT key, value FROM settings WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')
-       UNION
-       SELECT key, value FROM site_content WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')`
+       UNION ALL
+       SELECT key, to_jsonb(value) as value FROM site_content WHERE key IN ('hero_wheel_cards', 'hero_kicker', 'hero_headline', 'hero_subtitle')`
     );
     const map: Record<string, any> = {};
     for (const r of rows) {
-      map[r.key] = r.value;
+      if (!map[r.key] || Array.isArray(r.value)) {
+        map[r.key] = r.value;
+      }
     }
     return {
       cards: Array.isArray(map.hero_wheel_cards) ? map.hero_wheel_cards : null,
       copy: {
-        kicker: map.hero_kicker || "I CAPTURE · YOU REMEMBER",
-        headline: map.hero_headline || "REAL MOMENTS. BEAUTIFUL MEMORIES",
-        subtitle: map.hero_subtitle || "I capture real emotions and raw moments that tell your story in the most authentic and timeless way.",
+        kicker: (typeof map.hero_kicker === "string" ? map.hero_kicker : null) || "I CAPTURE · YOU REMEMBER",
+        headline: (typeof map.hero_headline === "string" ? map.hero_headline : null) || "REAL MOMENTS. BEAUTIFUL MEMORIES",
+        subtitle: (typeof map.hero_subtitle === "string" ? map.hero_subtitle : null) || "I capture real emotions and raw moments that tell your story in the most authentic and timeless way.",
       },
     };
   } catch (e) {
