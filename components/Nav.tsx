@@ -62,13 +62,13 @@ export function Nav() {
     <header className={`sticky top-0 z-50 border-b border-line transition-all ${
       mobileMenuOpen ? "bg-[#FAF8F5]" : "bg-cream/85 backdrop-blur-md"
     }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-14 sm:h-16 lg:h-18 flex items-center justify-between gap-2.5 sm:gap-4">
         {/* 1. Left Brand Wordmark */}
         <Link href="/" className="group flex flex-col justify-center shrink-0">
-          <span className="font-display text-2xl sm:text-3xl tracking-tight text-deep font-semibold transition-colors group-hover:text-gold">
+          <span className="font-display text-xl sm:text-2xl lg:text-3xl tracking-tight text-deep font-semibold transition-colors group-hover:text-gold leading-none">
             LamSparks
           </span>
-          <span className="font-body text-[10px] uppercase tracking-[0.24em] text-muted -mt-1 font-medium">
+          <span className="font-body text-[8.5px] sm:text-[9.5px] lg:text-[10px] uppercase tracking-[0.22em] text-muted mt-0.5 font-medium leading-none">
             Photography · Abuja
           </span>
         </Link>
@@ -236,54 +236,54 @@ export function Nav() {
         </nav>
 
         {/* 4. Mobile Controls (lg:hidden) */}
-        <div className="flex lg:hidden items-center gap-2">
+        <div className="flex lg:hidden items-center gap-1.5 sm:gap-2">
           {/* Quick Studio link with Person Icon on Mobile */}
           <Link
             href="/studio"
-            className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-line bg-cream text-brown hover:text-gold"
+            className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-line bg-cream text-brown hover:text-gold"
             title="Studio OS"
           >
-            <User className="w-4 h-4 text-gold" />
+            <User className="w-3.5 h-3.5 text-gold" />
           </Link>
 
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-deep hover:bg-cream border border-line focus:outline-none"
+            className="p-1.5 sm:p-2 rounded-lg text-deep hover:bg-cream border border-line focus:outline-none"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
         </div>
       </div>
 
       {/* 5. Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed left-0 right-0 top-20 bottom-0 w-full h-[calc(100dvh-5rem)] min-h-[calc(100dvh-5rem)] z-50 bg-[#FAF8F5] border-t border-line overflow-y-auto px-6 py-6 pb-28 flex flex-col justify-between shadow-2xl animate-in fade-in duration-200">
-          <div className="space-y-4">
+        <div className="lg:hidden fixed left-0 right-0 top-14 sm:top-16 lg:top-18 bottom-0 w-full h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] z-50 bg-[#FAF8F5] border-t border-line overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 pb-24 flex flex-col justify-between shadow-2xl animate-in fade-in duration-200">
+          <div className="space-y-3 sm:space-y-4">
             {/* Accordion 1: Sessions */}
-            <div className="border-b border-line/60 pb-3">
+            <div className="border-b border-line/60 pb-2.5 sm:pb-3">
               <button
                 type="button"
                 onClick={() => setMobileSessionsOpen(!mobileSessionsOpen)}
-                className="w-full flex items-center justify-between py-2 text-left"
+                className="w-full flex items-center justify-between py-1.5 text-left"
               >
-                <span className="font-display text-lg text-deep font-medium">Sessions</span>
+                <span className="font-display text-base sm:text-lg text-deep font-medium">Sessions</span>
                 <ChevronDown
-                  className={`w-4 h-4 text-gold transition-transform duration-200 ${
+                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold transition-transform duration-200 ${
                     mobileSessionsOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
               {mobileSessionsOpen && (
-                <div className="pl-3 py-2 space-y-2 border-l-2 border-gold/40 mt-1">
+                <div className="pl-3 py-1.5 space-y-1.5 border-l-2 border-gold/40 mt-1">
                   {sessionLinks.map((s) => (
                     <Link
                       key={s.href}
                       href={s.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block py-1 text-sm font-body text-brown hover:text-gold"
+                      className="block py-1 text-[13px] sm:text-sm font-body text-brown hover:text-gold"
                     >
                       {s.label}
                     </Link>
@@ -293,27 +293,27 @@ export function Nav() {
             </div>
 
             {/* Accordion 2: Galleries */}
-            <div className="border-b border-line/60 pb-3">
+            <div className="border-b border-line/60 pb-2.5 sm:pb-3">
               <button
                 type="button"
                 onClick={() => setMobileGalleriesOpen(!mobileGalleriesOpen)}
-                className="w-full flex items-center justify-between py-2 text-left"
+                className="w-full flex items-center justify-between py-1.5 text-left"
               >
-                <span className="font-display text-lg text-deep font-medium">Galleries</span>
+                <span className="font-display text-base sm:text-lg text-deep font-medium">Galleries</span>
                 <ChevronDown
-                  className={`w-4 h-4 text-gold transition-transform duration-200 ${
+                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold transition-transform duration-200 ${
                     mobileGalleriesOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
               {mobileGalleriesOpen && (
-                <div className="pl-3 py-2 space-y-2 border-l-2 border-gold/40 mt-1">
+                <div className="pl-3 py-1.5 space-y-1.5 border-l-2 border-gold/40 mt-1">
                   {galleryLinks.map((g) => (
                     <Link
                       key={g.href}
                       href={g.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block py-1 text-sm font-body text-brown hover:text-gold"
+                      className="block py-1 text-[13px] sm:text-sm font-body text-brown hover:text-gold"
                     >
                       {g.label}
                     </Link>
@@ -323,21 +323,21 @@ export function Nav() {
             </div>
 
             {/* Accordion 3: Atelier */}
-            <div className="border-b border-line/60 pb-3">
+            <div className="border-b border-line/60 pb-2.5 sm:pb-3">
               <button
                 type="button"
                 onClick={() => setMobileAtelierOpen(!mobileAtelierOpen)}
-                className="w-full flex items-center justify-between py-2 text-left"
+                className="w-full flex items-center justify-between py-1.5 text-left"
               >
-                <span className="font-display text-lg text-deep font-medium">Atelier</span>
+                <span className="font-display text-base sm:text-lg text-deep font-medium">Atelier</span>
                 <ChevronDown
-                  className={`w-4 h-4 text-gold transition-transform duration-200 ${
+                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold transition-transform duration-200 ${
                     mobileAtelierOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
               {mobileAtelierOpen && (
-                <div className="pl-3 py-2 space-y-2 border-l-2 border-gold/40 mt-1">
+                <div className="pl-3 py-1.5 space-y-1.5 border-l-2 border-gold/40 mt-1">
                   {atelierLinks.map((a) => (
                     <Link
                       key={a.href}

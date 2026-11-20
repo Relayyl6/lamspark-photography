@@ -9,6 +9,7 @@ import { EditorialTestimonialSection } from "@/components/EditorialTestimonialSe
 import { EditorialCameraShowcaseCTA } from "@/components/EditorialCameraShowcaseCTA";
 import { SESSION_TYPES } from "@/lib/catalog/seed";
 import { getLiveSessionTypes } from "@/lib/catalog/live";
+import { BackgroundVideoLooper } from "@/components/BackgroundVideoLooper";
 import { PhilosophyGallery } from "@/components/PhilosophyGallery";
 import { neon } from "@neondatabase/serverless";
 
@@ -55,6 +56,9 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* Heavily Efficient Desktop Ambient Video Looper (Strictly Hidden on Mobile) */}
+      <BackgroundVideoLooper />
+
       {/* Editorial Navigation */}
       <Nav />
 
