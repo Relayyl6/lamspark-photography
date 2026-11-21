@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   GripVertical,
   Plus,
@@ -125,6 +126,21 @@ export function KanbanBoard({
 
   // Quick Lead Modal
   const [showAddLead, setShowAddLead] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (showAddLead || mobileMoveCard) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [showAddLead, mobileMoveCard]);
   const [leadForm, setLeadForm] = useState({
     clientName: "",
     whatsapp: "",
@@ -447,8 +463,8 @@ export function KanbanBoard({
       </div>
 
       {/* Add New Lead Modal */}
-      {showAddLead && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {mounted && showAddLead && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-warm-white rounded-2xl border border-line max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between mb-4 border-b border-line pb-3">
               <h3 className="font-display text-xl text-deep font-semibold">Create New Client Inquiry</h3>
@@ -534,7 +550,8 @@ export function KanbanBoard({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* VIEW 1: EXECUTIVE PILLARS (5 Horizontal Swimlanes) */}
@@ -906,9 +923,9 @@ export function KanbanBoard({
       )}
 
       {/* Mobile Move Stage Sheet Modal */}
-      {mobileMoveCard && (
+      {mounted && mobileMoveCard && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
           onClick={() => setMobileMoveCard(null)}
         >
           <div
@@ -975,7 +992,8 @@ export function KanbanBoard({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -15,7 +15,7 @@ export default async function SessionsIndexPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 page-enter">
+      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Editorial Header */}
         <div className="max-w-3xl mb-16 reveal-down">
           <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-3">

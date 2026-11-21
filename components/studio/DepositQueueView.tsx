@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   CheckCircle,
   Eye,
@@ -61,6 +62,21 @@ export function DepositQueueView() {
   const [uploadingDepositId, setUploadingDepositId] = useState<string | null>(null);
   const [isProcessingId, setIsProcessingId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (zoomedReceiptUrl) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [zoomedReceiptUrl]);
 
   async function loadDeposits() {
     setIsLoading(true);
@@ -404,9 +420,9 @@ export function DepositQueueView() {
       )}
 
       {/* High-Resolution Zoom Lightbox */}
-      {zoomedReceiptUrl && (
+      {mounted && zoomedReceiptUrl && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
           onClick={() => setZoomedReceiptUrl(null)}
         >
           <div
@@ -446,7 +462,8 @@ export function DepositQueueView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

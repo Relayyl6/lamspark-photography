@@ -141,7 +141,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#121110] overflow-y-auto">
       <Nav />
-      <main className="flex-1 text-warm-white px-4 sm:px-6 lg:px-8 relative py-6 sm:py-10 page-enter">
+      <main className="flex-1 text-warm-white px-4 sm:px-6 lg:px-8 relative py-6 sm:py-10">
         {/* Subtle Background Grain Texture */}
         <div
           className="absolute inset-0 opacity-[0.035] pointer-events-none"

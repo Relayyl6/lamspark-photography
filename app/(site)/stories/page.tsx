@@ -99,7 +99,7 @@ export default function StoriesPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 bg-[#FAF8F5] py-10 sm:py-16 px-4 sm:px-6 lg:px-8 selection:bg-gold-light selection:text-deep page-enter">
+      <main className="flex-1 bg-[#FAF8F5] py-10 sm:py-16 px-4 sm:px-6 lg:px-8 selection:bg-gold-light selection:text-deep">
         <div className="max-w-7xl mx-auto">
           {/* Header Block */}
           <div className="max-w-3xl mb-10 sm:mb-14 reveal-down">

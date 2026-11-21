@@ -59,7 +59,7 @@ export default async function FAQPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 py-10 sm:py-14 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 page-enter">
+      <main className="flex-1 py-10 sm:py-14 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10 reveal-down">
           <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-3">
             Clear Guidance

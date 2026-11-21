@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Inbox,
   MessageCircle,
@@ -79,6 +80,11 @@ export function HumanInbox() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Channel & Triage filters
   const [channelFilter, setChannelFilter] = useState<"all" | "whatsapp" | "instagram">("all");
@@ -117,6 +123,16 @@ export function HumanInbox() {
   const [simPhone, setSimPhone] = useState("+234 803 123 4567");
   const [simText, setSimText] = useState("Hello! I would love to book an unhurried toddler session in Maitama studio next week.");
   const [isSimulating, setIsSimulating] = useState(false);
+
+  useEffect(() => {
+    if (showDeviceModal || showSimModal) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [showDeviceModal, showSimModal]);
 
   // Load Inbox and Device Statuses
   async function loadInbox() {
@@ -841,8 +857,8 @@ export function HumanInbox() {
       )}
 
       {/* DEVICE LINKING MODAL (BAILEYS QR + INSTAGRAM DIRECT) */}
-      {showDeviceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+      {mounted && showDeviceModal && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
           <div className="bg-warm-white w-full max-w-lg rounded-2xl border border-line shadow-2xl p-6 space-y-5 animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <div className="flex items-center gap-2">
@@ -1068,12 +1084,13 @@ export function HumanInbox() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* SIMULATOR MODAL */}
-      {showSimModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+      {mounted && showSimModal && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
           <div className="bg-warm-white w-full max-w-lg rounded-2xl border border-line shadow-2xl p-6 space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <div className="flex items-center gap-2">
@@ -1183,7 +1200,8 @@ export function HumanInbox() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

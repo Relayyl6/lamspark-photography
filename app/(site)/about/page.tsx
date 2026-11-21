@@ -67,7 +67,7 @@ export default async function AboutPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 bg-cream py-14 sm:py-24 px-4 sm:px-6 lg:px-8 page-enter">
+      <main className="flex-1 bg-cream py-14 sm:py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Top Story Section: Osemene & Lametu Heritage */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center mb-20 sm:mb-28">

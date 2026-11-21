@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar,
   Clock,
@@ -37,6 +38,21 @@ export function ContentCalendar() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [platformFilter, setPlatformFilter] = useState("All");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (showAddModal) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [showAddModal]);
 
   // Form State
   const [formPlatform, setFormPlatform] = useState("Instagram");
@@ -256,8 +272,8 @@ export function ContentCalendar() {
       )}
 
       {/* Schedule Post Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {mounted && showAddModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-warm-white rounded-2xl border border-line max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-display text-xl text-deep font-semibold">
@@ -377,7 +393,8 @@ export function ContentCalendar() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

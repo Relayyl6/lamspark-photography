@@ -71,7 +71,7 @@ export default async function HomePage() {
       {/* Editorial Navigation */}
       <Nav />
 
-      <main className="flex-1 relative z-10 page-enter">
+      <main className="flex-1 relative z-10">
         {/* Overhauled Editorial 3D Arched Panorama Hero with Integrated 3D Nikon Camera */}
         <HeroOverhaulSection initialCards={heroData.cards} initialCopy={heroData.copy} />
 

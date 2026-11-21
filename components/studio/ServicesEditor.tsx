@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Tag,
   Edit2,
@@ -47,6 +48,21 @@ export function ServicesEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (editingSession) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [editingSession]);
 
   // Form State
   const [editPrice, setEditPrice] = useState<string>("");
@@ -409,8 +425,8 @@ export function ServicesEditor() {
       )}
 
       {/* Edit Modal */}
-      {editingSession && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {mounted && editingSession && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-warm-white rounded-2xl border border-line max-w-2xl w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
@@ -726,7 +742,8 @@ export function ServicesEditor() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

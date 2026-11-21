@@ -35,7 +35,7 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
   return (
     <>
       <Nav />
-      <main className="flex-1 pb-24 page-enter">
+      <main className="flex-1 pb-24">
         {/* 1. Hero Image & One-Line Promise */}
         <div className="relative w-full bg-deep text-warm-white py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
           <div className="absolute inset-0 opacity-25">

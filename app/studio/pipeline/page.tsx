@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { KanbanBoard } from "@/components/studio/KanbanBoard";
 import { EnquiryRecord, PipelineStage } from "@/lib/types";
 import { transitionEnquiry } from "@/lib/pipeline/transition";
@@ -25,6 +26,21 @@ export default function PipelinePage() {
   const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEnquiry, setSelectedEnquiry] = useState<EnquiryRecord | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (selectedEnquiry) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [selectedEnquiry]);
 
   useEffect(() => {
     setLoading(true);
@@ -69,9 +85,9 @@ export default function PipelinePage() {
       )}
 
       {/* Enquiry Detail Modal */}
-      {selectedEnquiry && (
+      {mounted && selectedEnquiry && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setSelectedEnquiry(null)}
         >
           <div
@@ -175,7 +191,8 @@ export default function PipelinePage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
