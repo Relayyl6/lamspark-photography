@@ -126,7 +126,7 @@ export default function PortfolioPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 bg-cream text-deep page-enter">
+      <main className="flex-1 bg-cream text-deep">
         {/* CURATED GALLERY SECTION */}
         <section
           id="gallery-section"

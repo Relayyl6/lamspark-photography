@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { X, ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
 
@@ -29,12 +30,28 @@ export function GalleryLightbox({
   onClose,
 }: GalleryLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [mounted, setMounted] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     setCurrentIndex(initialIndex);
   }, [initialIndex]);
+
+  // Lock body scroll while lightbox is active
+  useEffect(() => {
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -47,7 +64,7 @@ export function GalleryLightbox({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, currentIndex, images.length]);
 
-  if (!isOpen || images.length === 0) return null;
+  if (!isOpen || images.length === 0 || !mounted) return null;
 
   const current = images[currentIndex] || images[0];
 
@@ -82,11 +99,11 @@ export function GalleryLightbox({
     touchStartY.current = null;
   }
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 bg-[#0E0C0A]/95 backdrop-blur-md flex flex-col justify-between p-3 sm:p-6 lg:p-8 animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-[100] bg-[#0E0C0A]/95 backdrop-blur-md flex flex-col justify-between p-3 sm:p-6 lg:p-8 animate-in fade-in duration-200 select-none"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -202,6 +219,7 @@ export function GalleryLightbox({
           <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
         </Link>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

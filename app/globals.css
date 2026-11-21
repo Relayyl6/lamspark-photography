@@ -162,11 +162,9 @@
 @keyframes pageFadeUp {
   0% {
     opacity: 0;
-    transform: translate3d(0, 18px, 0);
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -187,7 +185,7 @@
 }
 
 .page-enter {
-  animation: pageFadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: pageFadeUp 0.4s ease-out both;
 }
 
 /* Progressive Enhancement: Only activate scroll-reveal hidden state when JS is initialized */

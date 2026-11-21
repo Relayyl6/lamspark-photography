@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Image as ImageIcon,
   Plus,
@@ -19,6 +20,9 @@ import {
   Layers,
   Palette,
   ArrowRight,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 interface Gallery {
@@ -110,6 +114,45 @@ export function GalleryManager() {
   // Photo Edit Modal
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [assetAltText, setAssetAltText] = useState("");
+
+  // Portal mount check
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Bulk Upload State
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [bulkTargetGalleryId, setBulkTargetGalleryId] = useState<string>("");
+  const [bulkUploadTab, setBulkUploadTab] = useState<"files" | "urls">("files");
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [stagedUrlsText, setStagedUrlsText] = useState("");
+  const [bulkCaptionPrefix, setBulkCaptionPrefix] = useState("");
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState<{
+    current: number;
+    total: number;
+    currentFileName: string;
+    percent: number;
+  } | null>(null);
+  const [bulkUploadResults, setBulkUploadResults] = useState<{
+    successCount: number;
+    failCount: number;
+    errors: string[];
+  } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Lock background scroll when ANY modal is active
+  useEffect(() => {
+    if (showEventTypeModal || showGalleryModal || editingAsset || showBulkUploadModal) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [showEventTypeModal, showGalleryModal, editingAsset, showBulkUploadModal]);
 
   // Load Event Types
   async function loadEventTypes() {
@@ -460,6 +503,203 @@ export function GalleryManager() {
     };
   }
 
+  // Handle files staged for bulk upload
+  function handleFilesStaged(newFiles: FileList | File[]) {
+    const valid = Array.from(newFiles).filter((f) => f.type.startsWith("image/"));
+    if (valid.length === 0) return;
+    setStagedFiles((prev) => [...prev, ...valid]);
+    setBulkUploadResults(null);
+  }
+
+  function removeStagedFile(index: number) {
+    setStagedFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // Execute Bulk Upload (Batch Parallel or URL List)
+  async function runBulkUpload() {
+    if (!bulkTargetGalleryId) {
+      alert("Please select a target Event Gallery.");
+      return;
+    }
+
+    const targetGallery = galleries.find((g) => g.id === bulkTargetGalleryId);
+    if (!targetGallery) return;
+
+    const targetSessionType = targetGallery.session_type || "general";
+    const targetGalleryId = targetGallery.id;
+
+    setIsBulkUploading(true);
+    setBulkUploadResults(null);
+
+    // MODE 1: Local Files
+    if (bulkUploadTab === "files") {
+      if (stagedFiles.length === 0) {
+        alert("Please select or drop at least one image file.");
+        setIsBulkUploading(false);
+        return;
+      }
+
+      const total = stagedFiles.length;
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      // Concurrency worker queue (3 files simultaneously)
+      const concurrency = 3;
+      let fileIndex = 0;
+
+      async function worker() {
+        while (fileIndex < stagedFiles.length) {
+          const currentIndex = fileIndex++;
+          const file = stagedFiles[currentIndex];
+
+          setBulkUploadProgress({
+            current: successCount + failCount + 1,
+            total,
+            currentFileName: file.name,
+            percent: Math.round(((successCount + failCount) / total) * 100),
+          });
+
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("partition", "public");
+            formData.append("sessionType", targetSessionType);
+
+            const uploadRes = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            });
+            const uploadData = await uploadRes.json();
+
+            if (uploadData.success) {
+              const caption = bulkCaptionPrefix
+                ? `${bulkCaptionPrefix} - ${file.name.replace(/\.[^/.]+$/, "")}`
+                : file.name.replace(/\.[^/.]+$/, "");
+
+              const assetRes = await fetch("/api/admin/assets", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  storageKey: uploadData.url || uploadData.storageKey,
+                  storageBucket: "portfolio-assets",
+                  kind: "photo",
+                  sessionType: targetSessionType,
+                  altText: caption,
+                  galleryId: targetGalleryId,
+                  consentStatus: "portfolio",
+                }),
+              });
+              const assetData = await assetRes.json();
+              if (assetData.asset && selectedGallery?.id === targetGalleryId) {
+                setGalleryAssets((prev) => [assetData.asset, ...prev]);
+              }
+              successCount++;
+            } else {
+              failCount++;
+              errors.push(`${file.name}: ${uploadData.error || "Upload failed"}`);
+            }
+          } catch (err: any) {
+            failCount++;
+            errors.push(`${file.name}: ${err.message || "Network error"}`);
+          }
+
+          setBulkUploadProgress({
+            current: successCount + failCount,
+            total,
+            currentFileName: file.name,
+            percent: Math.round(((successCount + failCount) / total) * 100),
+          });
+        }
+      }
+
+      const workers = Array.from({ length: Math.min(concurrency, total) }, () => worker());
+      await Promise.all(workers);
+
+      setBulkUploadResults({ successCount, failCount, errors });
+      setIsBulkUploading(false);
+      setStagedFiles([]);
+      loadGalleries();
+      loadEventTypes();
+      if (selectedGallery?.id === targetGalleryId) {
+        fetch(`/api/admin/assets?galleryId=${targetGalleryId}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.assets) setGalleryAssets(data.assets);
+          })
+          .catch(() => {});
+      }
+    } else {
+      // MODE 2: Bulk Image URLs
+      const urls = stagedUrlsText
+        .split("\n")
+        .map((u) => u.trim())
+        .filter((u) => u.length > 5 && (u.startsWith("http") || u.startsWith("/")));
+
+      if (urls.length === 0) {
+        alert("Please paste at least one valid image URL (one per line).");
+        setIsBulkUploading(false);
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i];
+        setBulkUploadProgress({
+          current: i + 1,
+          total: urls.length,
+          currentFileName: url.split("/").pop() || `URL ${i + 1}`,
+          percent: Math.round(((i + 1) / urls.length) * 100),
+        });
+
+        try {
+          const caption = bulkCaptionPrefix
+            ? `${bulkCaptionPrefix} - Photo ${i + 1}`
+            : (url.split("/").pop() || "Photograph").replace(/\.[^/.]+$/, "");
+
+          const assetRes = await fetch("/api/admin/assets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              storageKey: url,
+              storageBucket: "portfolio-assets",
+              kind: "photo",
+              sessionType: targetSessionType,
+              altText: caption,
+              galleryId: targetGalleryId,
+              consentStatus: "portfolio",
+            }),
+          });
+          const assetData = await assetRes.json();
+          if (assetData.asset && selectedGallery?.id === targetGalleryId) {
+            setGalleryAssets((prev) => [assetData.asset, ...prev]);
+          }
+          successCount++;
+        } catch (err: any) {
+          failCount++;
+          errors.push(`URL ${i + 1}: ${err.message}`);
+        }
+      }
+
+      setBulkUploadResults({ successCount, failCount, errors });
+      setIsBulkUploading(false);
+      setStagedUrlsText("");
+      loadGalleries();
+      loadEventTypes();
+      if (selectedGallery?.id === targetGalleryId) {
+        fetch(`/api/admin/assets?galleryId=${targetGalleryId}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.assets) setGalleryAssets(data.assets);
+          })
+          .catch(() => {});
+      }
+    }
+  }
+
   return (
     <div className="space-y-8 select-none">
       {/* Studio Top Control Header */}
@@ -497,6 +737,25 @@ export function GalleryManager() {
           >
             <Tag className="w-3.5 h-3.5 text-gold" />
             <span>Event Types ({eventTypes.length})</span>
+          </button>
+
+          {/* Bulk Upload Action Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setBulkTargetGalleryId(selectedGallery?.id || (galleries[0]?.id ?? ""));
+              setStagedFiles([]);
+              setStagedUrlsText("");
+              setBulkCaptionPrefix("");
+              setBulkUploadResults(null);
+              setBulkUploadProgress(null);
+              setShowBulkUploadModal(true);
+            }}
+            className="inline-flex items-center gap-2 bg-gold/15 hover:bg-gold text-deep border border-gold/60 font-body text-xs uppercase tracking-wider font-bold px-4 py-2.5 rounded-full shadow-sm transition-all"
+            title="Bulk Upload Photographs to any Event Gallery"
+          >
+            <UploadCloud className="w-4 h-4 text-deep" />
+            <span>⚡ Bulk Upload Photos</span>
           </button>
 
           {/* Create Gallery Button */}
@@ -710,11 +969,29 @@ export function GalleryManager() {
               )}
             </div>
 
-            {/* Upload Button */}
-            <div className="flex items-center gap-3 shrink-0">
-              <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold cursor-pointer transition-all shadow-sm active:scale-95">
+            {/* Upload Buttons */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setBulkTargetGalleryId(selectedGallery.id);
+                  setStagedFiles([]);
+                  setStagedUrlsText("");
+                  setBulkCaptionPrefix("");
+                  setBulkUploadResults(null);
+                  setBulkUploadProgress(null);
+                  setShowBulkUploadModal(true);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-gold hover:bg-gold-light text-deep text-xs font-body font-bold transition-all shadow-sm active:scale-95"
+                title="Bulk upload multiple photos at once with live progress"
+              >
                 <UploadCloud className="w-4 h-4" />
-                <span>Upload Photos</span>
+                <span>⚡ Bulk Upload (Batch)</span>
+              </button>
+
+              <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold cursor-pointer transition-all shadow-sm active:scale-95">
+                <Plus className="w-4 h-4" />
+                <span>Quick Add</span>
                 <input
                   type="file"
                   multiple
@@ -811,8 +1088,8 @@ export function GalleryManager() {
       {/* ========================================================================= */}
       {/* MODAL 1: EVENT TYPES & CATEGORIES MANAGER (FULL CRUD OPS)                 */}
       {/* ========================================================================= */}
-      {showEventTypeModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {mounted && showEventTypeModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-warm-white rounded-3xl border border-line max-w-2xl w-full p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col justify-between overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-line shrink-0">
@@ -1068,14 +1345,15 @@ export function GalleryManager() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 2: CREATE / EDIT GALLERY (WITH DYNAMIC EVENT TYPE SELECTOR)         */}
       {/* ========================================================================= */}
-      {showGalleryModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {mounted && showGalleryModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-warm-white rounded-3xl border border-line max-w-lg w-full p-6 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-200">
             <h3 className="font-display text-xl text-deep font-semibold mb-4">
               {editingGallery ? `Edit Gallery: ${editingGallery.title}` : "+ Create New Event Gallery"}
@@ -1266,14 +1544,15 @@ export function GalleryManager() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 3: EDIT PHOTO DETAILS                                              */}
       {/* ========================================================================= */}
-      {editingAsset && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      {mounted && editingAsset && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-warm-white rounded-2xl border border-line max-w-sm w-full p-5 shadow-2xl animate-in zoom-in-95 duration-200">
             <h3 className="font-display text-lg text-deep font-semibold mb-3">Edit Photo Details</h3>
             <div className="space-y-3">
@@ -1291,12 +1570,14 @@ export function GalleryManager() {
               </div>
               <div className="pt-2 flex justify-end gap-2">
                 <button
+                  type="button"
                   onClick={() => setEditingAsset(null)}
                   className="px-3 py-1.5 text-xs text-muted hover:text-deep"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleSaveAssetAlt}
                   className="px-4 py-1.5 rounded-lg bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep"
                 >
@@ -1305,7 +1586,346 @@ export function GalleryManager() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 4: BULK UPLOAD PHOTOS STUDIO (BATCH / PARALLEL / URLS)              */}
+      {/* ========================================================================= */}
+      {mounted && showBulkUploadModal && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-warm-white rounded-3xl border border-line max-w-2xl w-full p-5 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col justify-between overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-line shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center text-gold shrink-0">
+                  <UploadCloud className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-display text-xl text-deep font-semibold">
+                    Bulk Upload Photographs
+                  </h3>
+                  <p className="font-body text-xs text-muted">
+                    Batch upload dozens of photographs directly to an event archive in parallel.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isBulkUploading}
+                onClick={() => {
+                  setShowBulkUploadModal(false);
+                  setStagedFiles([]);
+                  setBulkUploadResults(null);
+                }}
+                className="w-8 h-8 rounded-full border border-line hover:bg-cream flex items-center justify-center text-muted hover:text-deep disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto no-scrollbar py-4 space-y-4 flex-1">
+              {/* Target Gallery Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1.5">
+                  Target Event Gallery *
+                </label>
+                <select
+                  value={bulkTargetGalleryId}
+                  disabled={isBulkUploading}
+                  onChange={(e) => setBulkTargetGalleryId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-cream/50 text-xs font-body font-semibold text-deep focus:outline-none focus:ring-2 focus:ring-gold"
+                >
+                  {galleries.map((g) => {
+                    const meta = getEventTypeMeta(g.session_type);
+                    return (
+                      <option key={g.id} value={g.id}>
+                        {g.title} ({g.item_count || 0} photos) · [{meta.name}]
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Upload Mode Selector (Tabs) */}
+              <div className="flex rounded-xl bg-cream p-1 border border-line">
+                <button
+                  type="button"
+                  disabled={isBulkUploading}
+                  onClick={() => setBulkUploadTab("files")}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-body font-semibold transition-all ${
+                    bulkUploadTab === "files"
+                      ? "bg-warm-white text-deep shadow-xs"
+                      : "text-muted hover:text-deep"
+                  }`}
+                >
+                  📁 Local Image Files ({stagedFiles.length})
+                </button>
+                <button
+                  type="button"
+                  disabled={isBulkUploading}
+                  onClick={() => setBulkUploadTab("urls")}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-body font-semibold transition-all ${
+                    bulkUploadTab === "urls"
+                      ? "bg-warm-white text-deep shadow-xs"
+                      : "text-muted hover:text-deep"
+                  }`}
+                >
+                  🔗 Paste Bulk Image URLs
+                </button>
+              </div>
+
+              {/* Mode 1: Files */}
+              {bulkUploadTab === "files" && (
+                <div className="space-y-3">
+                  {/* Dropzone */}
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragOver(true);
+                    }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragOver(false);
+                      if (e.dataTransfer.files) handleFilesStaged(e.dataTransfer.files);
+                    }}
+                    onClick={() => bulkFileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                      isDragOver
+                        ? "border-gold bg-gold/10 scale-[1.01]"
+                        : "border-line bg-cream/30 hover:border-gold/60 hover:bg-cream/50"
+                    }`}
+                  >
+                    <UploadCloud className="w-8 h-8 text-gold mx-auto mb-2 animate-bounce" />
+                    <p className="font-display text-base text-deep font-semibold">
+                      Drag &amp; drop photos here, or click to browse
+                    </p>
+                    <p className="font-body text-xs text-muted mt-1">
+                      Select 10, 50, or 100+ photos (JPG, PNG, WEBP).
+                    </p>
+                    <input
+                      ref={bulkFileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      disabled={isBulkUploading}
+                      onChange={(e) => {
+                        if (e.target.files) handleFilesStaged(e.target.files);
+                        e.target.value = "";
+                      }}
+                      className="hidden"
+                    />
+                  </div>
+
+                  {/* Staged Files Preview Grid */}
+                  {stagedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-body">
+                        <span className="font-semibold text-deep">
+                          {stagedFiles.length} Photos Staged (
+                          {(
+                            stagedFiles.reduce((acc, f) => acc + f.size, 0) /
+                            (1024 * 1024)
+                          ).toFixed(1)}{" "}
+                          MB)
+                        </span>
+                        {!isBulkUploading && (
+                          <button
+                            type="button"
+                            onClick={() => setStagedFiles([])}
+                            className="text-red-600 hover:underline text-[11px]"
+                          >
+                            Clear All
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="max-h-48 overflow-y-auto rounded-xl border border-line bg-warm-white p-2 divide-y divide-line/60">
+                        {stagedFiles.map((file, idx) => (
+                          <div
+                            key={`${file.name}-${idx}`}
+                            className="py-1.5 px-2 flex items-center justify-between gap-3 text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-mono text-[10px] text-muted shrink-0">
+                                #{idx + 1}
+                              </span>
+                              <span className="font-body text-deep truncate">
+                                {file.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="font-mono text-[10px] text-muted">
+                                {(file.size / 1024).toFixed(0)} KB
+                              </span>
+                              {!isBulkUploading && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeStagedFile(idx)}
+                                  className="text-muted hover:text-red-600 p-0.5"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mode 2: Bulk Image URLs */}
+              {bulkUploadTab === "urls" && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-deep uppercase tracking-wider">
+                    Paste Image URLs (One Per Line)
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={stagedUrlsText}
+                    disabled={isBulkUploading}
+                    onChange={(e) => setStagedUrlsText(e.target.value)}
+                    placeholder="https://images.unsplash.com/photo-1...&#10;https://res.cloudinary.com/...&#10;/uploads/..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-line bg-cream/40 text-xs font-mono text-deep resize-none focus:outline-none focus:ring-2 focus:ring-gold"
+                  />
+                  <span className="text-[11px] text-muted font-body block">
+                    {
+                      stagedUrlsText
+                        .split("\n")
+                        .filter((u) => u.trim().length > 5).length
+                    }{" "}
+                    valid URLs detected.
+                  </span>
+                </div>
+              )}
+
+              {/* Optional Caption Prefix */}
+              <div>
+                <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1">
+                  Common Caption Prefix / Event Tag (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={bulkCaptionPrefix}
+                  disabled={isBulkUploading}
+                  onChange={(e) => setBulkCaptionPrefix(e.target.value)}
+                  placeholder="e.g. Woodhall MOU Reception"
+                  className="w-full px-3.5 py-2 rounded-xl border border-line bg-cream/40 text-xs font-body text-deep focus:outline-none focus:ring-2 focus:ring-gold"
+                />
+              </div>
+
+              {/* Live Progress Bar */}
+              {bulkUploadProgress && (
+                <div className="p-3.5 rounded-xl bg-gold/10 border border-gold/30 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-body font-semibold text-deep">
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-gold" />
+                      <span>
+                        Uploading {bulkUploadProgress.current} of{" "}
+                        {bulkUploadProgress.total}
+                      </span>
+                    </span>
+                    <span className="font-mono text-gold font-bold">
+                      {bulkUploadProgress.percent}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-cream rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-gold h-full transition-all duration-300"
+                      style={{ width: `${bulkUploadProgress.percent}%` }}
+                    />
+                  </div>
+                  <p className="font-mono text-[10px] text-muted truncate">
+                    Current: {bulkUploadProgress.currentFileName}
+                  </p>
+                </div>
+              )}
+
+              {/* Results Toast */}
+              {bulkUploadResults && (
+                <div
+                  className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs font-body ${
+                    bulkUploadResults.failCount === 0
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                      : "bg-amber-50 border-amber-300 text-amber-900"
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">
+                      Bulk upload finished: {bulkUploadResults.successCount} photos
+                      successfully imported.
+                    </p>
+                    {bulkUploadResults.failCount > 0 && (
+                      <p className="text-[11px] text-red-600 mt-1">
+                        {bulkUploadResults.failCount} failed.{" "}
+                        {bulkUploadResults.errors.slice(0, 2).join("; ")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-line flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-muted font-body">
+                Fast parallel Lakebase upload · Automatic gallery sync
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isBulkUploading}
+                  onClick={() => {
+                    setShowBulkUploadModal(false);
+                    setStagedFiles([]);
+                    setBulkUploadResults(null);
+                  }}
+                  className="px-4 py-2 rounded-lg text-xs font-body text-muted hover:text-deep disabled:opacity-50"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    isBulkUploading ||
+                    (bulkUploadTab === "files" && stagedFiles.length === 0) ||
+                    (bulkUploadTab === "urls" &&
+                      stagedUrlsText.trim().length === 0)
+                  }
+                  onClick={runBulkUpload}
+                  className="px-5 py-2.5 rounded-full bg-deep text-warm-white text-xs font-body font-bold hover:bg-gold hover:text-deep transition-all shadow-sm disabled:opacity-40 flex items-center gap-2"
+                >
+                  {isBulkUploading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-4 h-4" />
+                      <span>
+                        Start Bulk Upload (
+                        {bulkUploadTab === "files"
+                          ? stagedFiles.length
+                          : stagedUrlsText
+                              .split("\n")
+                              .filter((u) => u.trim().length > 5).length}{" "}
+                        Photos)
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

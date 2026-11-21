@@ -275,7 +275,7 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
 
         {/* Content Area: Pinned scrollable container, scrolls independently */}
         <main className="flex-1 h-full overflow-y-auto overflow-x-hidden p-4 sm:p-8">
-          <div className="max-w-7xl mx-auto w-full page-enter">
+          <div className="max-w-7xl mx-auto w-full">
             {children}
           </div>
         </main>
