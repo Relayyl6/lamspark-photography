@@ -1000,7 +1000,7 @@ function BookingWizard() {
                           <p className="text-xs font-body text-brown/85 leading-relaxed max-w-md">
                             Upload your bank transfer screenshot now to fast-track date verification, or share it directly on WhatsApp.
                           </p>
-                          <label className="cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all shadow-sm shrink-0">
+                          <label className="cursor-pointer w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all shadow-sm shrink-0 text-center">
                             {isUploadingReceipt ? (
                               <Loader2 className="w-4 h-4 animate-spin text-gold" />
                             ) : (
@@ -1023,12 +1023,12 @@ function BookingWizard() {
               )}
 
               {/* Hand-off Action Buttons */}
-              <div className="pt-6 border-t border-line flex flex-col sm:flex-row items-center gap-4">
+              <div className="pt-6 border-t border-line flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
                 <a
                   href={priceAgreed && messagingConsent ? whatsappUrl : "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`w-full sm:flex-1 inline-flex items-center justify-center gap-3 py-4 rounded-full font-body text-xs uppercase tracking-wider font-semibold shadow-editorial transition-all ${
+                  className={`w-full sm:flex-1 inline-flex items-center justify-center gap-3 py-3.5 sm:py-4 px-5 rounded-xl sm:rounded-full font-body text-xs uppercase tracking-wider font-semibold shadow-editorial transition-all text-center ${
                     priceAgreed && messagingConsent
                       ? "bg-deep hover:bg-brown text-warm-white"
                       : "bg-line text-muted cursor-not-allowed opacity-60"
@@ -1042,7 +1042,7 @@ function BookingWizard() {
                     submitBookingToDb();
                   }}
                 >
-                  <MessageCircle className="w-4 h-4 text-gold" />
+                  <MessageCircle className="w-4 h-4 text-gold shrink-0" />
                   <span>Continue to WhatsApp ({referenceCode})</span>
                 </a>
 
@@ -1051,7 +1051,7 @@ function BookingWizard() {
                   href={talkFirstUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-line hover:border-gold text-deep font-body text-xs uppercase tracking-wider font-medium px-6 py-4 rounded-full transition-colors whitespace-nowrap"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-line hover:border-gold text-deep font-body text-xs uppercase tracking-wider font-medium px-6 py-3.5 sm:py-4 rounded-xl sm:rounded-full transition-colors whitespace-nowrap text-center"
                 >
                   <span>Talk with Osemene First</span>
                 </a>

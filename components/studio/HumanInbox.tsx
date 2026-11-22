@@ -414,22 +414,22 @@ export function HumanInbox() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setShowDeviceModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cream hover:bg-cream/70 text-deep border border-line text-xs font-semibold transition-all shadow-xs"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl sm:rounded-full bg-cream hover:bg-cream/70 text-deep border border-line text-xs font-semibold transition-all shadow-xs whitespace-nowrap"
           >
-            <Smartphone className="w-3.5 h-3.5 text-gold" />
+            <Smartphone className="w-3.5 h-3.5 text-gold shrink-0" />
             <span>Link Devices (QR / IG)</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowSimModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-xs"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl sm:rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-xs whitespace-nowrap"
           >
-            <Plus className="w-3.5 h-3.5 text-gold" />
+            <Plus className="w-3.5 h-3.5 text-gold shrink-0" />
             <span>Simulate Inbound</span>
           </button>
         </div>
@@ -858,21 +858,21 @@ export function HumanInbox() {
 
       {/* DEVICE LINKING MODAL (BAILEYS QR + INSTAGRAM DIRECT) */}
       {mounted && showDeviceModal && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-warm-white w-full max-w-lg rounded-2xl border border-line shadow-2xl p-6 space-y-5 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-warm-white w-full max-w-lg rounded-2xl border border-line shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 animate-in zoom-in-95 max-h-[94vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <div className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-gold" />
-                <h3 className="font-display text-lg font-semibold text-deep">
+                <Smartphone className="w-5 h-5 text-gold shrink-0" />
+                <h3 className="font-display text-base sm:text-lg font-semibold text-deep">
                   Link Messaging Devices (Zero API Stress)
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowDeviceModal(false)}
-                className="text-muted hover:text-deep p-1 rounded-lg"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-line text-muted hover:text-deep flex items-center justify-center shrink-0"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1074,7 +1074,7 @@ export function HumanInbox() {
                       <button
                         type="submit"
                         disabled={igLoading}
-                        className="px-5 py-2 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm"
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm text-center"
                       >
                         {igLoading ? "Connecting..." : "Connect Instagram Direct"}
                       </button>
@@ -1090,21 +1090,21 @@ export function HumanInbox() {
 
       {/* SIMULATOR MODAL */}
       {mounted && showSimModal && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-warm-white w-full max-w-lg rounded-2xl border border-line shadow-2xl p-6 space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-warm-white w-full max-w-lg rounded-2xl border border-line shadow-2xl p-4 sm:p-6 space-y-4 animate-in zoom-in-95 max-h-[94vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-line">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-gold" />
-                <h3 className="font-display text-lg font-semibold text-deep">
+                <Sparkles className="w-5 h-5 text-gold shrink-0" />
+                <h3 className="font-display text-base sm:text-lg font-semibold text-deep">
                   Simulate Client Inbound Message
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowSimModal(false)}
-                className="text-muted hover:text-deep p-1 rounded-lg"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-line text-muted hover:text-deep flex items-center justify-center shrink-0"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1181,18 +1181,18 @@ export function HumanInbox() {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-3 border-t border-line">
                 <button
                   type="button"
                   onClick={() => setShowSimModal(false)}
-                  className="px-4 py-2 rounded-full text-xs font-semibold text-muted hover:text-deep"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-line text-xs font-semibold text-muted hover:text-deep hover:bg-cream text-center transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSimulating || !simText.trim()}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm disabled:opacity-50"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm disabled:opacity-50 text-center"
                 >
                   {isSimulating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                   <span>Fire Simulation</span>

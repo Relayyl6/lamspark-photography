@@ -717,7 +717,7 @@ export function GalleryManager() {
         </div>
 
         {/* Dual Primary Actions: Event Types Manager & Create Gallery */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Manage Event Types Button */}
           <button
             type="button"
@@ -732,10 +732,10 @@ export function GalleryManager() {
               });
               setShowEventTypeModal(true);
             }}
-            className="inline-flex items-center gap-2 bg-warm-white hover:bg-cream text-deep border border-gold/40 hover:border-gold font-body text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-full shadow-sm transition-all"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-warm-white hover:bg-cream text-deep border border-gold/40 hover:border-gold font-body text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-xl sm:rounded-full shadow-sm transition-all whitespace-nowrap"
             title="Configure and perform CRUD on Event Types"
           >
-            <Tag className="w-3.5 h-3.5 text-gold" />
+            <Tag className="w-3.5 h-3.5 text-gold shrink-0" />
             <span>Event Types ({eventTypes.length})</span>
           </button>
 
@@ -751,10 +751,10 @@ export function GalleryManager() {
               setBulkUploadProgress(null);
               setShowBulkUploadModal(true);
             }}
-            className="inline-flex items-center gap-2 bg-gold/15 hover:bg-gold text-deep border border-gold/60 font-body text-xs uppercase tracking-wider font-bold px-4 py-2.5 rounded-full shadow-sm transition-all"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-gold/15 hover:bg-gold text-deep border border-gold/60 font-body text-xs uppercase tracking-wider font-bold px-4 py-2.5 rounded-xl sm:rounded-full shadow-sm transition-all whitespace-nowrap"
             title="Bulk Upload Photographs to any Event Gallery"
           >
-            <UploadCloud className="w-4 h-4 text-deep" />
+            <UploadCloud className="w-4 h-4 text-deep shrink-0" />
             <span>⚡ Bulk Upload Photos</span>
           </button>
 
@@ -772,9 +772,9 @@ export function GalleryManager() {
               });
               setShowGalleryModal(true);
             }}
-            className="inline-flex items-center gap-2 bg-deep hover:bg-gold hover:text-deep text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-full transition-all shadow-sm shrink-0"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-deep hover:bg-gold hover:text-deep text-warm-white font-body text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-xl sm:rounded-full transition-all shadow-sm whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>+ Create Gallery</span>
           </button>
         </div>
@@ -970,7 +970,7 @@ export function GalleryManager() {
             </div>
 
             {/* Upload Buttons */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => {
@@ -982,15 +982,15 @@ export function GalleryManager() {
                   setBulkUploadProgress(null);
                   setShowBulkUploadModal(true);
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-gold hover:bg-gold-light text-deep text-xs font-body font-bold transition-all shadow-sm active:scale-95"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl sm:rounded-full bg-gold hover:bg-gold-light text-deep text-xs font-body font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap"
                 title="Bulk upload multiple photos at once with live progress"
               >
-                <UploadCloud className="w-4 h-4" />
+                <UploadCloud className="w-4 h-4 shrink-0" />
                 <span>⚡ Bulk Upload (Batch)</span>
               </button>
 
-              <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold cursor-pointer transition-all shadow-sm active:scale-95">
-                <Plus className="w-4 h-4" />
+              <label className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl sm:rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold cursor-pointer transition-all shadow-sm active:scale-95 whitespace-nowrap">
+                <Plus className="w-4 h-4 shrink-0" />
                 <span>Quick Add</span>
                 <input
                   type="file"
@@ -1089,19 +1089,19 @@ export function GalleryManager() {
       {/* MODAL 1: EVENT TYPES & CATEGORIES MANAGER (FULL CRUD OPS)                 */}
       {/* ========================================================================= */}
       {mounted && showEventTypeModal && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-warm-white rounded-3xl border border-line max-w-2xl w-full p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col justify-between overflow-hidden">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6">
+          <div className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-2xl w-full p-4 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] sm:max-h-[90vh] flex flex-col justify-between overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-line shrink-0">
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-line shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center text-gold">
+                <div className="w-8 h-8 rounded-xl sm:rounded-full bg-gold/20 flex items-center justify-center text-gold shrink-0">
                   <Tag className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-display text-xl text-deep font-semibold">
+                  <h3 className="font-display text-lg sm:text-xl text-deep font-semibold">
                     Picture Event Types &amp; Categories
                   </h3>
-                  <p className="font-body text-xs text-muted">
+                  <p className="font-body text-[11px] sm:text-xs text-muted">
                     Manage the classifications assigned to event galleries and client photographs.
                   </p>
                 </div>
@@ -1112,7 +1112,7 @@ export function GalleryManager() {
                   setShowEventTypeModal(false);
                   setEditingEventType(null);
                 }}
-                className="w-8 h-8 rounded-full border border-line hover:bg-cream flex items-center justify-center text-muted hover:text-deep"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-full border border-line hover:bg-cream flex items-center justify-center text-muted hover:text-deep"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1339,7 +1339,7 @@ export function GalleryManager() {
                   setShowEventTypeModal(false);
                   setEditingEventType(null);
                 }}
-                className="px-5 py-2 rounded-full bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep transition-all text-center"
               >
                 Done
               </button>
@@ -1353,9 +1353,9 @@ export function GalleryManager() {
       {/* MODAL 2: CREATE / EDIT GALLERY (WITH DYNAMIC EVENT TYPE SELECTOR)         */}
       {/* ========================================================================= */}
       {mounted && showGalleryModal && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-warm-white rounded-3xl border border-line max-w-lg w-full p-6 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="font-display text-xl text-deep font-semibold mb-4">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6">
+          <div className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-lg w-full p-4 sm:p-6 md:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] overflow-y-auto">
+            <h3 className="font-display text-lg sm:text-xl text-deep font-semibold mb-3 sm:mb-4">
               {editingGallery ? `Edit Gallery: ${editingGallery.title}` : "+ Create New Event Gallery"}
             </h3>
 
@@ -1527,17 +1527,17 @@ export function GalleryManager() {
                 )}
               </div>
 
-              <div className="pt-3 border-t border-line flex justify-end gap-2">
+              <div className="pt-3 border-t border-line flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowGalleryModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-body text-muted hover:text-deep"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-line text-xs font-body font-semibold text-muted hover:text-deep hover:bg-cream text-center transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-lg bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm text-center"
                 >
                   Save Gallery
                 </button>
@@ -1552,8 +1552,8 @@ export function GalleryManager() {
       {/* MODAL 3: EDIT PHOTO DETAILS                                              */}
       {/* ========================================================================= */}
       {mounted && editingAsset && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-warm-white rounded-2xl border border-line max-w-sm w-full p-5 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-warm-white rounded-2xl border border-line max-w-sm w-full p-4 sm:p-5 shadow-2xl animate-in zoom-in-95 duration-200">
             <h3 className="font-display text-lg text-deep font-semibold mb-3">Edit Photo Details</h3>
             <div className="space-y-3">
               <div>
@@ -1568,18 +1568,18 @@ export function GalleryManager() {
                   className="w-full px-3 py-2 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep"
                 />
               </div>
-              <div className="pt-2 flex justify-end gap-2">
+              <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingAsset(null)}
-                  className="px-3 py-1.5 text-xs text-muted hover:text-deep"
+                  className="flex-1 sm:flex-initial px-4 py-2 rounded-xl border border-line text-xs font-semibold text-muted hover:text-deep text-center transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveAssetAlt}
-                  className="px-4 py-1.5 rounded-lg bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep"
+                  className="flex-1 sm:flex-initial px-5 py-2 rounded-xl bg-deep text-warm-white text-xs font-semibold hover:bg-gold hover:text-deep text-center shadow-sm"
                 >
                   Save
                 </button>
@@ -1594,19 +1594,19 @@ export function GalleryManager() {
       {/* MODAL 4: BULK UPLOAD PHOTOS STUDIO (BATCH / PARALLEL / URLS)              */}
       {/* ========================================================================= */}
       {mounted && showBulkUploadModal && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
-          <div className="bg-warm-white rounded-3xl border border-line max-w-2xl w-full p-5 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col justify-between overflow-hidden">
+        <div className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6">
+          <div className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-2xl w-full p-4 sm:p-6 md:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] sm:max-h-[92vh] flex flex-col justify-between overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-line shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center text-gold shrink-0">
-                  <UploadCloud className="w-5 h-5" />
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-line shrink-0">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-full bg-gold/20 flex items-center justify-center text-gold shrink-0">
+                  <UploadCloud className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <h3 className="font-display text-xl text-deep font-semibold">
+                  <h3 className="font-display text-lg sm:text-xl text-deep font-semibold">
                     Bulk Upload Photographs
                   </h3>
-                  <p className="font-body text-xs text-muted">
+                  <p className="font-body text-[11px] sm:text-xs text-muted">
                     Batch upload dozens of photographs directly to an event archive in parallel.
                   </p>
                 </div>
@@ -1619,7 +1619,7 @@ export function GalleryManager() {
                   setStagedFiles([]);
                   setBulkUploadResults(null);
                 }}
-                className="w-8 h-8 rounded-full border border-line hover:bg-cream flex items-center justify-center text-muted hover:text-deep disabled:opacity-50"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-full border border-line hover:bg-cream flex items-center justify-center text-muted hover:text-deep disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1693,17 +1693,17 @@ export function GalleryManager() {
                       if (e.dataTransfer.files) handleFilesStaged(e.dataTransfer.files);
                     }}
                     onClick={() => bulkFileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                    className={`border-2 border-dashed rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center cursor-pointer transition-all ${
                       isDragOver
                         ? "border-gold bg-gold/10 scale-[1.01]"
                         : "border-line bg-cream/30 hover:border-gold/60 hover:bg-cream/50"
                     }`}
                   >
-                    <UploadCloud className="w-8 h-8 text-gold mx-auto mb-2 animate-bounce" />
-                    <p className="font-display text-base text-deep font-semibold">
+                    <UploadCloud className="w-6 h-6 sm:w-8 sm:h-8 text-gold mx-auto mb-1.5 animate-bounce" />
+                    <p className="font-display text-sm sm:text-base text-deep font-semibold">
                       Drag &amp; drop photos here, or click to browse
                     </p>
-                    <p className="font-body text-xs text-muted mt-1">
+                    <p className="font-body text-[11px] sm:text-xs text-muted mt-0.5">
                       Select 10, 50, or 100+ photos (JPG, PNG, WEBP).
                     </p>
                     <input
@@ -1873,11 +1873,11 @@ export function GalleryManager() {
             </div>
 
             {/* Modal Footer */}
-            <div className="pt-3 border-t border-line flex items-center justify-between shrink-0">
-              <span className="text-[11px] text-muted font-body">
+            <div className="pt-3 border-t border-line flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shrink-0">
+              <span className="text-[10px] sm:text-[11px] text-muted font-body text-center sm:text-left">
                 Fast parallel Lakebase upload · Automatic gallery sync
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   disabled={isBulkUploading}
@@ -1886,7 +1886,7 @@ export function GalleryManager() {
                     setStagedFiles([]);
                     setBulkUploadResults(null);
                   }}
-                  className="px-4 py-2 rounded-lg text-xs font-body text-muted hover:text-deep disabled:opacity-50"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-line text-xs font-body font-semibold text-muted hover:text-deep hover:bg-cream disabled:opacity-50 text-center transition-colors"
                 >
                   Close
                 </button>
@@ -1899,16 +1899,16 @@ export function GalleryManager() {
                       stagedUrlsText.trim().length === 0)
                   }
                   onClick={runBulkUpload}
-                  className="px-5 py-2.5 rounded-full bg-deep text-warm-white text-xs font-body font-bold hover:bg-gold hover:text-deep transition-all shadow-sm disabled:opacity-40 flex items-center gap-2"
+                  className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-body font-bold hover:bg-gold hover:text-deep transition-all shadow-sm disabled:opacity-40 flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   {isBulkUploading ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                       <span>Uploading...</span>
                     </>
                   ) : (
                     <>
-                      <UploadCloud className="w-4 h-4" />
+                      <UploadCloud className="w-4 h-4 shrink-0" />
                       <span>
                         Start Bulk Upload (
                         {bulkUploadTab === "files"

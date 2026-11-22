@@ -87,14 +87,14 @@ export default function PipelinePage() {
       {/* Enquiry Detail Modal */}
       {mounted && selectedEnquiry && createPortal(
         <div
-          className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 md:p-6 animate-in fade-in duration-200"
           onClick={() => setSelectedEnquiry(null)}
         >
           <div
-            className="relative w-full max-w-2xl bg-warm-white rounded-2xl shadow-2xl border border-line p-6 max-h-[90vh] overflow-y-auto space-y-5"
+            className="relative w-full max-w-2xl bg-warm-white rounded-2xl shadow-2xl border border-line p-4 sm:p-6 max-h-[94vh] overflow-y-auto space-y-4 sm:space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-line pb-4">
+            <div className="flex items-center justify-between border-b border-line pb-3 sm:pb-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-mono text-xs uppercase bg-gold/15 text-gold px-2 py-0.5 rounded font-bold">
@@ -104,16 +104,16 @@ export default function PipelinePage() {
                     Source: {selectedEnquiry.source}
                   </span>
                 </div>
-                <h2 className="font-display text-2xl text-deep font-medium">
+                <h2 className="font-display text-xl sm:text-2xl text-deep font-medium">
                   {selectedEnquiry.purpose_text || "Client Session Enquiry"}
                 </h2>
               </div>
               <button
                 onClick={() => setSelectedEnquiry(null)}
-                className="p-1.5 rounded-full hover:bg-cream border border-line text-deep"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-cream border border-line text-deep flex items-center justify-center shrink-0 ml-2"
                 aria-label="Close details"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
@@ -172,12 +172,12 @@ export default function PipelinePage() {
             </div>
 
             {/* Action Footer */}
-            <div className="pt-4 border-t border-line flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="pt-4 border-t border-line flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <a
                 href={`https://wa.me/2348130847299?text=Hello%20${encodeURIComponent(selectedEnquiry.purpose_text || "LamSparks Client")}%20(Ref:%20${selectedEnquiry.reference_code})`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-body text-xs uppercase tracking-wider font-semibold px-4 py-2.5 rounded-full transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-body text-xs uppercase tracking-wider font-semibold px-5 py-2.5 rounded-xl transition-all text-center"
               >
                 <MessageSquare className="w-4 h-4" />
                 <span>Open WhatsApp Concierge</span>
@@ -185,7 +185,7 @@ export default function PipelinePage() {
 
               <button
                 onClick={() => setSelectedEnquiry(null)}
-                className="w-full sm:w-auto px-5 py-2.5 bg-deep text-warm-white font-body text-xs uppercase tracking-wider font-semibold rounded-full"
+                className="w-full sm:w-auto px-6 py-2.5 bg-deep hover:bg-gold hover:text-deep text-warm-white font-body text-xs uppercase tracking-wider font-semibold rounded-xl transition-all text-center"
               >
                 Done
               </button>

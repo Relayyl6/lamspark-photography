@@ -213,7 +213,7 @@ export function GalleryLightbox({
         <Link
           href={`/book?session=${current.sessionSlug || "toddler"}`}
           onClick={onClose}
-          className="inline-flex items-center gap-2 bg-gold hover:bg-gold-light text-deep font-body text-[11px] sm:text-xs uppercase tracking-wider font-bold px-4 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all shrink-0 shadow-pill active:scale-95"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gold hover:bg-gold-light text-deep font-body text-xs uppercase tracking-wider font-bold px-5 py-2.5 rounded-xl sm:rounded-full transition-all shrink-0 shadow-pill active:scale-95 text-center"
         >
           <span>Book This Style</span>
           <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />

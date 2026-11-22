@@ -426,20 +426,20 @@ export function ServicesEditor() {
 
       {/* Edit Modal */}
       {mounted && editingSession && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-warm-white rounded-2xl border border-line max-w-2xl w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6">
+          <div className="bg-warm-white rounded-2xl border border-line max-w-2xl w-full p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4 max-h-[94vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <div>
-                <h3 className="font-display text-xl text-deep font-semibold">
+                <h3 className="font-display text-lg sm:text-xl text-deep font-semibold">
                   Edit {editingSession.title}
                 </h3>
-                <span className="text-xs font-mono text-muted uppercase">
+                <span className="text-[11px] sm:text-xs font-mono text-muted uppercase">
                   Slug: {editingSession.slug} · Database Single Source of Truth
                 </span>
               </div>
               <button
                 onClick={() => setEditingSession(null)}
-                className="text-muted hover:text-deep p-1 rounded-full hover:bg-cream"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-line flex items-center justify-center text-muted hover:text-deep hover:bg-cream"
               >
                 ✕
               </button>
@@ -724,18 +724,18 @@ export function ServicesEditor() {
                 )}
               </div>
 
-              <div className="pt-3 border-t border-line flex justify-end gap-2">
+              <div className="pt-3 border-t border-line flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setEditingSession(null)}
-                  className="px-4 py-2 rounded-lg text-xs font-body text-muted hover:text-deep"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-line text-xs font-body font-semibold text-muted hover:text-deep hover:bg-cream text-center transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-6 py-2 rounded-lg bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all shadow-sm text-center"
                 >
                   {isSaving ? "Saving to DB..." : "Save Session & Collections"}
                 </button>

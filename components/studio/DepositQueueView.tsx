@@ -393,7 +393,7 @@ export function DepositQueueView() {
                       type="button"
                       disabled={isProcessingId === enq.id}
                       onClick={() => handleVerifyDeposit(enq)}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold py-2.5 rounded-full transition-all shadow-sm disabled:opacity-50"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold py-2.5 rounded-xl transition-all shadow-sm disabled:opacity-50"
                     >
                       {isProcessingId === enq.id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -407,7 +407,7 @@ export function DepositQueueView() {
                       type="button"
                       disabled={isProcessingId === enq.id}
                       onClick={() => handleRejectDeposit(enq)}
-                      className="px-4 py-2.5 border border-line hover:border-red-400 text-red-600 font-body text-xs uppercase tracking-wider font-semibold rounded-full transition-colors"
+                      className="px-4 py-2.5 border border-line hover:border-red-400 text-red-600 font-body text-xs uppercase tracking-wider font-semibold rounded-xl transition-colors"
                     >
                       Reject
                     </button>
@@ -422,25 +422,25 @@ export function DepositQueueView() {
       {/* High-Resolution Zoom Lightbox */}
       {mounted && zoomedReceiptUrl && createPortal(
         <div
-          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-2.5 sm:p-4 md:p-6 animate-in fade-in duration-200"
           onClick={() => setZoomedReceiptUrl(null)}
         >
           <div
-            className="relative max-w-4xl max-h-[90vh] bg-warm-white rounded-2xl overflow-hidden shadow-2xl border border-line flex flex-col w-full"
+            className="relative max-w-4xl max-h-[94vh] bg-warm-white rounded-2xl overflow-hidden shadow-2xl border border-line flex flex-col w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-line bg-cream/70">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-gold" />
-                <h3 className="font-display text-base font-semibold text-deep">
+            <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-3.5 border-b border-line bg-cream/70">
+              <div className="flex items-center gap-2 min-w-0">
+                <Eye className="w-4 h-4 text-gold shrink-0" />
+                <h3 className="font-display text-sm sm:text-base font-semibold text-deep truncate">
                   High-Resolution Bank Transfer Receipt Inspector
                 </h3>
               </div>
               <button
                 onClick={() => setZoomedReceiptUrl(null)}
-                className="p-1 rounded-full text-deep hover:bg-cream border border-line transition-colors"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-full text-deep hover:bg-cream border border-line transition-colors flex items-center justify-center shrink-0 ml-2"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -452,11 +452,11 @@ export function DepositQueueView() {
               />
             </div>
 
-            <div className="px-5 py-3 border-t border-line bg-cream/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-body text-brown">
+            <div className="px-4 py-3 sm:px-5 border-t border-line bg-cream/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-body text-brown">
               <span>Verify: Account Name, Sender Name, Session Ref, and Date/Timestamp against your bank statement.</span>
               <button
                 onClick={() => setZoomedReceiptUrl(null)}
-                className="self-end sm:self-auto px-4 py-1.5 bg-deep text-warm-white text-xs uppercase tracking-wider rounded-full font-semibold"
+                className="w-full sm:w-auto px-5 py-2.5 bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs uppercase tracking-wider rounded-xl font-semibold transition-all text-center"
               >
                 Close Inspector
               </button>

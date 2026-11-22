@@ -140,7 +140,7 @@ export function ContentCalendar() {
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-deep text-warm-white hover:bg-gold hover:text-deep text-xs font-body font-semibold transition-all shadow-editorial self-start sm:self-auto"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl sm:rounded-full bg-deep text-warm-white hover:bg-gold hover:text-deep text-xs font-body font-semibold transition-all shadow-editorial text-center"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>+ Schedule Post</span>
@@ -273,13 +273,16 @@ export function ContentCalendar() {
 
       {/* Schedule Post Modal */}
       {mounted && showAddModal && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-warm-white rounded-2xl border border-line max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4">
+          <div className="bg-warm-white rounded-2xl border border-line max-w-lg w-full p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4 max-h-[94vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-line pb-3">
-              <h3 className="font-display text-xl text-deep font-semibold">
+              <h3 className="font-display text-lg sm:text-xl text-deep font-semibold">
                 Schedule Brand Editorial Post
               </h3>
-              <button onClick={() => setShowAddModal(false)} className="text-muted hover:text-deep">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-line flex items-center justify-center text-muted hover:text-deep"
+              >
                 ✕
               </button>
             </div>
@@ -375,18 +378,18 @@ export function ContentCalendar() {
                 />
               </div>
 
-              <div className="pt-3 border-t border-line flex justify-end gap-2">
+              <div className="pt-3 border-t border-line flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-body text-muted hover:text-deep"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-line text-xs font-body font-semibold text-muted hover:text-deep hover:bg-cream text-center transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-lg bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all text-center"
                 >
                   {isSubmitting ? "Scheduling..." : "Add to Editorial Queue"}
                 </button>
