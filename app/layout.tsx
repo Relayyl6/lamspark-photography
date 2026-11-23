@@ -41,6 +41,31 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Fast-path instant intro stream and critical roulette asset preloading */}
+        <link rel="preload" href="/videos/welcome-intro.mp4" as="video" type="video/mp4" fetchPriority="high" />
+        <link rel="preload" href="/images/client/corporate_1.webp" as="image" type="image/webp" fetchPriority="high" />
+        <link rel="preload" href="/images/client/weddings_1.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/images/client/events_1.webp" as="image" type="image/webp" />
+
+        {/* Synchronous script: Prevent any flash on subpages or returning sessions before first paint */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var p = window.location.pathname;
+                  var s = window.location.search;
+                  var hasIntro = s.indexOf('intro') !== -1;
+                  if (p.startsWith('/studio') || (p !== '/' && !hasIntro) || (sessionStorage.getItem('lamsparks_intro_session_seen') && !hasIntro)) {
+                    document.documentElement.classList.add('intro-skip');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-cream text-deep antialiased selection:bg-gold-light selection:text-deep flex flex-col font-sans">
         <ScrollRevealObserver />
         <WelcomeIntro />

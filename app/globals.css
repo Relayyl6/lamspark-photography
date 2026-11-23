@@ -47,6 +47,11 @@
   }
 }
 
+/* Fast-track intro suppression for returning sessions and subpages (zero flash) */
+html.intro-skip #welcome-intro-root {
+  display: none !important;
+}
+
 /* Editorial styling utilities */
 .font-headline {
   font-family: 'Anton', 'Oswald', -apple-system, BlinkMacSystemFont, "Impact", "Arial Black", sans-serif;

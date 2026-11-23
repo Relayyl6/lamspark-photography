@@ -61,9 +61,11 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
   const cylinderRadius = spacing / Math.sin((angleStep * Math.PI) / 180);
   const totalRange = Math.max(1, count * angleStep);
 
-  // Fetch live settings/cards from Neon DB
+  // Fetch live settings/cards from Neon DB silently in background (Never wipe cards with skeleton if initialCards exist)
   useEffect(() => {
-    setLoading(true);
+    if (!cards || cards.length === 0) {
+      setLoading(true);
+    }
     fetch("/api/content")
       .then((res) => res.json())
       .then((data) => {
@@ -344,6 +346,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
                     className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-out pointer-events-none"
                     loading="eager"
                     decoding="async"
+                    fetchPriority={idx === 3 ? "high" : "auto"}
                     onError={(e) => {
                       const target = e.currentTarget;
                       if (target.src.endsWith(".webp")) {

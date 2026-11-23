@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 
-type IntroStage = "check" | "video" | "pulse_dot" | "typing" | "fading_out" | "done";
+type IntroStage = "video" | "pulse_dot" | "typing" | "fading_out" | "done";
 
 // Exact timestamp where the camera mode dial scene fades to a pure black screen
 const INTRO_VIDEO_CUT_TIME = 7.75;
 
 export function WelcomeIntro() {
-  const [stage, setStage] = useState<IntroStage>("check");
+  const [stage, setStage] = useState<IntroStage>("video");
   const [typedText, setTypedText] = useState("");
   const [videoStarted, setVideoStarted] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
@@ -41,29 +41,33 @@ export function WelcomeIntro() {
         setStage("done");
         return;
       }
-
-      setStage("video");
     } catch {
       setStage("done");
     }
   }, []);
 
-  // Background asset preloader: Warm up hero images, database content & 3D assets while intro plays
+  // Background asset preloader: Warm up hero roulette images, database content & 3D CAD assets while intro plays
   useEffect(() => {
     if (stage === "video") {
       try {
         const criticalAssets = [
-          "/images/client/weddings/weddings_1.jpg",
-          "/images/client/weddings/weddings_2.jpg",
-          "/images/client/events/events_1.jpg",
-          "/images/client/corporate/corporate_1.jpg",
-          "/images/client/curated_master/curated_master_1.jpg",
+          "/images/client/weddings_1.webp",
+          "/images/client/weddings_2.webp",
+          "/images/client/events_1.webp",
+          "/images/client/corporate_1.webp",
+          "/images/client/events_3.webp",
+          "/images/client/corporate_3.webp",
+          "/images/client/corporate_6.webp",
         ];
 
         criticalAssets.forEach((src) => {
           const img = new Image();
           img.src = src;
         });
+
+        // Warm up CAD camera STL models in background
+        fetch("/models/falcon-camera/anim/part_body.stl").catch(() => {});
+        fetch("/models/falcon-camera/anim/part_lens_outer.stl").catch(() => {});
 
         fetch("/api/content?key=philosophy_photos").catch(() => {});
         fetch("/api/content?key=hero_wheel_cards").catch(() => {});
@@ -192,7 +196,7 @@ export function WelcomeIntro() {
     }
   }, [stage, startFadeOut]);
 
-  if (stage === "done" || stage === "check") {
+  if (stage === "done") {
     return null;
   }
 
@@ -200,6 +204,7 @@ export function WelcomeIntro() {
 
   return (
     <div
+      id="welcome-intro-root"
       onClick={() => {
         if (stage === "video" && videoRef.current && !videoStarted) {
           videoRef.current.play().then(() => {
