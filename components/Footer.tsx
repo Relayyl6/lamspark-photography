@@ -6,9 +6,34 @@ import { Instagram, MessageCircle, Linkedin, Twitter } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="relative bg-warm-white/80 backdrop-blur-md text-deep pt-20 pb-0 overflow-hidden border-t border-line mt-auto">
-      {/* Wave Animation Styles */}
+    <footer className="footer-fullscreen-container relative bg-warm-white/80 backdrop-blur-md text-deep overflow-hidden border-t border-line mt-auto flex flex-col justify-between">
+      {/* Wave Animation & Viewport Optimization Styles */}
       <style jsx>{`
+        .footer-fullscreen-container {
+          min-height: calc(100vh - 3.5rem);
+          min-height: calc(100dvh - 3.5rem); /* Mobile sticky nav is h-14 (3.5rem / 56px) */
+        }
+        @media (min-width: 640px) {
+          .footer-fullscreen-container {
+            min-height: calc(100vh - 4rem);
+            min-height: calc(100dvh - 4rem); /* Small/Tablet landscape sticky nav is h-16 (4rem / 64px) */
+          }
+        }
+        @media (min-width: 1024px) {
+          .footer-fullscreen-container {
+            min-height: calc(100vh - 4.5rem);
+            min-height: calc(100dvh - 4.5rem); /* Desktop sticky nav is h-18 (4.5rem / 72px) */
+          }
+        }
+        /* Tall tablets in portrait mode (iPad, iPad Air, iPad Pro, Android tablets):
+           When in portrait mode, viewport height is 1024px–1366px, so avoid stretching
+           into unnatural giant voids and let footer flow at its balanced natural height */
+        @media (min-width: 768px) and (orientation: portrait) {
+          .footer-fullscreen-container {
+            min-height: auto !important;
+          }
+        }
+
         @keyframes waveRoll1 {
           0% {
             transform: translate3d(0, 0, 0);
@@ -69,10 +94,10 @@ export function Footer() {
       `}</style>
 
       {/* Top Section: Brand Info + 4 Link Columns */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 sm:pb-16">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-10 lg:gap-12" data-stagger="true">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pt-8 sm:pt-12 lg:pt-14 pb-6 sm:pb-8 lg:pb-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-8 lg:gap-10" data-stagger="true">
           {/* Brand Left Column */}
-          <div className="reveal-up col-span-2 md:col-span-2 lg:col-span-2 space-y-4">
+          <div className="reveal-up col-span-2 md:col-span-2 lg:col-span-2 space-y-3 sm:space-y-4">
             <Link href="/" className="inline-block group">
               <span className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-deep group-hover:text-gold transition-colors">
                 LamSparks.
@@ -87,7 +112,7 @@ export function Footer() {
             </p>
 
             {/* Social Media Pill Buttons */}
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2 pt-1 sm:pt-2">
               <a
                 href="https://twitter.com"
                 target="_blank"
@@ -129,10 +154,10 @@ export function Footer() {
 
           {/* Column 1: Sessions */}
           <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
-            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-4">
+            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-3 sm:mb-4">
               Sessions
             </h4>
-            <ul className="space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
+            <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
               <li>
                 <Link href="/sessions/toddler" className="hover:text-gold transition-colors">
                   Toddler & Children
@@ -163,10 +188,10 @@ export function Footer() {
 
           {/* Column 2: Studio */}
           <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
-            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-4">
+            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-3 sm:mb-4">
               Studio
             </h4>
-            <ul className="space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
+            <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
               <li>
                 <Link href="/about" className="hover:text-gold transition-colors">
                   About Osemene
@@ -192,10 +217,10 @@ export function Footer() {
 
           {/* Column 3: Resources */}
           <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
-            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-4">
+            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-3 sm:mb-4">
               Resources
             </h4>
-            <ul className="space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
+            <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
               <li>
                 <Link href="/faq" className="hover:text-gold transition-colors">
                   Session FAQ & Prep
@@ -216,10 +241,10 @@ export function Footer() {
 
           {/* Column 4: Legal */}
           <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
-            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-4">
+            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-3 sm:mb-4">
               Legal
             </h4>
-            <ul className="space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
+            <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
               <li>
                 <Link href="/legal/privacy" className="hover:text-gold transition-colors">
                   Privacy Policy
@@ -247,7 +272,7 @@ export function Footer() {
 
       {/* Middle & Lower Stage: Pure Handcrafted Animated Rolling Wave Landscape + Typographic Brand */}
       <div
-        className="relative w-full overflow-hidden select-none pt-16 sm:pt-28 pb-8 sm:pb-12"
+        className="flex-1 flex flex-col justify-between relative w-full overflow-hidden select-none min-h-[300px] sm:min-h-[360px] lg:min-h-[420px] pt-8 sm:pt-14 lg:pt-18 pb-0"
         style={{
           background: "linear-gradient(180deg, #FAF7F2 0%, #F5EFE6 14%, #EADBCA 28%, #D4C1A8 42%, #9B7E62 58%, #573E2E 72%, #2B1D16 85%, #18100C 94%, #0D0907 100%)",
         }}
@@ -267,7 +292,7 @@ export function Footer() {
 
         {/* Back Wave Layer: Deep Velvety Obsidian Espresso (Behind text) */}
         <div
-          className="absolute inset-x-0 bottom-0 h-72 sm:h-96 md:h-[460px] z-0 pointer-events-none overflow-hidden opacity-90"
+          className="absolute inset-x-0 bottom-0 h-64 sm:h-80 md:h-[420px] lg:h-[480px] z-0 pointer-events-none overflow-hidden opacity-90"
           style={{
             maskImage: "linear-gradient(to bottom, transparent 0%, transparent 12%, rgba(0,0,0,0.15) 26%, rgba(0,0,0,0.6) 48%, black 75%, black 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, transparent 12%, rgba(0,0,0,0.15) 26%, rgba(0,0,0,0.6) 48%, black 75%, black 100%)",
@@ -296,16 +321,16 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Huge Bold Brand Wordmark: LamSparks. (Responsive scaling with zero cutoff on mobile) */}
-        <div className="relative z-10 w-full text-center px-4 pointer-events-none pt-2 sm:pt-4 md:pt-8 overflow-hidden">
-          <span className="font-sans font-black tracking-[-0.03em] sm:tracking-[-0.05em] md:tracking-[-0.07em] leading-[0.85] block text-[clamp(34px,11.2vw,240px)] text-warm-white/95 select-none whitespace-nowrap drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
+        {/* Huge Bold Brand Wordmark: LamSparks. (Vertically centered and dynamically scaled) */}
+        <div className="relative z-10 w-full text-center px-4 pointer-events-none my-auto pt-4 sm:pt-6 md:pt-8 pb-3 overflow-hidden">
+          <span className="font-sans font-black tracking-[-0.03em] sm:tracking-[-0.05em] md:tracking-[-0.07em] leading-[0.85] block text-[clamp(36px,11.5vw,240px)] text-warm-white/95 select-none whitespace-nowrap drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
             LamSparks.
           </span>
         </div>
 
         {/* Front Multi-Layer Rolling Wave Dunes (Cohesive Warm Bronze, Satin Gold & Deep Velvet Noir) */}
         <div
-          className="absolute inset-x-0 bottom-0 h-64 sm:h-80 md:h-[400px] z-20 pointer-events-none overflow-hidden"
+          className="absolute inset-x-0 bottom-0 h-56 sm:h-72 md:h-[360px] lg:h-[420px] z-20 pointer-events-none overflow-hidden"
           style={{
             maskImage: "linear-gradient(to bottom, transparent 0%, transparent 10%, rgba(0,0,0,0.12) 24%, rgba(0,0,0,0.55) 45%, black 72%, black 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, transparent 10%, rgba(0,0,0,0.12) 24%, rgba(0,0,0,0.55) 45%, black 72%, black 100%)",
@@ -400,7 +425,7 @@ export function Footer() {
         </div>
 
         {/* Base Copyright Bar */}
-        <div className="relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14 mt-4 sm:mt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 font-body text-xs text-warm-white/70">
+        <div className="relative z-30 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 lg:py-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 font-body text-xs text-warm-white/70 mt-auto">
           <div className="text-center sm:text-left">
             © 2026 LamSparks Photography, Inc. All rights reserved.
           </div>
