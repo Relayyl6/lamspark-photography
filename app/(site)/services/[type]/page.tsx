@@ -1,6 +1,6 @@
-import SessionDetailPage, { generateStaticParams } from "../../sessions/[type]/page";
+import SessionDetailPage from "../../sessions/[type]/page";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export { generateStaticParams };
 export default SessionDetailPage;

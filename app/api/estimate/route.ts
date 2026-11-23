@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateEstimate } from "@/lib/estimate/engine";
+import { getLiveSessionTypes, getLivePackages } from "@/lib/catalog/live";
 import { BookingAnswers, SessionTypeSlug } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +21,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const estimate = calculateEstimate(sessionType, answers || {}, packageId);
+    const [liveSessions, livePackages] = await Promise.all([
+      getLiveSessionTypes(),
+      getLivePackages(sessionType),
+    ]);
+
+    const estimate = calculateEstimate(
+      sessionType,
+      answers || {},
+      packageId,
+      livePackages,
+      liveSessions[sessionType]
+    );
 
     return NextResponse.json({
       success: true,

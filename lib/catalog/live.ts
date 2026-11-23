@@ -14,12 +14,25 @@ export async function getLiveSessionTypes(): Promise<Record<SessionTypeSlug, Ses
     const result: any = {};
     for (const [key, st] of Object.entries(SESSION_TYPES)) {
       const ov: any = map.get(st.slug);
+      let tierLowestPrice: number | null = null;
+      if (Array.isArray(ov?.package_tiers) && ov.package_tiers.length > 0) {
+        const tierPrices = ov.package_tiers
+          .map((t: any) => (t.promoPrice ? Number(t.promoPrice) : Number(t.price)))
+          .filter((p: number) => !isNaN(p) && p > 0);
+        if (tierPrices.length > 0) {
+          tierLowestPrice = Math.min(...tierPrices);
+        }
+      }
+
+      const effectiveFrom = ov?.price_override ?? tierLowestPrice ?? st.fromPrice;
+
       result[key] = {
         ...st,
         heroImage: ov?.cover_image_url || st.heroImage,
-        fromPrice: ov?.price_override ?? st.fromPrice,
+        fromPrice: effectiveFrom,
         promoPrice: ov?.promo_price ?? null,
         depositPercent: ov?.deposit_percent ?? st.defaultDepositPercent,
+        defaultDepositPercent: ov?.deposit_percent ?? st.defaultDepositPercent,
         standardDeliveryDays: ov?.delivery_days || st.standardDeliveryDays,
       };
     }

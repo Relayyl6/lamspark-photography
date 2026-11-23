@@ -69,14 +69,22 @@ function BookingWizard() {
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [depositReportedSuccess, setDepositReportedSuccess] = useState(false);
   const [livePackages, setLivePackages] = useState(PACKAGES);
+  const [liveSessions, setLiveSessions] = useState<Record<string, any>>(SESSION_TYPES);
 
-  // Load live packages configured in Studio
+  // Load live packages & session types configured in Studio
   useEffect(() => {
     fetch("/api/sessions")
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data.packages) && data.packages.length > 0) {
           setLivePackages(data.packages);
+        }
+        if (Array.isArray(data.sessions) && data.sessions.length > 0) {
+          const map: Record<string, any> = {};
+          for (const s of data.sessions) {
+            map[s.slug] = s;
+          }
+          setLiveSessions(map);
         }
       })
       .catch(() => {});
@@ -140,8 +148,8 @@ function BookingWizard() {
   );
 
   const estimate: EstimateResult = useMemo(() => {
-    return calculateEstimate(sessionType, answers, packageId);
-  }, [sessionType, answers, packageId]);
+    return calculateEstimate(sessionType, answers, packageId, livePackages, (liveSessions as any)[sessionType]);
+  }, [sessionType, answers, packageId, livePackages, liveSessions]);
 
   const isBespoke = estimate.quoteRequired || estimate.total === 0;
 
@@ -230,7 +238,7 @@ function BookingWizard() {
     const text = `Hello LamSparks! I have completed my session estimate online.\n\n` +
       `Reference: ${referenceCode}\n` +
       `Client: ${clientName || "Client"}\n` +
-      `Session: ${SESSION_TYPES[sessionType]?.title || sessionType}\n` +
+      `Session: ${liveSessions[sessionType]?.title || SESSION_TYPES[sessionType]?.title || sessionType}\n` +
       `Collection: ${estimate.packageName}\n` +
       `Purpose: ${purpose || "Special Milestone"}\n` +
       (feeling ? `Desired Feeling: ${feeling}\n` : "") +
@@ -245,7 +253,7 @@ function BookingWizard() {
 
   const talkFirstUrl = useMemo(() => {
     const businessNumber = "2348130847299";
-    const text = `Hello Osemene! I am looking at a ${SESSION_TYPES[sessionType]?.title} session (Ref: ${referenceCode}), but I have a few questions before locking my date.`;
+    const text = `Hello Osemene! I am looking at a ${liveSessions[sessionType]?.title || SESSION_TYPES[sessionType]?.title} session (Ref: ${referenceCode}), but I have a few questions before locking my date.`;
     return `https://wa.me/${businessNumber}?text=${encodeURIComponent(text)}`;
   }, [sessionType, referenceCode]);
 
@@ -286,7 +294,7 @@ function BookingWizard() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.values(SESSION_TYPES).map((st) => (
+              {Object.values(liveSessions).map((st: any) => (
                 <button
                   key={st.slug}
                   type="button"
@@ -423,7 +431,7 @@ function BookingWizard() {
             {/* Collection Tier Picker */}
             <div className="space-y-3">
               <label className="block font-body text-xs uppercase tracking-wider text-gold font-semibold">
-                Available Collections for {SESSION_TYPES[sessionType]?.title}
+                Available Collections for {liveSessions[sessionType]?.title || SESSION_TYPES[sessionType]?.title}
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {livePackages.filter((p) => p.sessionType === sessionType).map((pkg) => (
@@ -741,7 +749,7 @@ function BookingWizard() {
                     {estimate.packageName}
                   </h3>
                   <span className="font-body text-xs text-muted block mt-0.5">
-                    Prepared for {clientName} · {SESSION_TYPES[sessionType]?.title}
+                    Prepared for {clientName} · {liveSessions[sessionType]?.title || SESSION_TYPES[sessionType]?.title}
                   </span>
                 </div>
                 <div className="text-right">

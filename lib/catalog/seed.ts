@@ -6,9 +6,11 @@ export interface SessionTypeMeta {
   tagline: string;
   description: string;
   fromPrice: number | null;
+  promoPrice?: number | null;
   heroImage: string;
   heroImageMobile?: string;
   defaultDepositPercent: number;
+  depositPercent?: number;
   standardDeliveryDays: string;
   expressDeliveryDays?: string;
   category: "studio" | "events" | "portraits";

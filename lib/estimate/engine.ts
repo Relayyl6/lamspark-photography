@@ -1,28 +1,32 @@
-import type { BookingAnswers, EstimateLineItem, EstimateResult, SessionTypeSlug } from "../types";
-import { PACKAGES, ADD_ONS, SESSION_TYPES } from "../catalog/seed";
+import type { BookingAnswers, EstimateLineItem, EstimateResult, SessionTypeSlug, PackageItem } from "../types";
+import { PACKAGES, ADD_ONS, SESSION_TYPES, SessionTypeMeta } from "../catalog/seed";
 
 export const RULES_VERSION = "2026.11.1";
 
 /**
  * Pure function: calculate itemised estimate for a session based on answers & catalog.
+ * Supports live DB overrides from Neon / Studio.
  * No side effects. Rounds to whole naira.
  */
 export function calculateEstimate(
   sessionType: SessionTypeSlug,
   answers: BookingAnswers,
-  customPackageId?: string
+  customPackageId?: string,
+  overridePackages?: PackageItem[],
+  overrideSessionMeta?: SessionTypeMeta | any
 ): EstimateResult {
-  const meta = SESSION_TYPES[sessionType] || SESSION_TYPES["toddler"];
+  const meta = overrideSessionMeta || SESSION_TYPES[sessionType] || SESSION_TYPES["toddler"];
   const targetPackageId = customPackageId || answers.packageId;
+  const packageList = overridePackages && overridePackages.length > 0 ? overridePackages : PACKAGES;
 
   // Find selected package
-  const pkg = PACKAGES.find((p) => p.id === targetPackageId && p.sessionType === sessionType) ||
-              PACKAGES.find((p) => p.sessionType === sessionType);
+  const pkg = packageList.find((p) => p.id === targetPackageId && p.sessionType === sessionType) ||
+              packageList.find((p) => p.sessionType === sessionType);
 
   const lineItems: EstimateLineItem[] = [];
 
   // If session type requires personal quote (e.g. wedding, not-sure)
-  if (!pkg || pkg.price === null || meta.fromPrice === null) {
+  if (!pkg || pkg.price === null || (meta.fromPrice === null && (!overridePackages || overridePackages.length === 0))) {
     const validUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     return {
       sessionType,
@@ -36,10 +40,10 @@ export function calculateEstimate(
         },
       ],
       total: 0,
-      depositPercent: meta.defaultDepositPercent,
+      depositPercent: meta.depositPercent || meta.defaultDepositPercent || 70,
       depositAmount: 0,
       balanceAmount: 0,
-      deliveryTimeline: meta.standardDeliveryDays,
+      deliveryTimeline: meta.delivery_days || meta.standardDeliveryDays || "5 to 7 business days",
       termsNote: "A custom proposal and payment schedule will be provided following your consultation.",
       rulesVersion: RULES_VERSION,
       validUntil,
@@ -164,7 +168,7 @@ export function calculateEstimate(
 
   // Round total to whole integer
   const finalTotal = Math.round(runningTotal);
-  const depositPercent = meta.defaultDepositPercent;
+  const depositPercent = meta.depositPercent || meta.defaultDepositPercent || 70;
   const depositAmount = Math.round((finalTotal * depositPercent) / 100);
   const balanceAmount = finalTotal - depositAmount;
 

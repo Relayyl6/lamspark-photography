@@ -9,17 +9,12 @@ import { getLiveSessionTypes, getLivePackages } from "@/lib/catalog/live";
 import { SessionTypeSlug } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface SessionPageProps {
   params: {
     type: string;
   };
-}
-
-export function generateStaticParams() {
-  return Object.keys(SESSION_TYPES).map((slug) => ({
-    type: slug,
-  }));
 }
 
 export default async function SessionDetailPage({ params }: SessionPageProps) {
@@ -31,6 +26,9 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
 
   const packages = await getLivePackages(session.slug);
   const addOns = ADD_ONS.filter((a) => a.sessionType === session.slug || a.sessionType === "all");
+
+  const standardDelivery = session.standardDeliveryDays || "5 to 7 business days";
+  const standardDepositPercent = (session as any).depositPercent ?? session.defaultDepositPercent ?? 70;
 
   return (
     <>
@@ -217,7 +215,17 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                   Investment Summary
                 </span>
                 <h3 className="font-display text-3xl text-deep font-normal mb-2">
-                  {session.fromPrice ? (
+                  {session.promoPrice ? (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-muted text-sm uppercase">from</span>
+                      <span className="text-deep font-semibold">₦{session.promoPrice.toLocaleString()}</span>
+                      {session.fromPrice && session.fromPrice !== session.promoPrice && (
+                        <span className="text-muted text-base line-through font-normal">
+                          ₦{session.fromPrice.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  ) : session.fromPrice ? (
                     <>
                       <span className="text-muted text-sm uppercase mr-1">from</span>
                       <span>₦{session.fromPrice.toLocaleString()}</span>
@@ -227,13 +235,13 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                   )}
                 </h3>
                 <p className="font-body text-xs text-muted mb-6">
-                  Turnaround: {session.standardDeliveryDays} · Deposit: {session.defaultDepositPercent}%
+                  Turnaround: {standardDelivery} · Deposit: {standardDepositPercent}%
                 </p>
 
                 <div className="space-y-3 pt-4 border-t border-line/60 mb-6">
                   <div className="flex items-center gap-2 text-xs text-brown/90">
                     <Clock className="w-4 h-4 text-gold shrink-0" />
-                    <span>Standard delivery {session.standardDeliveryDays}</span>
+                    <span>Standard delivery {standardDelivery}</span>
                   </div>
                   {session.expressDeliveryDays && (
                     <div className="flex items-center gap-2 text-xs text-brown/90">
