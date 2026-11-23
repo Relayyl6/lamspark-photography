@@ -92,16 +92,43 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Public asset
-    let storageKey = `portfolio/${safeFilename}`;
+    // Public asset (Portfolio, Event Galleries, Studio Content)
+    let processedBuffer = buffer;
+    let finalContentType = file.type || "image/jpeg";
+    let finalSafeFilename = safeFilename;
+
+    // Automatic Studio Image Optimization: Auto-rotate EXIF, cap at 4K (2560px), encode to high-fidelity WebP
+    if (partition === "public" && (file.type?.startsWith("image/") || /\.(jpe?g|png|webp|heic|tiff)$/i.test(file.name))) {
+      try {
+        const sharp = require("sharp");
+        processedBuffer = await sharp(buffer)
+          .rotate() // Automatically orient camera photos based on EXIF tag
+          .resize({
+            width: 2560,
+            height: 2560,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .webp({ quality: 86, effort: 4 })
+          .toBuffer();
+
+        finalContentType = "image/webp";
+        finalSafeFilename = `${uniqueId}.webp`;
+      } catch (sharpErr) {
+        console.warn("Sharp image optimization fallback to raw buffer:", sharpErr);
+        processedBuffer = buffer;
+      }
+    }
+
+    let storageKey = `portfolio/${finalSafeFilename}`;
     let publicUrl = "";
 
     try {
       publicUrl = await uploadObject({
         bucket: PUBLIC_BUCKET,
         key: storageKey,
-        body: buffer,
-        contentType: file.type || "image/jpeg",
+        body: processedBuffer,
+        contentType: finalContentType,
       });
     } catch (s3Err) {
       console.warn("Public S3 upload fallback to local storage:", s3Err);
@@ -109,8 +136,8 @@ export async function POST(req: NextRequest) {
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
-      fs.writeFileSync(path.join(uploadsDir, safeFilename), buffer);
-      storageKey = `/uploads/${safeFilename}`;
+      fs.writeFileSync(path.join(uploadsDir, finalSafeFilename), processedBuffer);
+      storageKey = `/uploads/${finalSafeFilename}`;
       publicUrl = storageKey;
     }
 
