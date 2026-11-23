@@ -42,8 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Fast-path instant intro stream and critical roulette asset preloading */}
-        <link rel="preload" href="/videos/welcome-intro.mp4" as="video" type="video/mp4" fetchPriority="high" />
+        {/* Fast-path critical image asset preloading */}
         <link rel="preload" href="/images/client/corporate_1.webp" as="image" type="image/webp" fetchPriority="high" />
         <link rel="preload" href="/images/client/weddings_1.webp" as="image" type="image/webp" />
         <link rel="preload" href="/images/client/events_1.webp" as="image" type="image/webp" />

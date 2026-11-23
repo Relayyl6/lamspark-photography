@@ -44,7 +44,7 @@ type Note = { text: string; x: number; y: number; arrow?: "up" | "down" };
 // Canonical default photos loaded immediately with zero flash of loading skeleton
 const CANONICAL_PHOTOS: Photo[] = [
   {
-    src: "/images/client/weddings/weddings_1.jpg",
+    src: "/images/client/weddings_1.webp",
     ar: 0.72,
     cluster: 0,
     z: 3,
@@ -54,7 +54,7 @@ const CANONICAL_PHOTOS: Photo[] = [
     m: { x: 12, y: 96, w: 118, rot: -3 },
   },
   {
-    src: "/images/client/weddings/weddings_2.jpg",
+    src: "/images/client/weddings_2.webp",
     ar: 0.72,
     cluster: 0,
     z: 1,
@@ -64,7 +64,7 @@ const CANONICAL_PHOTOS: Photo[] = [
     m: { x: 100, y: 20, w: 118, rot: 0.5 },
   },
   {
-    src: "/images/client/events/events_1.jpg",
+    src: "/images/client/events_1.webp",
     ar: 0.72,
     cluster: 0,
     z: 2,
@@ -74,7 +74,7 @@ const CANONICAL_PHOTOS: Photo[] = [
     m: { x: 200, y: 110, w: 130, rot: 3 },
   },
   {
-    src: "/images/client/corporate/corporate_1.jpg",
+    src: "/images/client/corporate_1.webp",
     ar: 0.72,
     cluster: 1,
     z: 2,
@@ -84,8 +84,8 @@ const CANONICAL_PHOTOS: Photo[] = [
     m: { x: 20, y: 100, w: 130, rot: -2 },
   },
   {
-    src: "/images/client/events/events_3.jpg",
-    ar: 1.5,
+    src: "/images/client/events_3.webp",
+    ar: 0.72,
     cluster: 1,
     z: 1,
     title: "Authentic Moments",
@@ -94,7 +94,7 @@ const CANONICAL_PHOTOS: Photo[] = [
     m: { x: 180, y: 40, w: 140, rot: 2 },
   },
   {
-    src: "/images/client/corporate/corporate_3.jpg",
+    src: "/images/client/corporate_3.webp",
     ar: 0.72,
     cluster: 2,
     z: 2,
@@ -104,7 +104,7 @@ const CANONICAL_PHOTOS: Photo[] = [
     m: { x: 20, y: 110, w: 130, rot: -1.5 },
   },
   {
-    src: "/images/client/corporate/corporate_6.jpg",
+    src: "/images/client/corporate_6.webp",
     ar: 0.72,
     cluster: 2,
     z: 1,
@@ -408,20 +408,38 @@ export function PhilosophyGallery() {
           boxShadow: `0 ${14 * u}px ${34 * u}px -${10 * u}px rgba(30,25,20,.30), 0 ${2 * u}px ${6 * u}px rgba(30,25,20,.08)`,
         }}
       >
-        <img
-          src={p.src}
-          alt={`${p.title} — ${p.sub}`}
-          draggable={false}
-          decoding="async"
+        <div
           style={{
-            display: "block",
             width: "100%",
             aspectRatio: p.ar,
-            objectFit: "cover",
             borderRadius: 7 * u,
-            userSelect: "none",
+            overflow: "hidden",
+            background: "#EAE5DC",
           }}
-        />
+        >
+          <img
+            src={p.src}
+            alt={`${p.title} — ${p.sub}`}
+            draggable={false}
+            decoding="async"
+            loading="lazy"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src.endsWith(".webp")) {
+                target.src = target.src.replace(".webp", ".jpg");
+              }
+            }}
+            style={{
+              display: "block",
+              width: "100%",
+              height: "100%",
+              aspectRatio: p.ar,
+              objectFit: "cover",
+              borderRadius: 7 * u,
+              userSelect: "none",
+            }}
+          />
+        </div>
       </div>
     );
   });

@@ -46,7 +46,7 @@ export function WelcomeIntro() {
     }
   }, []);
 
-  // Background asset preloader: Warm up hero roulette images, database content & 3D CAD assets while intro plays
+  // Background asset preloader: Warm up lightweight WebP images in background while intro plays
   useEffect(() => {
     if (stage === "video") {
       try {
@@ -64,13 +64,6 @@ export function WelcomeIntro() {
           const img = new Image();
           img.src = src;
         });
-
-        // Warm up CAD camera STL models in background
-        fetch("/models/falcon-camera/anim/part_body.stl").catch(() => {});
-        fetch("/models/falcon-camera/anim/part_lens_outer.stl").catch(() => {});
-
-        fetch("/api/content?key=philosophy_photos").catch(() => {});
-        fetch("/api/content?key=hero_wheel_cards").catch(() => {});
       } catch (_) {}
     }
   }, [stage]);
@@ -120,7 +113,7 @@ export function WelcomeIntro() {
     startFadeOut();
   }, [startFadeOut]);
 
-  // Robust video autoplay enforcement with readyState checks and user gesture fallback
+  // High-reliability video playback engine with fast fallback
   useEffect(() => {
     if (stage !== "video") return;
 
@@ -131,12 +124,20 @@ export function WelcomeIntro() {
     vid.defaultMuted = true;
     vid.playsInline = true;
 
+    let started = false;
+    const markStarted = () => {
+      if (!started) {
+        started = true;
+        setVideoStarted(true);
+        setAutoplayBlocked(false);
+      }
+    };
+
     const tryPlay = () => {
       const p = vid.play();
       if (p !== undefined) {
         p.then(() => {
-          setVideoStarted(true);
-          setAutoplayBlocked(false);
+          markStarted();
         }).catch((err) => {
           console.warn("[WelcomeIntro autoplay notice]", err?.message || err);
           setAutoplayBlocked(true);
@@ -144,20 +145,39 @@ export function WelcomeIntro() {
       }
     };
 
-    if (vid.readyState >= 2) {
-      tryPlay();
-    } else {
-      vid.addEventListener("canplay", tryPlay, { once: true });
-      vid.addEventListener("loadeddata", tryPlay, { once: true });
-    }
+    // Attempt instant play immediately
+    tryPlay();
 
-    // Safety timeout: transition after 9s if video stalls
+    vid.addEventListener("playing", markStarted);
+    vid.addEventListener("canplay", tryPlay, { once: true });
+    vid.addEventListener("loadeddata", tryPlay, { once: true });
+
+    // If autoplay is restricted by browser policy, reveal tap overlay quickly (1.2s)
+    const promptTimer = setTimeout(() => {
+      if (!started && (!vid.currentTime || vid.currentTime === 0 || vid.paused)) {
+        setAutoplayBlocked(true);
+      }
+    }, 1200);
+
+    // Hard fallback: If playback has not produced frames after 3.8s, smoothly advance
+    // so the visitor is NEVER stranded on a black screen
     const safetyTimer = setTimeout(() => {
+      if (!started) {
+        console.warn("[WelcomeIntro] Video stalled, advancing to signature");
+        handleVideoEnd();
+      }
+    }, 3800);
+
+    // Global cap: maximum duration is 9.5s regardless
+    const maxTimer = setTimeout(() => {
       handleVideoEnd();
-    }, 9000);
+    }, 9500);
 
     return () => {
+      clearTimeout(promptTimer);
       clearTimeout(safetyTimer);
+      clearTimeout(maxTimer);
+      vid.removeEventListener("playing", markStarted);
       vid.removeEventListener("canplay", tryPlay);
       vid.removeEventListener("loadeddata", tryPlay);
     };
@@ -236,10 +256,13 @@ export function WelcomeIntro() {
         <div className="relative w-full h-full flex items-center justify-center animate-in fade-in duration-700">
           <video
             ref={videoRef}
+            src="/videos/welcome-intro.mp4"
             autoPlay
             playsInline
             muted
             preload="auto"
+            disablePictureInPicture
+            disableRemotePlayback
             onPlaying={() => {
               setVideoStarted(true);
               setAutoplayBlocked(false);
@@ -251,9 +274,7 @@ export function WelcomeIntro() {
               setStage("pulse_dot");
             }}
             className="w-full h-full object-cover"
-          >
-            <source src="/videos/welcome-intro.mp4" type="video/mp4" />
-          </video>
+          />
 
           {/* Autoplay blocked touch overlay */}
           {autoplayBlocked && !videoStarted && (
