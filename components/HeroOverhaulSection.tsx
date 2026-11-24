@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ArrowRight, Camera } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Camera } from "lucide-react";
 import { Nikon3DCamera } from "./Nikon3DCamera";
 
 interface WheelCard {
@@ -423,13 +423,22 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
           Swipe to explore
         </div>
 
-        <Link
-          href="/portfolio"
-          className="mt-2 sm:mt-3 inline-flex items-center gap-2 rounded-full bg-[#111111] hover:bg-[#D93829] text-white px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] transition-colors"
-        >
-          View Portfolio
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+        <div className="mt-2 sm:mt-3 flex items-center justify-center gap-2.5 sm:gap-3 flex-wrap">
+          <Link
+            href="/portfolio"
+            className="inline-flex items-center gap-2 rounded-full bg-[#111111] hover:bg-[#D93829] text-white px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] transition-colors"
+          >
+            View Portfolio
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <Link
+            href="/book"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] px-6 py-2.5 text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-sm hover:shadow-md group"
+          >
+            <span>BOOK</span>
+            <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </Link>
+        </div>
       </div>
     </section>
   );
