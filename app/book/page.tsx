@@ -204,6 +204,21 @@ function BookingWizard() {
           if (data.booking.payment?.aiCheck) {
             setAiAnalysisResult(data.booking.payment.aiCheck);
           }
+          // Save or refresh in device localStorage
+          try {
+            const raw = localStorage.getItem("lamsparks_saved_bookings");
+            const existing = raw ? JSON.parse(raw) : [];
+            const filtered = existing.filter((b: any) => b.referenceCode !== data.booking.referenceCode);
+            const shootStart = data.booking.shootStart || (data.booking.answers?.selectedDate ? `${data.booking.answers.selectedDate} at ${data.booking.answers.timeSlot || ""}` : "");
+            const newRecord = {
+              referenceCode: data.booking.referenceCode,
+              sessionTitle: data.booking.sessionType || "Atelier Session",
+              shootStart,
+              status: data.booking.status || "awaiting_deposit",
+              createdAt: new Date().toISOString(),
+            };
+            localStorage.setItem("lamsparks_saved_bookings", JSON.stringify([newRecord, ...filtered].slice(0, 5)));
+          } catch {}
           setStep(5);
         }
       })
@@ -400,6 +415,21 @@ function BookingWizard() {
             holdExpiresAt: data.holdExpiresAt,
           });
         }
+        // Save to device localStorage so client can track under "My Booking"
+        try {
+          const raw = localStorage.getItem("lamsparks_saved_bookings");
+          const existing = raw ? JSON.parse(raw) : [];
+          const filtered = existing.filter((b: any) => b.referenceCode !== data.referenceCode);
+          const newRecord = {
+            referenceCode: data.referenceCode,
+            sessionTitle: liveSessions[sessionType]?.title || sessionType,
+            shootStart: `${selectedDate} at ${timeSlot}`,
+            status: "awaiting_deposit",
+            createdAt: new Date().toISOString(),
+          };
+          localStorage.setItem("lamsparks_saved_bookings", JSON.stringify([newRecord, ...filtered].slice(0, 5)));
+        } catch {}
+
         // Update URL to make it a revisitable page
         router.replace(`/book?ref=${data.referenceCode}`, { scroll: false });
         setStep(5);

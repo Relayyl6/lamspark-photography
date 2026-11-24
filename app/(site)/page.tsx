@@ -10,6 +10,8 @@ import { EditorialCameraShowcaseCTA } from "@/components/EditorialCameraShowcase
 import { SESSION_TYPES } from "@/lib/catalog/seed";
 import { getLiveSessionTypes } from "@/lib/catalog/live";
 import { PhilosophyGallery } from "@/components/PhilosophyGallery";
+import { LiveCalendarSection } from "@/components/LiveCalendarSection";
+import { WhyFamiliesTrustUsSection } from "@/components/WhyFamiliesTrustUsSection";
 import { neon } from "@neondatabase/serverless";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +77,9 @@ export default async function HomePage() {
         {/* Overhauled Editorial 3D Arched Panorama Hero with Integrated 3D Nikon Camera */}
         <HeroOverhaulSection initialCards={heroData.cards} initialCopy={heroData.copy} />
 
+        {/* Live Studio Calendar: Free or Booked, At a Glance (Fetched from Neon DB) */}
+        <LiveCalendarSection />
+
         {/* Brand Line & Editorial Philosophy Section */}
         <PhilosophyGallery />
 
@@ -114,6 +119,9 @@ export default async function HomePage() {
 
         {/* Full-Screen-Width Editorial Rangefinder Camera Showcase CTA */}
         <EditorialCameraShowcaseCTA />
+
+        {/* Why Families Trust Us: An Unhurried Approach to Art */}
+        <WhyFamiliesTrustUsSection />
       </main>
 
       <Footer />

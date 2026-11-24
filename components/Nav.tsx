@@ -6,12 +6,11 @@ import { ArrowUpRight, Menu, X, ChevronDown, Sparkles, BookOpen, Camera, Shield,
 
 export function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<"sessions" | "galleries" | "atelier" | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<"sessions" | "galleries" | null>(null);
 
   // Mobile accordion states
   const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
   const [mobileGalleriesOpen, setMobileGalleriesOpen] = useState(false);
-  const [mobileAtelierOpen, setMobileAtelierOpen] = useState(false);
 
   const navRef = useRef<HTMLElement>(null);
 
@@ -51,11 +50,8 @@ export function Nav() {
     { href: "/portfolio", label: "Curated Portfolio", desc: "Archival Series 02 · Vintage camera matte board & fine art works" },
     { href: "/stories", label: "Session Stories", desc: "3D Flippable chronicles & behind-the-scenes craft alchemy" },
     { href: "/love-notes", label: "Client Love Notes", desc: "Real memories & words from families across Nigeria" },
-  ];
-
-  const atelierLinks = [
-    { href: "/about", label: "Our Story & Philosophy", desc: "Honouring Lametu · Meet Osemene & the Abuja Atelier" },
     { href: "/faq", label: "Session FAQ & Prep", desc: "Timing, booking steps, and studio suite details" },
+    { href: "/about", label: "The Atelier Story", desc: "Honouring Lametu · Meet Osemene & the Abuja Atelier" },
   ];
 
   return (
@@ -174,47 +170,13 @@ export function Nav() {
             )}
           </div>
 
-          {/* Dropdown 3: Atelier */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setOpenDropdown(openDropdown === "atelier" ? null : "atelier")}
-              className={`inline-flex items-center gap-1 font-body text-[13px] font-medium px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                openDropdown === "atelier" ? "text-deep bg-warm-white shadow-sm" : "text-brown/90 hover:text-deep hover:bg-warm-white/60"
-              }`}
-              aria-expanded={openDropdown === "atelier"}
-            >
-              <span>Atelier</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                  openDropdown === "atelier" ? "rotate-180 text-gold" : "text-muted"
-                }`}
-              />
-            </button>
-
-            {openDropdown === "atelier" && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-[#FAF8F5] rounded-xl border border-[#E5DDD2] shadow-2xl p-3 space-y-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="px-3 py-1.5 text-[10px] font-body uppercase tracking-[0.2em] text-gold font-bold border-b border-[#E5DDD2]">
-                  The Studio
-                </div>
-                {atelierLinks.map((a) => (
-                  <Link
-                    key={a.href}
-                    href={a.href}
-                    onClick={() => setOpenDropdown(null)}
-                    className="block p-2.5 rounded-lg hover:bg-[#F2ECE3] transition-colors group"
-                  >
-                    <span className="block font-display text-sm font-medium text-deep group-hover:text-gold transition-colors">
-                      {a.label}
-                    </span>
-                    <span className="block font-body text-[11px] text-muted line-clamp-1 mt-0.5">
-                      {a.desc}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Direct Link: My Booking */}
+          <Link
+            href="/find-booking"
+            className="font-body text-[13px] font-medium text-brown/90 hover:text-deep hover:bg-warm-white/60 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+          >
+            My Booking
+          </Link>
 
           {/* Direct Link: Contact */}
           <Link
@@ -336,34 +298,18 @@ export function Nav() {
               )}
             </div>
 
-            {/* Accordion 3: Atelier */}
-            <div className="border-b border-line/60 pb-2.5 sm:pb-3">
-              <button
-                type="button"
-                onClick={() => setMobileAtelierOpen(!mobileAtelierOpen)}
-                className="w-full flex items-center justify-between py-1.5 text-left"
+            {/* Direct Link: My Booking */}
+            <div className="border-b border-line/60 pb-3">
+              <Link
+                href="/find-booking"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between py-2 font-display text-lg text-deep font-medium hover:text-gold"
               >
-                <span className="font-display text-base sm:text-lg text-deep font-medium">Atelier</span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold transition-transform duration-200 ${
-                    mobileAtelierOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {mobileAtelierOpen && (
-                <div className="pl-3 py-1.5 space-y-1.5 border-l-2 border-gold/40 mt-1">
-                  {atelierLinks.map((a) => (
-                    <Link
-                      key={a.href}
-                      href={a.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block py-1 text-sm font-body text-brown hover:text-gold"
-                    >
-                      {a.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
+                <span>My Booking</span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-gold font-bold px-2 py-0.5 rounded-full bg-gold/15">
+                  Find Status
+                </span>
+              </Link>
             </div>
 
             {/* Direct Link: Contact */}

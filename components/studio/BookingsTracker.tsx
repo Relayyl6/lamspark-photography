@@ -19,7 +19,9 @@ import {
   Loader2,
   CalendarCheck,
   AlertCircle,
+  Lock,
 } from "lucide-react";
+import { StudioCalendarManager } from "./StudioCalendarManager";
 
 interface BookingItem {
   id: string;
@@ -47,6 +49,7 @@ interface BookingItem {
 }
 
 export function BookingsTracker() {
+  const [viewMode, setViewMode] = useState<"roster" | "calendar">("roster");
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -203,8 +206,41 @@ export function BookingsTracker() {
         )}
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-warm-white p-4 rounded-2xl border border-line shadow-sm space-y-4">
+      {/* View Switcher: Bookings List vs Live Calendar & Slot Locks */}
+      <div className="flex items-center gap-2 p-1 bg-warm-white rounded-2xl border border-line w-fit">
+        <button
+          type="button"
+          onClick={() => setViewMode("roster")}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-body font-semibold transition-all ${
+            viewMode === "roster"
+              ? "bg-deep text-warm-white shadow-xs"
+              : "text-brown hover:text-deep hover:bg-cream"
+          }`}
+        >
+          <CalendarCheck className="w-4 h-4" />
+          <span>Bookings Roster ({bookings.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setViewMode("calendar")}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-body font-semibold transition-all ${
+            viewMode === "calendar"
+              ? "bg-deep text-warm-white shadow-xs"
+              : "text-brown hover:text-deep hover:bg-cream"
+          }`}
+        >
+          <Lock className="w-4 h-4 text-gold" />
+          <span>Live Calendar &amp; Slot Locks (Operability)</span>
+        </button>
+      </div>
+
+      {viewMode === "calendar" ? (
+        <StudioCalendarManager />
+      ) : (
+        <>
+          {/* Filter and Search Bar */}
+          <div className="bg-warm-white p-4 rounded-2xl border border-line shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -405,6 +441,8 @@ export function BookingsTracker() {
             );
           })}
         </div>
+      )}
+      </>
       )}
 
       {/* Reschedule Modal */}
