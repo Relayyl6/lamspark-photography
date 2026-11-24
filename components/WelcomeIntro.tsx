@@ -152,21 +152,21 @@ export function WelcomeIntro() {
     vid.addEventListener("canplay", tryPlay, { once: true });
     vid.addEventListener("loadeddata", tryPlay, { once: true });
 
-    // If autoplay is restricted by browser policy, reveal tap overlay quickly (1.2s)
+    // If autoplay is restricted by browser policy, reveal tap overlay quickly (900ms)
     const promptTimer = setTimeout(() => {
       if (!started && (!vid.currentTime || vid.currentTime === 0 || vid.paused)) {
         setAutoplayBlocked(true);
       }
-    }, 1200);
+    }, 900);
 
-    // Hard fallback: If playback has not produced frames after 3.8s, smoothly advance
+    // Hard fallback: If playback has not produced frames after 2.0s, smoothly advance
     // so the visitor is NEVER stranded on a black screen
     const safetyTimer = setTimeout(() => {
       if (!started) {
         console.warn("[WelcomeIntro] Video stalled, advancing to signature");
         handleVideoEnd();
       }
-    }, 3800);
+    }, 2000);
 
     // Global cap: maximum duration is 9.5s regardless
     const maxTimer = setTimeout(() => {

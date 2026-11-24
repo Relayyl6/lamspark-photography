@@ -27,6 +27,13 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
   const packages = await getLivePackages(session.slug);
   const addOns = ADD_ONS.filter((a) => a.sessionType === session.slug || a.sessionType === "all");
 
+  // Derive live starting rate dynamically from live studio packages or session override
+  const packagePrices = packages
+    .map((p) => (typeof p.price === "number" && p.price > 0 ? p.price : null))
+    .filter((p): p is number => p !== null);
+  const lowestPackagePrice = packagePrices.length > 0 ? Math.min(...packagePrices) : null;
+  const startingPrice = lowestPackagePrice ?? session.fromPrice;
+
   const standardDelivery = session.standardDeliveryDays || "5 to 7 business days";
   const standardDepositPercent = (session as any).depositPercent ?? session.defaultDepositPercent ?? 70;
 
@@ -215,20 +222,20 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                   Investment Summary
                 </span>
                 <h3 className="font-display text-3xl text-deep font-normal mb-2">
-                  {session.promoPrice ? (
+                  {session.promoPrice && session.promoPrice < (startingPrice || Infinity) ? (
                     <div className="flex items-baseline gap-2">
                       <span className="text-muted text-sm uppercase">from</span>
                       <span className="text-deep font-semibold">₦{session.promoPrice.toLocaleString()}</span>
-                      {session.fromPrice && session.fromPrice !== session.promoPrice && (
+                      {startingPrice && (
                         <span className="text-muted text-base line-through font-normal">
-                          ₦{session.fromPrice.toLocaleString()}
+                          ₦{startingPrice.toLocaleString()}
                         </span>
                       )}
                     </div>
-                  ) : session.fromPrice ? (
+                  ) : startingPrice ? (
                     <>
                       <span className="text-muted text-sm uppercase mr-1">from</span>
-                      <span>₦{session.fromPrice.toLocaleString()}</span>
+                      <span className="text-deep font-semibold">₦{startingPrice.toLocaleString()}</span>
                     </>
                   ) : (
                     "Bespoke Consultation"

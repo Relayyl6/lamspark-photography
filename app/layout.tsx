@@ -42,10 +42,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Fast-path critical image asset preloading */}
+        {/* Fast-path critical image and intro video asset preloading */}
+        <link rel="preload" href="/videos/welcome-intro.mp4" as="video" type="video/mp4" />
         <link rel="preload" href="/images/client/corporate_1.webp" as="image" type="image/webp" fetchPriority="high" />
         <link rel="preload" href="/images/client/weddings_1.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/images/client/weddings_2.webp" as="image" type="image/webp" />
         <link rel="preload" href="/images/client/events_1.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/images/client/events_3.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/images/client/corporate_3.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/images/client/corporate_6.webp" as="image" type="image/webp" />
 
         {/* Synchronous script: Prevent any flash on subpages or returning sessions before first paint */}
         <script

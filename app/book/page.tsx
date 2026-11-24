@@ -549,7 +549,7 @@ function BookingWizard() {
       `Session: ${sessionTitle}\n` +
       `Package: ${pkgName}\n` +
       shootInfo +
-      `Deposit (70%): ₦${depositAmt}\n` +
+      `Deposit (${activeBooking?.estimate?.depositPercent || estimate.depositPercent}%): ₦${depositAmt}\n` +
       `Total Investment: ₦${totalAmt}\n\n` +
       (receiptReported || receiptUrl
         ? `I have uploaded my bank transfer receipt for verification.\n`
@@ -693,7 +693,7 @@ function BookingWizard() {
                   <p className="text-sm sm:text-base text-[#6E6359]">
                     {activeBooking.status === "confirmed"
                       ? "Your date and studio time slot are officially locked on Osemene's calendar."
-                      : "We have temporarily reserved your slot. Complete your 70% deposit transfer below to confirm your date."}
+                      : "We have temporarily reserved your slot. Complete your deposit transfer below to confirm your date."}
                   </p>
                 </div>
 
@@ -712,7 +712,7 @@ function BookingWizard() {
                       </div>
                     </div>
                     <span className="hidden sm:inline-block font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-200/60 text-amber-900">
-                      70% Deposit Required
+                      {activeBooking?.estimate?.depositPercent || estimate.depositPercent}% Deposit Required
                     </span>
                   </div>
                 )}
@@ -937,10 +937,24 @@ function BookingWizard() {
                     </div>
                   </div>
 
-                  {/* Right Column: Order Summary, Shoot Operability Details & Calendar */}
-                  <div className="lg:col-span-5 space-y-6">
+                  {/* Right Column: Order Summary, Shoot Operability Details & Calendar (Sticky on Desktop) */}
+                  <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
                     {/* Session Summary Card */}
                     <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
+                      {/* Bespoke Service Image Banner in Summary Card */}
+                      <div className="relative h-36 sm:h-44 w-full rounded-xl overflow-hidden mb-4 border border-[#E5DECF] bg-[#F8F4EE]">
+                        <img
+                          src={liveSessions[activeBooking.sessionType || sessionType]?.heroImage || "/images/client/weddings_3.jpg"}
+                          alt={liveSessions[activeBooking.sessionType || sessionType]?.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent flex items-end p-3">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-white font-bold bg-[#1A1410]/75 px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20">
+                            {liveSessions[activeBooking.sessionType || sessionType]?.title}
+                          </span>
+                        </div>
+                      </div>
+
                       <div className="pb-4 border-b border-[#E5DECF]">
                         <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block mb-1">
                           Session Summary
@@ -1017,13 +1031,13 @@ function BookingWizard() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-amber-900 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/60 font-semibold">
-                          <span>Deposit to Book (70%):</span>
+                          <span>Deposit to Book ({activeBooking.estimate?.depositPercent || estimate.depositPercent}%):</span>
                           <span>
                             ₦{(activeBooking.estimate?.depositAmount || estimate.depositAmount).toLocaleString()}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-[#6E6359]">
-                          <span>Balance on Shoot Day (30%):</span>
+                          <span>Balance on Shoot Day ({100 - (activeBooking.estimate?.depositPercent || estimate.depositPercent)}%):</span>
                           <span className="font-semibold text-[#1A1410]">
                             ₦{(activeBooking.estimate?.balanceAmount || estimate.balanceAmount).toLocaleString()}
                           </span>
@@ -1285,73 +1299,115 @@ function BookingWizard() {
                   </p>
                 </div>
 
-                {/* Package Cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {currentPackages.map((pkg) => {
-                    const isSelected = selectedPackage?.id === pkg.id;
-                    return (
-                      <div
-                        key={pkg.id}
-                        onClick={() => setPackageId(pkg.id)}
-                        className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative ${
-                          isSelected
-                            ? "bg-[#FDFBF8] border-[#C9A96E] ring-2 ring-[#C9A96E] shadow-lg scale-[1.01]"
-                            : "bg-[#FDFBF8]/80 border-[#E5DECF] hover:border-[#C9A96E]/60 hover:bg-[#FDFBF8]"
-                        }`}
-                      >
-                        {/* Radio Dot indicator */}
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div>
-                            <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410] font-medium leading-snug">
-                              {pkg.name}
-                            </h3>
-                            <span className="text-xs font-semibold text-[#6E6359]">
-                              {(pkg as any)?.durationMinutes ? `${(pkg as any).durationMinutes} mins` : "Standard Duration"}
-                            </span>
-                          </div>
-                          <div
-                            className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-1 transition-all ${
-                              isSelected
-                                ? "border-[#C9A96E] bg-[#C9A96E]"
-                                : "border-[#E5DECF] bg-transparent"
-                            }`}
-                          >
-                            {isSelected && <div className="w-2 h-2 rounded-full bg-[#1A1410]" />}
-                          </div>
-                        </div>
-
-                        {/* Price */}
-                        <div className="py-2 border-y border-[#E5DECF]/80 my-3">
-                          <span className="text-[10px] text-[#6E6359] uppercase tracking-wider block">
-                            Starting from
-                          </span>
-                          <span className="font-serif text-2xl font-bold text-[#1A1410]">
-                            ₦{(pkg.price || 0).toLocaleString()}
-                          </span>
-                        </div>
-
-                        {/* Inclusions */}
-                        <ul className="space-y-2 mb-4 text-xs text-[#6E6359] flex-1">
-                          {pkg.inclusions.map((inc, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <Check className="w-3.5 h-3.5 text-[#C9A96E] shrink-0 mt-0.5" />
-                              <span>{inc}</span>
-                            </li>
-                          ))}
-                        </ul>
-
-                        <div className="pt-2">
-                          <span
-                            className={`text-[11px] uppercase tracking-wider font-bold block ${
-                              isSelected ? "text-[#C9A96E]" : "text-[#6E6359]"
-                            }`}
-                          >
-                            {isSelected ? "Selected ✓" : "Click to select"}
+                {/* Two-Column Editorial Package Picker: Bespoke Photo on Left (Sticky) + Package Cards on Right */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  {/* Left Column: Bespoke Service Editorial Portrait (Sticky on Desktop) */}
+                  <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-4">
+                    <div className="relative rounded-3xl overflow-hidden shadow-md border border-[#E5DECF] bg-[#F8F4EE] group aspect-[3/4] sm:aspect-[4/5] lg:aspect-[3/4]">
+                      <img
+                        src={liveSessions[sessionType]?.heroImage || "/images/client/weddings_3.jpg"}
+                        alt={liveSessions[sessionType]?.title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-5 text-white">
+                        <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#C9A96E] font-bold block mb-1">
+                          LamSparks Atelier · Abuja
+                        </span>
+                        <h3 className="font-serif text-2xl text-white font-medium leading-tight">
+                          {liveSessions[sessionType]?.title}
+                        </h3>
+                        <p className="text-xs text-white/80 line-clamp-2 mt-1 font-sans">
+                          {liveSessions[sessionType]?.tagline}
+                        </p>
+                        <div className="pt-3 mt-3 border-t border-white/20 flex items-center justify-between text-[11px] text-white/90">
+                          <span>{liveSessions[sessionType]?.standardDeliveryDays || "5–7 business days"}</span>
+                          <span className="font-serif font-bold text-[#C9A96E]">
+                            {liveSessions[sessionType]?.fromPrice ? `From ₦${liveSessions[sessionType].fromPrice.toLocaleString()}` : "Bespoke"}
                           </span>
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] text-xs text-[#6E6359] space-y-1 hidden lg:block">
+                      <span className="font-bold text-[#1A1410] uppercase tracking-wider text-[10px] block">
+                        Atelier Craft Promise
+                      </span>
+                      <p className="text-[11px] leading-relaxed">
+                        {liveSessions[sessionType]?.description || "Unhurried, intentional studio sessions tailored to your celebration."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Package Cards Grid */}
+                  <div className="lg:col-span-8 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {currentPackages.map((pkg) => {
+                        const isSelected = selectedPackage?.id === pkg.id;
+                        return (
+                          <div
+                            key={pkg.id}
+                            onClick={() => setPackageId(pkg.id)}
+                            className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative ${
+                              isSelected
+                                ? "bg-[#FDFBF8] border-[#C9A96E] ring-2 ring-[#C9A96E] shadow-lg scale-[1.01]"
+                                : "bg-[#FDFBF8]/80 border-[#E5DECF] hover:border-[#C9A96E]/60 hover:bg-[#FDFBF8]"
+                            }`}
+                          >
+                            {/* Radio Dot indicator */}
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <div>
+                                <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410] font-medium leading-snug">
+                                  {pkg.name}
+                                </h3>
+                                <span className="text-xs font-semibold text-[#6E6359]">
+                                  {(pkg as any)?.durationMinutes ? `${(pkg as any).durationMinutes} mins` : "Standard Duration"}
+                                </span>
+                              </div>
+                              <div
+                                className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-1 transition-all ${
+                                  isSelected
+                                    ? "border-[#C9A96E] bg-[#C9A96E]"
+                                    : "border-[#E5DECF] bg-transparent"
+                                }`}
+                              >
+                                {isSelected && <div className="w-2 h-2 rounded-full bg-[#1A1410]" />}
+                              </div>
+                            </div>
+
+                            {/* Price */}
+                            <div className="py-2 border-y border-[#E5DECF]/80 my-3">
+                              <span className="text-[10px] text-[#6E6359] uppercase tracking-wider block">
+                                Starting from
+                              </span>
+                              <span className="font-serif text-2xl font-bold text-[#1A1410]">
+                                ₦{(pkg.price || 0).toLocaleString()}
+                              </span>
+                            </div>
+
+                            {/* Inclusions */}
+                            <ul className="space-y-2 mb-4 text-xs text-[#6E6359] flex-1">
+                              {pkg.inclusions.map((inc, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <Check className="w-3.5 h-3.5 text-[#C9A96E] shrink-0 mt-0.5" />
+                                  <span>{inc}</span>
+                                </li>
+                              ))}
+                            </ul>
+
+                            <div className="pt-2">
+                              <span
+                                className={`text-[11px] uppercase tracking-wider font-bold block ${
+                                  isSelected ? "text-[#C9A96E]" : "text-[#6E6359]"
+                                }`}
+                              >
+                                {isSelected ? "Selected ✓" : "Click to select"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Sticky Bottom Total Bar (Inspired by Video 00:24) */}
@@ -1362,7 +1418,7 @@ function BookingWizard() {
                     </span>
                     <div className="text-sm sm:text-base font-medium">
                       Total ₦{(selectedPackage?.price || 0).toLocaleString()} · Deposit to book ₦
-                      {Math.round((selectedPackage?.price || 0) * 0.7).toLocaleString()} (70%)
+                      {Math.round((selectedPackage?.price || 0) * (estimate.depositPercent / 100)).toLocaleString()} ({estimate.depositPercent}%)
                     </div>
                   </div>
                   <button
@@ -1875,7 +1931,7 @@ function BookingWizard() {
                           className="mt-1 w-4 h-4 rounded border-[#E5DECF] text-[#C9A96E] focus:ring-[#C9A96E]"
                         />
                         <span className="text-xs text-[#1A1410] leading-relaxed">
-                          I agree to the 70% booking deposit requirement to hold this studio slot and confirm I have reviewed LamSparks&apos; booking policy. <span className="text-[#C9A96E]">*</span>
+                          I agree to the {estimate.depositPercent}% booking deposit requirement to hold this studio slot and confirm I have reviewed LamSparks&apos; booking policy. <span className="text-[#C9A96E]">*</span>
                         </span>
                       </label>
 
@@ -1926,6 +1982,20 @@ function BookingWizard() {
 
                   {/* Right Column: Sticky Live Summary */}
                   <div className="lg:col-span-5 p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6 sticky top-24">
+                    {/* Bespoke Service Image Banner in Summary Card */}
+                    <div className="relative h-36 sm:h-44 w-full rounded-xl overflow-hidden border border-[#E5DECF] bg-[#F8F4EE]">
+                      <img
+                        src={liveSessions[sessionType]?.heroImage || "/images/client/weddings_3.jpg"}
+                        alt={liveSessions[sessionType]?.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent flex items-end p-3">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-white font-bold bg-[#1A1410]/75 px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20">
+                          {liveSessions[sessionType]?.title}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="pb-4 border-b border-[#E5DECF]">
                       <span className="text-[10px] text-[#C9A96E] uppercase tracking-wider font-bold block mb-1">
                         Order Summary
@@ -1984,13 +2054,13 @@ function BookingWizard() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-amber-900 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/60 font-semibold">
-                        <span>Deposit to Book (70%):</span>
+                        <span>Deposit to Book ({estimate.depositPercent}%):</span>
                         <span>
                           ₦{estimate.depositAmount.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[#6E6359]">
-                        <span>Balance on Shoot Day (30%):</span>
+                        <span>Balance on Shoot Day ({100 - estimate.depositPercent}%):</span>
                         <span className="font-semibold text-[#1A1410]">
                           ₦{estimate.balanceAmount.toLocaleString()}
                         </span>

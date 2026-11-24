@@ -422,7 +422,7 @@ export function PhilosophyGallery() {
             alt={`${p.title} — ${p.sub}`}
             draggable={false}
             decoding="async"
-            loading="lazy"
+            loading="eager"
             onError={(e) => {
               const target = e.currentTarget;
               if (target.src.endsWith(".webp")) {

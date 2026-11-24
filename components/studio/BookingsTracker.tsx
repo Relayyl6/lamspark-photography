@@ -28,7 +28,7 @@ interface BookingItem {
   shoot_end: string;
   location_type: string;
   location_detail: string | null;
-  status: "confirmed" | "rescheduled" | "completed" | "cancelled" | "shooting";
+  status: "confirmed" | "rescheduled" | "completed" | "cancelled" | "shooting" | "held";
   reschedule_count: number;
   reference_code: string;
   session_type: string;
@@ -227,7 +227,7 @@ export function BookingsTracker() {
 
           {/* Status Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-            {["All", "Confirmed", "Shooting", "Rescheduled", "Completed"].map((st) => (
+            {["All", "Held", "Confirmed", "Shooting", "Rescheduled", "Completed"].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
@@ -290,10 +290,12 @@ export function BookingsTracker() {
                           ? "bg-amber-100 text-amber-800 border border-amber-200"
                           : b.status === "completed"
                           ? "bg-blue-100 text-blue-800 border border-blue-200"
+                          : b.status === "held"
+                          ? "bg-amber-100 text-amber-900 border border-amber-300 animate-pulse"
                           : "bg-cream text-muted"
                       }`}
                     >
-                      {b.status}
+                      {b.status === "held" ? "Held · Pending Deposit" : b.status}
                     </span>
                   </div>
 
@@ -379,6 +381,15 @@ export function BookingsTracker() {
                     >
                       Reschedule
                     </button>
+
+                    {b.status === "held" && (
+                      <button
+                        onClick={() => handleUpdateStatus(b.id, "confirmed")}
+                        className="px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-warm-white text-xs font-body font-semibold transition-all"
+                      >
+                        Confirm Slot
+                      </button>
+                    )}
 
                     {b.status === "confirmed" && (
                       <button

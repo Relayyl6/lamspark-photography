@@ -24,7 +24,8 @@ export async function getLiveSessionTypes(): Promise<Record<SessionTypeSlug, Ses
         }
       }
 
-      const effectiveFrom = ov?.price_override ?? tierLowestPrice ?? st.fromPrice;
+      // If package tiers are configured in the studio, their lowest tier price takes precedence as the live starting price
+      const effectiveFrom = tierLowestPrice ?? ov?.price_override ?? st.fromPrice;
 
       result[key] = {
         ...st,
