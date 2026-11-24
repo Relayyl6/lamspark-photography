@@ -20,6 +20,11 @@ import {
   CalendarCheck,
   AlertCircle,
   Lock,
+  Trash2,
+  Eye,
+  AlertTriangle,
+  X,
+  Mail,
 } from "lucide-react";
 import { StudioCalendarManager } from "./StudioCalendarManager";
 
@@ -55,6 +60,9 @@ export function BookingsTracker() {
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
+  const [bookingToDelete, setBookingToDelete] = useState<BookingItem | null>(null);
+  const [detailBooking, setDetailBooking] = useState<BookingItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -65,14 +73,14 @@ export function BookingsTracker() {
   }, []);
 
   useEffect(() => {
-    if (selectedBooking) {
+    if (selectedBooking || bookingToDelete || detailBooking) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = prev;
       };
     }
-  }, [selectedBooking]);
+  }, [selectedBooking, bookingToDelete, detailBooking]);
 
   async function loadBookings() {
     setIsLoading(true);
@@ -132,6 +140,30 @@ export function BookingsTracker() {
       console.error("Failed to update status:", err);
     } finally {
       setIsUpdating(false);
+    }
+  }
+
+  // Handle permanent deletion of a booking
+  async function handleDeleteBooking(booking: BookingItem) {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/bookings?id=${encodeURIComponent(booking.id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBookings((prev) => prev.filter((b) => b.id !== booking.id));
+        setBookingToDelete(null);
+        setDetailBooking(null);
+        setStatusMessage(`Booking ${booking.reference_code} permanently deleted.`);
+        setTimeout(() => setStatusMessage(null), 3500);
+      } else {
+        alert(data.error || "Failed to delete booking");
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -398,21 +430,33 @@ export function BookingsTracker() {
                 </div>
 
                 {/* Action Controls */}
-                <div className="pt-3 border-t border-line flex items-center justify-between gap-2">
-                  <a
-                    href={`https://wa.me/${b.client.whatsapp.replace(/\D/g, "")}?text=Hello%20${encodeURIComponent(b.client.name)}!%20Regarding%20your%20upcoming%20LamSparks%20shoot%20(${b.reference_code})`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-body font-semibold transition-all"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                    <span>WhatsApp</span>
-                  </a>
-
+                <div className="pt-3 border-t border-line flex items-center justify-between gap-1.5 flex-wrap">
                   <div className="flex items-center gap-1.5">
+                    <a
+                      href={`https://wa.me/${b.client.whatsapp.replace(/\D/g, "")}?text=Hello%20${encodeURIComponent(b.client.name)}!%20Regarding%20your%20upcoming%20LamSparks%20shoot%20(${b.reference_code})`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-body font-semibold transition-all shrink-0"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => setDetailBooking(b)}
+                      className="px-2.5 py-1.5 rounded-full bg-gold/15 hover:bg-gold/30 text-gold-darker border border-gold/40 text-xs font-body font-semibold transition-all inline-flex items-center gap-1 shrink-0"
+                      title="View full booking details"
+                    >
+                      <Eye className="w-3 h-3" />
+                      <span>Details</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     <button
                       onClick={() => setSelectedBooking(b)}
-                      className="px-2.5 py-1.5 rounded-full bg-cream hover:bg-warm-white border border-line text-xs font-body font-semibold text-deep transition-all"
+                      className="px-2.5 py-1.5 rounded-full bg-cream hover:bg-warm-white border border-line text-xs font-body font-semibold text-deep transition-all shrink-0"
                       title="Reschedule session"
                     >
                       Reschedule
@@ -421,7 +465,7 @@ export function BookingsTracker() {
                     {b.status === "held" && (
                       <button
                         onClick={() => handleUpdateStatus(b.id, "confirmed")}
-                        className="px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-warm-white text-xs font-body font-semibold transition-all"
+                        className="px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-warm-white text-xs font-body font-semibold transition-all shrink-0"
                       >
                         Confirm Slot
                       </button>
@@ -430,11 +474,21 @@ export function BookingsTracker() {
                     {b.status === "confirmed" && (
                       <button
                         onClick={() => handleUpdateStatus(b.id, "completed")}
-                        className="px-3 py-1.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all"
+                        className="px-3 py-1.5 rounded-full bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all shrink-0"
                       >
                         Complete Shoot
                       </button>
                     )}
+
+                    {/* Delete Trigger Button */}
+                    <button
+                      type="button"
+                      onClick={() => setBookingToDelete(b)}
+                      className="w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 flex items-center justify-center transition-colors shrink-0"
+                      title={`Delete booking ${b.reference_code}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -501,6 +555,229 @@ export function BookingsTracker() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Permanent Deletion Confirmation Modal */}
+      {mounted && bookingToDelete && createPortal(
+        <div
+          className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setBookingToDelete(null)}
+        >
+          <div
+            className="bg-warm-white rounded-2xl border border-line max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 text-rose-900">
+              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-700 shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg sm:text-xl text-deep font-semibold">
+                  Delete Booking · {bookingToDelete.reference_code}
+                </h3>
+                <p className="text-xs text-rose-800 mt-1 leading-relaxed">
+                  Are you sure you want to permanently delete this booking for{" "}
+                  <strong>{bookingToDelete.client.name}</strong> ({bookingToDelete.session_type} Session)? This will release the calendar slot and permanently remove all associated records from Neon DB. This cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-line flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setBookingToDelete(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-muted hover:text-deep hover:bg-cream transition-colors"
+              >
+                Cancel (Keep Safe)
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => handleDeleteBooking(bookingToDelete)}
+                className="px-5 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-warm-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+              >
+                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>{isDeleting ? "Deleting..." : "Yes, Permanently Delete"}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Comprehensive Booking Details Modal */}
+      {mounted && detailBooking && createPortal(
+        <div
+          className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4 md:p-6 animate-in fade-in duration-200"
+          onClick={() => setDetailBooking(null)}
+        >
+          <div
+            className="relative w-full max-w-2xl bg-warm-white rounded-3xl shadow-2xl border border-line p-5 sm:p-7 max-h-[92vh] overflow-y-auto space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-line pb-4 gap-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-xs uppercase bg-gold/15 text-gold font-bold px-2.5 py-0.5 rounded-lg border border-gold/30">
+                    {detailBooking.reference_code}
+                  </span>
+                  <span className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded-full bg-cream text-muted border border-line">
+                    Status: {detailBooking.status}
+                  </span>
+                </div>
+                <h2 className="font-display text-2xl text-deep font-semibold">
+                  {detailBooking.client.name}
+                </h2>
+                <span className="text-xs font-body text-gold font-bold uppercase tracking-wider block">
+                  {detailBooking.session_type} Session
+                </span>
+              </div>
+              <button
+                onClick={() => setDetailBooking(null)}
+                className="w-8 h-8 rounded-xl hover:bg-cream border border-line text-deep flex items-center justify-center shrink-0 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Client Profile */}
+            <div className="p-4 rounded-2xl bg-[#FBF9F6] border border-line space-y-2.5 text-xs font-body">
+              <span className="text-[10px] font-mono uppercase font-bold text-gold tracking-wider block">
+                Client Contact
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <span className="text-muted block text-[10px] uppercase">Name</span>
+                  <strong className="text-deep font-semibold">{detailBooking.client.name}</strong>
+                </div>
+                <div>
+                  <span className="text-muted block text-[10px] uppercase">WhatsApp</span>
+                  <a
+                    href={`https://wa.me/${detailBooking.client.whatsapp.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-700 font-bold hover:underline"
+                  >
+                    {detailBooking.client.whatsapp} &rarr;
+                  </a>
+                </div>
+                <div>
+                  <span className="text-muted block text-[10px] uppercase">Email</span>
+                  <span className="text-deep truncate block">
+                    {detailBooking.client.email || "Not provided"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Logistics & Timing */}
+            <div className="p-4 rounded-2xl bg-cream/40 border border-line space-y-2 text-xs font-body">
+              <span className="text-[10px] font-mono uppercase font-bold text-deep tracking-wider block">
+                Logistics &amp; Reserved Slot
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 text-deep font-semibold">
+                  <Calendar className="w-3.5 h-3.5 text-gold" />
+                  <span>
+                    {new Date(detailBooking.shoot_start).toLocaleDateString("en-NG", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}{" "}
+                    · {new Date(detailBooking.shoot_start).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-brown">
+                  <MapPin className="w-3.5 h-3.5 text-gold" />
+                  <span className="capitalize">
+                    {detailBooking.location_type === "studio"
+                      ? "Maitama Studio Suite, Abuja"
+                      : detailBooking.location_detail || "Outdoor / Client Residence"}
+                  </span>
+                </div>
+                {detailBooking.purpose_text && (
+                  <div className="col-span-2 pt-1">
+                    <span className="text-muted block text-[10px] uppercase">Purpose / Occasion</span>
+                    <span className="text-deep">{detailBooking.purpose_text}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Financials */}
+            <div className="p-4 rounded-2xl bg-warm-white border border-line space-y-2 text-xs font-body">
+              <span className="text-[10px] font-mono uppercase font-bold text-gold tracking-wider block">
+                Financial Breakdown
+              </span>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <span className="text-muted block text-[10px] uppercase">Total Agreed</span>
+                  <strong className="text-sm font-display text-deep">
+                    ₦{detailBooking.agreed_price.toLocaleString()}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-muted block text-[10px] uppercase">Deposit Recorded</span>
+                  <strong className="text-sm font-display text-emerald-700">
+                    ₦{detailBooking.deposit_recorded.toLocaleString()}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-muted block text-[10px] uppercase">Balance Due (Shoot Day)</span>
+                  <strong className="text-sm font-display text-deep">
+                    ₦{detailBooking.balance_due.toLocaleString()}
+                  </strong>
+                </div>
+              </div>
+              {detailBooking.bank_reference && (
+                <div className="text-[11px] text-muted pt-2 border-t border-line/40">
+                  Bank Reference: <strong className="text-deep font-mono">{detailBooking.bank_reference}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="pt-3 border-t border-line flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const b = detailBooking;
+                  setDetailBooking(null);
+                  setBookingToDelete(b);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-body font-semibold transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Booking</span>
+              </button>
+
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const b = detailBooking;
+                    setDetailBooking(null);
+                    setSelectedBooking(b);
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-line bg-cream hover:bg-warm-white text-xs font-body font-semibold text-deep transition-all"
+                >
+                  Reschedule
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailBooking(null)}
+                  className="px-6 py-2.5 rounded-xl bg-deep hover:bg-gold hover:text-deep text-warm-white text-xs font-body font-semibold transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>,
         document.body

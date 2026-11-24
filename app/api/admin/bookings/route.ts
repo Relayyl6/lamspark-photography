@@ -129,3 +129,97 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+// DELETE: permanently delete a booking and its associated enquiry and records
+export async function DELETE(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get("id");
+    let ref = searchParams.get("ref");
+
+    if (!id && !ref) {
+      try {
+        const body = await req.json();
+        id = body.id;
+        ref = body.ref;
+      } catch (_) {}
+    }
+
+    if (!id && !ref) {
+      return NextResponse.json({ error: "Booking id or ref is required" }, { status: 400 });
+    }
+
+    // Find the booking and associated enquiry_id
+    let bookingRows: any[];
+    if (id) {
+      bookingRows = await sql.query(
+        `SELECT b.id, b.enquiry_id, e.reference_code 
+         FROM booking b 
+         LEFT JOIN enquiry e ON b.enquiry_id = e.id 
+         WHERE b.id = $1 LIMIT 1`,
+        [id]
+      );
+    } else {
+      bookingRows = await sql.query(
+        `SELECT b.id, b.enquiry_id, e.reference_code 
+         FROM booking b 
+         LEFT JOIN enquiry e ON b.enquiry_id = e.id 
+         WHERE e.reference_code = $1 LIMIT 1`,
+        [ref]
+      );
+    }
+
+    if (bookingRows.length === 0) {
+      // Check if the provided id was actually an enquiry_id
+      if (id) {
+        const altRows = await sql.query(
+          `SELECT b.id, b.enquiry_id, e.reference_code
+           FROM enquiry e
+           LEFT JOIN booking b ON b.enquiry_id = e.id
+           WHERE e.id = $1 LIMIT 1`,
+          [id]
+        );
+        if (altRows.length > 0) {
+          bookingRows = altRows;
+        }
+      }
+    }
+
+    if (bookingRows.length === 0) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    const targetBooking = bookingRows[0];
+    const bookingId = targetBooking.id;
+    const enquiryId = targetBooking.enquiry_id;
+
+    // Delete dependent records
+    if (bookingId) {
+      await sql.query(`DELETE FROM booking WHERE id = $1`, [bookingId]);
+    }
+
+    if (enquiryId) {
+      await sql.query(`DELETE FROM payment WHERE enquiry_id = $1`, [enquiryId]);
+      await sql.query(`DELETE FROM booking WHERE enquiry_id = $1`, [enquiryId]);
+      await sql.query(`DELETE FROM estimate_snapshot WHERE enquiry_id = $1`, [enquiryId]);
+      try {
+        await sql.query(`DELETE FROM conversation WHERE enquiry_id = $1`, [enquiryId]);
+      } catch (_) {}
+      await sql.query(`DELETE FROM enquiry WHERE id = $1`, [enquiryId]);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Booking ${targetBooking.reference_code || ""} deleted successfully`,
+      deletedBookingId: bookingId,
+      deletedEnquiryId: enquiryId,
+    });
+  } catch (err: any) {
+    console.error("[bookings DELETE error]", err);
+    return NextResponse.json({ error: err.message || "Failed to delete booking" }, { status: 500 });
+  }
+}
+
