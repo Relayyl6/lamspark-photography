@@ -1,0 +1,22 @@
+name: Render Keepalive Heartbeat
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent Render free instance spin-down
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send GET Heartbeat to Render
+        run: |
+          echo "Pinging LamSparks Render keepalive endpoint at $(date -u)..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "https://lamspark-photography.onrender.com/api/keepalive")
+          echo "Response HTTP Status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Warning: Received non-200 status code: $HTTP_STATUS"
+          else
+            echo "Success: Render instance is awake and responsive."
+          fi
