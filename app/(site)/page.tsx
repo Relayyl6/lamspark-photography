@@ -6,7 +6,6 @@ import { Footer } from "@/components/Footer";
 import { HeroOverhaulSection } from "@/components/HeroOverhaulSection";
 import { SessionCard } from "@/components/SessionCard";
 import { EditorialTestimonialSection } from "@/components/EditorialTestimonialSection";
-import { EditorialCameraShowcaseCTA } from "@/components/EditorialCameraShowcaseCTA";
 import { SESSION_TYPES } from "@/lib/catalog/seed";
 import { getLiveSessionTypes } from "@/lib/catalog/live";
 import { PhilosophyGallery } from "@/components/PhilosophyGallery";
@@ -116,9 +115,6 @@ export default async function HomePage() {
 
         {/* Full-Screen-Width Editorial Testimonial Carousel */}
         <EditorialTestimonialSection />
-
-        {/* Full-Screen-Width Editorial Rangefinder Camera Showcase CTA */}
-        <EditorialCameraShowcaseCTA />
 
         {/* Why Families Trust Us: An Unhurried Approach to Art */}
         <WhyFamiliesTrustUsSection />
