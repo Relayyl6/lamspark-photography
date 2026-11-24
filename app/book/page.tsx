@@ -1155,28 +1155,36 @@ function BookingWizard() {
         {!isLoadingBooking && !isExistingBookingView && (
           <div className="space-y-8 animate-fade-up">
             {/* 5-Step Stepper Header */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs uppercase tracking-wider text-[#6E6359] font-medium">
-                <span>LamSparks Atelier Booking</span>
-                <span>Step {step} of 5</span>
+            <div className="space-y-3 pb-6 border-b border-[#E5DECF]">
+              <div className="flex items-center justify-between text-xs tracking-wider">
+                <span className="text-[10px] font-mono uppercase font-bold text-[#C9A96E] tracking-[0.2em]">
+                  LamSparks Atelier Booking
+                </span>
+                <span className="text-[10px] font-mono uppercase font-bold text-[#1A1410] tracking-wider">
+                  Step {step} of 5
+                </span>
               </div>
-              <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+              <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5">
                 {[
                   { num: 1, label: "Session" },
                   { num: 2, label: "Package" },
-                  { num: 3, label: "Date & time" },
-                  { num: 4, label: "Your details" },
+                  { num: 3, label: "Date & Time" },
+                  { num: 4, label: "Your Details" },
                   { num: 5, label: "Deposit" },
                 ].map((s) => (
                   <div key={s.num} className="space-y-1.5">
                     <div
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                      className={`h-1 rounded-full transition-all duration-300 ${
                         step >= s.num ? "bg-[#C9A96E]" : "bg-[#E5DECF]"
                       }`}
                     />
                     <span
-                      className={`hidden sm:block text-[10px] uppercase tracking-wider font-semibold ${
-                        step === s.num ? "text-[#1A1410]" : "text-[#6E6359]/70"
+                      className={`hidden sm:block text-[10px] uppercase tracking-wider font-semibold transition-colors ${
+                        step === s.num
+                          ? "text-[#1A1410]"
+                          : step > s.num
+                          ? "text-[#C9A96E]"
+                          : "text-[#6E6359]/60"
                       }`}
                     >
                       {s.label}
@@ -1251,46 +1259,21 @@ function BookingWizard() {
 
             {/* STEP 2: PACKAGE PICKER (Inspired by Reference Video 00:21 - 00:24) */}
             {step === 2 && (
-              <div className="space-y-8 animate-fade-up">
+              <div className="space-y-6 sm:space-y-8 animate-fade-up">
                 {/* Top Breadcrumb Navigation */}
-                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359] mb-3">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359]">
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="inline-flex items-center gap-1 font-semibold text-[#1A1410] hover:text-[#C9A96E] transition-colors"
+                    className="inline-flex items-center gap-1.5 font-bold text-[#1A1410] hover:text-[#C9A96E] transition-colors"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
                     <span>Change session</span>
                   </button>
-                  <span>/</span>
-                  <span className="text-[#C9A96E] font-medium">{liveSessions[sessionType]?.title}</span>
-                  <span>/</span>
-                  <span>Choose a package</span>
-                </div>
-
-                {/* Quick Category Chips */}
-                <div className="space-y-2">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-[#C9A96E] font-bold block">
-                    Session Experience
-                  </span>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-                    {Object.values(liveSessions).map((st: any) => (
-                      <button
-                        key={st.slug}
-                        type="button"
-                        onClick={() => {
-                          setSessionType(st.slug);
-                        }}
-                        className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
-                          sessionType === st.slug
-                            ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410] shadow-sm"
-                            : "bg-[#FDFBF8] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
-                        }`}
-                      >
-                        {st.title}
-                      </button>
-                    ))}
-                  </div>
+                  <span className="text-[#E5DECF]">/</span>
+                  <span className="text-[#C9A96E] font-semibold">{liveSessions[sessionType]?.title}</span>
+                  <span className="text-[#E5DECF]">/</span>
+                  <span className="text-[#6E6359]">Choose a package</span>
                 </div>
 
                 {/* Headline: "Pick your package" with key word in gold */}

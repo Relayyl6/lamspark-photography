@@ -220,34 +220,15 @@ export function LiveCalendarSection() {
   const bookedSlotCount = slotStatuses.filter((s) => s.status === "booked" || s.status === "locked").length;
 
   return (
-    <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div className="bg-[#FAF7F2] rounded-3xl sm:rounded-[36px] border border-[#E5DECF] p-6 sm:p-10 lg:p-12 shadow-sm space-y-8 relative overflow-hidden">
-        {/* Soft decorative background tint */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Top Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-          <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 text-[10.5px] font-mono uppercase tracking-[0.2em] font-bold">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>LIVE CALENDAR</span>
-            </div>
-
-            <h2 className="font-headline uppercase tracking-tight text-[#1A1410] font-black text-3xl sm:text-5xl lg:text-6xl leading-[0.95]">
-              FREE OR BOOKED, <br />
-              <span className="text-[#C9A96E]">AT A GLANCE.</span>
-            </h2>
-          </div>
-
-          <div className="max-w-md text-xs sm:text-sm text-[#6E6359] leading-relaxed">
-            <p>
-              LamSparks live studio calendar. Pick a session to see which days are free, then tap a free day for its times. Booked times are taken straight away, so nobody can double-book.
-            </p>
-          </div>
-        </div>
+    <section className="w-full py-12 sm:py-20 px-4 sm:px-8 lg:px-12 xl:px-16 space-y-8">
+      {/* Bold Headline & Category Filters (No bounding box, full width) */}
+      <div className="space-y-4">
+        <h2 className="font-headline uppercase tracking-tight text-[#1A1410] font-black text-3xl sm:text-5xl lg:text-6xl leading-[0.95]">
+          FREE OR BOOKED, <span className="text-[#C9A96E]">AT A GLANCE.</span>
+        </h2>
 
         {/* Category Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none pt-1">
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory.id === cat.id;
             return (
@@ -446,25 +427,25 @@ export function LiveCalendarSection() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Floating / Embedded WhatsApp Help Badge */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E5DECF]">
-          <span className="text-xs text-[#6E6359]">
-            Looking for bespoke dates, VIP evening shoots, or multi-day coverage?
-          </span>
+      {/* Floating / Embedded WhatsApp Help Badge */}
+      <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E5DECF]">
+        <span className="text-xs text-[#6E6359]">
+          Looking for bespoke dates, VIP evening shoots, or multi-day coverage?
+        </span>
 
-          <a
-            href={`https://wa.me/2348130847299?text=${encodeURIComponent(
-              `Hello Osemene! I was browsing your live studio calendar for ${selectedCategory.label} around ${selectedDayStr}. Is a session available?`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#1A1410] text-[#FDFBF8] hover:bg-[#C9A96E] hover:text-[#111111] text-xs font-bold uppercase tracking-wider transition-all shadow-sm shrink-0"
-          >
-            <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Ask Osemene on WhatsApp</span>
-          </a>
-        </div>
+        <a
+          href={`https://wa.me/2348130847299?text=${encodeURIComponent(
+            `Hello Osemene! I was browsing your live studio calendar for ${selectedCategory.label} around ${selectedDayStr}. Is a session available?`
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#1A1410] text-[#FDFBF8] hover:bg-[#C9A96E] hover:text-[#111111] text-xs font-bold uppercase tracking-wider transition-all shadow-sm shrink-0"
+        >
+          <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Ask Osemene on WhatsApp</span>
+        </a>
       </div>
     </section>
   );
