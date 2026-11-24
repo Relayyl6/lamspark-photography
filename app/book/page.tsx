@@ -26,10 +26,7 @@ import {
   UploadCloud,
   X,
   AlertCircle,
-  Heart,
   User,
-  Film,
-  Zap,
   MapPin,
   FileCheck2,
 } from "lucide-react";
@@ -114,11 +111,12 @@ function BookingWizard() {
   const router = useRouter();
 
   const refParam = searchParams.get("ref");
-  const initialSession = (searchParams.get("session") as SessionTypeSlug) || "toddler";
+  const rawSession = searchParams.get("session") as SessionTypeSlug | null;
+  const initialSession = rawSession || "toddler";
   const initialPkg = searchParams.get("pkg") || undefined;
 
-  // Step state: 1: Package, 2: Date & Time, 3: Your Details & Shoot Operability, 4: Deposit & Time Held
-  const [step, setStep] = useState(1);
+  // 5-Step Architecture: 1: Session, 2: Package, 3: Date & Time, 4: Your Details, 5: Deposit / Held
+  const [step, setStep] = useState(rawSession ? 2 : 1);
 
   // Core selections
   const [sessionType, setSessionType] = useState<SessionTypeSlug>(initialSession);
@@ -126,24 +124,10 @@ function BookingWizard() {
   const [selectedDate, setSelectedDate] = useState<string>(""); // YYYY-MM-DD
   const [timeSlot, setTimeSlot] = useState<string>("");
 
-  // Client contact
+  // Client contact (Decluttered)
   const [clientName, setClientName] = useState("");
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [clientEmail, setClientEmail] = useState("");
-
-  // Prior flow specifics for photographer operability
-  const [purpose, setPurpose] = useState("");
-  const [feeling, setFeeling] = useState("");
-  const [childName, setChildName] = useState("");
-  const [childAge, setChildAge] = useState("");
-  const [additionalFamilyCount, setAdditionalFamilyCount] = useState(0);
-  const [additionalChildCount, setAdditionalChildCount] = useState(0);
-  const [weeksPregnant, setWeeksPregnant] = useState("");
-  const [partnerName, setPartnerName] = useState("");
-  const [locationType, setLocationType] = useState<"studio" | "outside" | "both">("studio");
-  const [priorityEditing, setPriorityEditing] = useState(false);
-  const [reelsAddon, setReelsAddon] = useState(false);
-  const [extraHours, setExtraHours] = useState(0);
   const [notes, setNotes] = useState("");
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [portfolioConsent, setPortfolioConsent] = useState(false);
@@ -220,6 +204,7 @@ function BookingWizard() {
           if (data.booking.payment?.aiCheck) {
             setAiAnalysisResult(data.booking.payment.aiCheck);
           }
+          setStep(5);
         }
       })
       .catch((err) => console.error("Failed to load booking:", err))
@@ -248,46 +233,16 @@ function BookingWizard() {
     return currentPackages.find((p) => p.id === packageId) || currentPackages[0] || null;
   }, [currentPackages, packageId]);
 
-  // Comprehensive answers object feeding both estimate engine & photographer shoot sheet
+  // Concise answers object feeding estimate engine & photographer shoot record
   const bookingAnswers: BookingAnswers = useMemo(
     () => ({
-      purpose: purpose || notes || `${liveSessions[sessionType]?.title || sessionType} Session`,
-      feeling: feeling || undefined,
+      purpose: notes || `${liveSessions[sessionType]?.title || sessionType} Session`,
       packageId: selectedPackage?.id,
-      childName: childName || undefined,
-      childAge: childAge || undefined,
-      additionalFamilyCount,
-      additionalChildCount,
-      weeksPregnant: weeksPregnant || undefined,
-      partnerName: partnerName || undefined,
-      locationType,
-      priorityEditing,
-      reelsAddon,
-      extraHours,
       selectedDate,
       timeSlot,
       notes,
     }),
-    [
-      purpose,
-      feeling,
-      notes,
-      liveSessions,
-      sessionType,
-      selectedPackage,
-      childName,
-      childAge,
-      additionalFamilyCount,
-      additionalChildCount,
-      weeksPregnant,
-      partnerName,
-      locationType,
-      priorityEditing,
-      reelsAddon,
-      extraHours,
-      selectedDate,
-      timeSlot,
-    ]
+    [notes, liveSessions, sessionType, selectedPackage, selectedDate, timeSlot]
   );
 
   const estimate: EstimateResult = useMemo(() => {
@@ -300,53 +255,128 @@ function BookingWizard() {
     );
   }, [sessionType, bookingAnswers, selectedPackage, livePackages, liveSessions]);
 
-  // Calendar Helpers
-  const year = currentCalendarDate.getFullYear();
-  const month = currentCalendarDate.getMonth();
+  // Calendar Event Data
+  const calendarEvent = useMemo(() => {
+    let start = new Date();
+    let end = new Date(Date.now() + 2 * 60 * 60 * 1000);
 
-  const daysInMonth = useMemo(() => {
-    return new Date(year, month + 1, 0).getDate();
-  }, [year, month]);
+    const bookingShootStart = activeBooking?.shootStart || (selectedDate && timeSlot ? `${selectedDate} ${timeSlot}` : null);
 
-  const firstDayOfWeek = useMemo(() => {
-    const day = new Date(year, month, 1).getDay();
-    return (day + 6) % 7; // Monday = 0
-  }, [year, month]);
+    if (bookingShootStart) {
+      const match = bookingShootStart.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if (match) {
+        const [, datePart, hourStr, minStr, ampm] = match;
+        let hours = parseInt(hourStr, 10);
+        const mins = parseInt(minStr, 10);
+        if (ampm.toUpperCase() === "PM" && hours < 12) hours += 12;
+        if (ampm.toUpperCase() === "AM" && hours === 12) hours = 0;
+        const [y, m, d] = datePart.split("-").map((v: string) => parseInt(v, 10));
+        start = new Date(Date.UTC(y, m - 1, d, hours, mins));
+        end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+      }
+    }
 
-  const todayStr = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  }, []);
+    const title = `LamSparks Atelier Shoot: ${liveSessions[activeBooking?.sessionType || sessionType]?.title || "Photography"}`;
+    const location = "LamSparks Private Atelier Studio, Abuja, Nigeria";
+    const description =
+      `LamSparks Photography Session\n` +
+      `Reference: ${activeBooking?.referenceCode || "Confirmed"}\n` +
+      `Client: ${activeBooking?.client?.name || clientName}\n` +
+      `Studio Contact: +234 813 084 7299\n\n` +
+      `Please arrive 15 minutes before your scheduled slot for wardrobe prep and styling direction.`;
 
-  const monthName = useMemo(() => {
-    return currentCalendarDate.toLocaleString("en-US", { month: "long", year: "numeric" });
+    return { title, location, description, startDate: start, endDate: end };
+  }, [activeBooking, sessionType, liveSessions, selectedDate, timeSlot, clientName]);
+
+  // Calendar Month Navigation
+  const monthName = currentCalendarDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const prevMonth = () => {
+    setCurrentCalendarDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentCalendarDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  // Build Calendar Days for the Month
+  const calendarDays = useMemo(() => {
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days: { dateStr: string; dayNum: number; isCurrentMonth: boolean; isPast: boolean; isToday: boolean }[] = [];
+
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    // Padding for previous month days
+    for (let i = 0; i < firstDay; i++) {
+      days.push({
+        dateStr: "",
+        dayNum: 0,
+        isCurrentMonth: false,
+        isPast: true,
+        isToday: false,
+      });
+    }
+
+    // Days in current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
+      const isPast = dateStr < todayStr;
+      const isToday = dateStr === todayStr;
+      days.push({
+        dateStr,
+        dayNum: d,
+        isCurrentMonth: true,
+        isPast,
+        isToday,
+      });
+    }
+
+    return days;
   }, [currentCalendarDate]);
 
-  // Create booking in database
+  // Handle Session Selection on Step 1
+  const handleSelectSession = (slug: SessionTypeSlug) => {
+    setSessionType(slug);
+    const available = livePackages.filter((p) => p.sessionType === slug);
+    if (available.length > 0) {
+      setPackageId(available[0].id);
+    }
+    setStep(2);
+  };
+
+  // Handle Create Booking Submission (Step 4 -> Step 5)
   async function handleCreateBooking() {
     if (!clientName.trim() || !whatsappPhone.trim() || !selectedDate || !timeSlot) {
-      alert("Please ensure your name, WhatsApp phone number, shoot date, and time slot are selected.");
+      alert("Please ensure your name, WhatsApp number, date, and time slot are filled.");
+      return;
+    }
+
+    if (!termsAgreed) {
+      alert("Please agree to the booking deposit terms to proceed.");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const shootStartIso = `${selectedDate} ${timeSlot}`;
+
       const res = await fetch("/api/booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clientName: clientName.trim(),
-          whatsappPhone: whatsappPhone.trim(),
-          clientEmail: clientEmail.trim() || undefined,
           sessionType,
-          selectedDate,
-          timeSlot,
-          answers: {
-            ...bookingAnswers,
-            packageName: selectedPackage?.name,
-          },
-          priceAgreed: true,
-          messagingConsent: true,
+          packageId: selectedPackage?.id,
+          packageName: selectedPackage?.name,
+          clientName: clientName.trim(),
+          clientEmail: clientEmail.trim() || undefined,
+          whatsappPhone: whatsappPhone.trim(),
+          shootStart: shootStartIso,
+          answers: bookingAnswers,
+          estimate,
           marketingConsent: portfolioConsent,
         }),
       });
@@ -372,7 +402,7 @@ function BookingWizard() {
         }
         // Update URL to make it a revisitable page
         router.replace(`/book?ref=${data.referenceCode}`, { scroll: false });
-        setStep(4);
+        setStep(5);
       } else {
         alert(data.error || "Failed to reserve slot. Please try again.");
       }
@@ -406,7 +436,6 @@ function BookingWizard() {
       const data = await res.json();
       if (data.success) {
         setIsRescheduleOpen(false);
-        // Refresh booking
         const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}`);
         const refData = await refresh.json();
         if (refData.success) {
@@ -549,480 +578,334 @@ function BookingWizard() {
       `Session: ${sessionTitle}\n` +
       `Package: ${pkgName}\n` +
       shootInfo +
-      `Deposit (${activeBooking?.estimate?.depositPercent || estimate.depositPercent}%): ₦${depositAmt}\n` +
+      `Deposit Required (70%): ₦${depositAmt}\n` +
       `Total Investment: ₦${totalAmt}\n\n` +
-      (receiptReported || receiptUrl
-        ? `I have uploaded my bank transfer receipt for verification.\n`
-        : `I am transferring the deposit now and sharing my receipt screenshot here.\n`) +
-      `Looking forward to confirming our date with Osemene!`;
+      `I am transferring my deposit now. Here is my reference.`;
 
     return `https://wa.me/${businessNumber}?text=${encodeURIComponent(text)}`;
-  }, [activeBooking, clientName, liveSessions, sessionType, selectedPackage, estimate, selectedDate, timeSlot, receiptReported, receiptUrl]);
+  }, [activeBooking, clientName, liveSessions, sessionType, selectedPackage, estimate, selectedDate, timeSlot]);
 
-  // Calendar Event Data for Google & .ics
-  const calendarEvent = useMemo(() => {
-    let startDate = new Date();
-    let endDate = new Date(startDate.getTime() + 7200000);
-
-    const shootStart = activeBooking?.shootStart;
-    if (shootStart) {
-      startDate = new Date(shootStart);
-      endDate = new Date(startDate.getTime() + 7200000);
-    } else if (selectedDate && timeSlot) {
-      const [y, m, d] = selectedDate.split("-").map((n) => parseInt(n, 10));
-      startDate = new Date(y, m - 1, d, 11, 0, 0);
-      endDate = new Date(startDate.getTime() + 7200000);
-    }
-
-    const sessionTitle = liveSessions[activeBooking?.sessionType || sessionType]?.title || "Photography Session";
-    const ref = activeBooking?.referenceCode || "LS-BOOKING";
-
-    return {
-      title: `LamSparks: ${sessionTitle} (Ref: ${ref})`,
-      description: `Bespoke photography session with LamSparks Photography (Osemene). Studio deposit confirmed. Booking Ref: ${ref}. Location: Private Abuja Studio.`,
-      location: "LamSparks Private Studio, Abuja, Nigeria",
-      startDate,
-      endDate,
-    };
-  }, [activeBooking, sessionType, selectedDate, timeSlot, liveSessions]);
-
-  // Full shareable booking link
-  const shareableBookingUrl = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    const ref = activeBooking?.referenceCode || refParam || "";
-    return `${window.location.origin}/book?ref=${encodeURIComponent(ref)}`;
-  }, [activeBooking, refParam]);
-
+  // Is this an existing booking view?
   const isExistingBookingView = Boolean(activeBooking && activeBooking.referenceCode);
 
   return (
-    <div className="min-h-screen bg-[#F8F4EE] flex flex-col justify-between text-[#1A1410] font-sans">
+    <div className="min-h-screen bg-[#FDFBF8] text-[#1A1410] flex flex-col font-sans selection:bg-[#C9A96E]/20">
       <Nav />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-14">
-        {/* Loading existing booking state */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {/* Loading Spinner for Existing Booking Query */}
         {isLoadingBooking && (
-          <div className="p-16 text-center space-y-4">
-            <Loader2 className="w-8 h-8 animate-spin text-[#C9A96E] mx-auto" />
-            <p className="font-serif text-lg text-[#1A1410]">Retrieving your session booking...</p>
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <Loader2 className="w-8 h-8 animate-spin text-[#C9A96E]" />
+            <p className="font-serif text-lg text-[#6E6359]">Retrieving your session reservation...</p>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* REVISITABLE BOOKING PAGE / TIME HELD CONFIRMATION                         */}
+        {/* STEP 5: DEPOSIT / TIME HELD & REVISITABLE BOOKING PAGE                    */}
         {/* ========================================================================= */}
         {!isLoadingBooking && isExistingBookingView && (
           <div className="space-y-8 animate-fade-up">
-            {/* Top Breadcrumb & Status Pill */}
-            <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#E5DECF]">
-              <div className="flex items-center gap-2 text-xs font-medium text-[#6E6359]">
-                <Link href="/" className="hover:text-[#1A1410] transition-colors">
-                  LamSparks
-                </Link>
-                <span>/</span>
-                <span className="text-[#1A1410]">Booking Ref: {activeBooking.referenceCode}</span>
-              </div>
-
-              {/* Status Pill */}
-              <div>
-                {activeBooking.status === "cancelled" ? (
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-stone-200 text-stone-700 border border-stone-300">
-                    <span className="w-2 h-2 rounded-full bg-stone-500" />
-                    Cancelled
-                  </span>
-                ) : activeBooking.status === "confirmed" ? (
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                    Confirmed &amp; Secured
-                  </span>
-                ) : activeBooking.status === "reported" || receiptReported ? (
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-300">
-                    <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-                    Deposit Reported · Verification in Progress
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    Awaiting Deposit
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Cancelled Banner */}
+            {/* Confirmation Banner */}
             {activeBooking.status === "cancelled" ? (
-              <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-stone-300 space-y-4 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600">
-                    <X className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h1 className="font-serif text-2xl sm:text-3xl text-[#1A1410]">
-                      Your booking is cancelled
-                    </h1>
-                    <p className="text-xs sm:text-sm text-[#6E6359] mt-0.5">
-                      Session Ref: {activeBooking.referenceCode} has been released.
-                    </p>
-                  </div>
+              <div className="p-6 rounded-3xl bg-neutral-100 border border-neutral-300 space-y-2 text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2 text-neutral-800">
+                  <Info className="w-5 h-5 text-neutral-500" />
+                  <h2 className="font-serif text-2xl">This Session Has Been Cancelled</h2>
                 </div>
-                {activeBooking.closedReason && (
-                  <p className="text-xs text-[#6E6359] bg-[#F8F4EE] p-3 rounded-lg border border-[#E5DECF]">
-                    <strong>Reason:</strong> {activeBooking.closedReason}
-                  </p>
-                )}
+                <p className="text-xs sm:text-sm text-neutral-600">
+                  Booking ref <span className="font-mono font-bold">{activeBooking.referenceCode}</span> was released on request.
+                </p>
                 <div className="pt-2">
-                  <Link
-                    href="/book"
-                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#1A1410] hover:bg-[#C9A96E] hover:text-[#1A1410] text-[#FDFBF8] text-xs uppercase tracking-wider font-semibold transition-all shadow-sm"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveBooking(null);
+                      router.replace("/book", { scroll: false });
+                      setStep(1);
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-bold uppercase tracking-wider hover:bg-[#C9A96E] hover:text-[#111111] transition-colors"
                   >
-                    <span>Book a new session</span>
+                    <span>Book a New Session</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                  </button>
                 </div>
               </div>
             ) : (
               <>
-                {/* Greeting & Time Held Header */}
-                <div className="space-y-2">
-                  <h1 className="font-serif text-3xl sm:text-5xl text-[#1A1410] font-normal leading-tight">
-                    Your time is held,{" "}
-                    <span className="italic font-serif text-[#C9A96E]">
-                      {activeBooking.client?.name || clientName || "Friend"}
-                    </span>
-                  </h1>
-                  <p className="text-sm sm:text-base text-[#6E6359]">
-                    {activeBooking.status === "confirmed"
-                      ? "Your date and studio time slot are officially locked on Osemene's calendar."
-                      : "We have temporarily reserved your slot. Complete your deposit transfer below to confirm your date."}
-                  </p>
-                </div>
-
-                {/* Hold Deadline Alert (when awaiting deposit) */}
-                {activeBooking.status !== "confirmed" && (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-300/80 flex items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="text-xs uppercase tracking-wider font-bold text-amber-900 block">
-                          Slot Held Temporarily
-                        </span>
-                        <p className="text-xs sm:text-sm text-amber-800">
-                          Reserved for you for 2 hours. Please transfer your deposit to lock this session.
-                        </p>
-                      </div>
+                {/* Hold Banner */}
+                <div className="p-5 sm:p-6 rounded-3xl bg-amber-50 border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-amber-800 block">
+                        Slot Held Temporarily
+                      </span>
+                      <p className="text-xs sm:text-sm text-amber-900 font-medium">
+                        Reserved for you for 2 hours. Please transfer your deposit to lock this session.
+                      </p>
                     </div>
-                    <span className="hidden sm:inline-block font-mono text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-200/60 text-amber-900">
-                      {activeBooking?.estimate?.depositPercent || estimate.depositPercent}% Deposit Required
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-300">
+                      70% Deposit Required
                     </span>
                   </div>
-                )}
+                </div>
 
-                {/* 2-Column Details & Payment Card */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
-                  {/* Left Column: Payment & Deposit Steps with AI Verification */}
+                {/* Main 2-Column Self-Serve Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  {/* Left Column: Bank Transfer & Receipt Flow */}
                   <div className="lg:col-span-7 space-y-6">
-                    {/* Step 1: Studio Bank Account Details */}
-                    <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
+                    {/* Welcome Title */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-xs uppercase tracking-wider text-[#6E6359] font-medium">
+                          Booking Ref:
+                        </span>
+                        <span className="font-mono font-bold text-xs px-2.5 py-0.5 rounded-full bg-[#F8F4EE] border border-[#E5DECF] text-[#1A1410]">
+                          {activeBooking.referenceCode}
+                        </span>
+                      </div>
+                      <h1 className="font-serif text-3xl sm:text-5xl text-[#1A1410] font-normal">
+                        Your time is held,{" "}
+                        <span className="text-[#C9A96E] italic font-serif">
+                          {activeBooking.client?.name || clientName || "there"}
+                        </span>
+                      </h1>
+                      <p className="text-xs sm:text-sm text-[#6E6359] mt-2 leading-relaxed">
+                        Follow the two simple steps below to finalize your booking with Osemene.
+                      </p>
+                    </div>
+
+                    {/* Step 1 Card: Transfer Details */}
+                    <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
                       <div className="flex items-center justify-between pb-3 border-b border-[#E5DECF]">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-mono font-bold flex items-center justify-center">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-6 h-6 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-bold flex items-center justify-center font-mono">
                             1
                           </span>
-                          <h3 className="font-serif text-lg text-[#1A1410] font-semibold">
+                          <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">
                             Transfer Deposit to Studio Account
                           </h3>
                         </div>
-                        <span className="text-xs font-mono font-bold text-[#1A1410] bg-[#C9A96E]/20 px-3 py-1 rounded-full border border-[#C9A96E]/40">
-                          ₦{(activeBooking.estimate?.depositAmount || estimate.depositAmount).toLocaleString()} Due
+                        <span className="font-serif text-xl sm:text-2xl font-bold text-[#C9A96E]">
+                          ₦{(activeBooking.estimate?.depositAmount || estimate.depositAmount).toLocaleString()}
                         </span>
                       </div>
 
-                      <div className="space-y-3 font-mono text-xs">
-                        <div className="p-3.5 rounded-xl bg-[#F8F4EE] border border-[#E5DECF] flex items-center justify-between">
-                          <div>
-                            <span className="text-[10px] text-[#6E6359] uppercase tracking-wider block font-sans">
-                              Bank Name
-                            </span>
-                            <span className="text-sm font-bold text-[#1A1410]">Fidelity Bank</span>
-                          </div>
-                          <span className="text-[11px] text-[#6E6359] font-sans">Nigeria</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]/80">
+                          <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
+                            Bank Name
+                          </span>
+                          <span className="font-bold text-[#1A1410] text-sm">Fidelity Bank</span>
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-[#F8F4EE] border border-[#E5DECF] flex items-center justify-between">
+                        <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]/80 flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] text-[#6E6359] uppercase tracking-wider block font-sans">
+                            <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
                               Account Number
                             </span>
-                            <span className="text-base font-bold text-[#1A1410] tracking-wider">
-                              5601662438
+                            <span className="font-mono font-bold text-[#1A1410] text-sm tracking-wider">
+                              5080045230
                             </span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => copyToClipboard("5601662438", "account")}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A1410] text-[#FDFBF8] text-[11px] font-sans font-semibold hover:bg-[#C9A96E] hover:text-[#1A1410] transition-colors"
+                            onClick={() => copyToClipboard("5080045230", "Account Number Copied")}
+                            className="p-2 rounded-xl hover:bg-white text-[#6E6359] hover:text-[#1A1410] transition-colors"
+                            title="Copy Account Number"
                           >
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>{copyFeedback === "account" ? "Copied!" : "Copy"}</span>
+                            <Copy className="w-4 h-4" />
                           </button>
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-[#F8F4EE] border border-[#E5DECF] flex items-center justify-between">
-                          <div>
-                            <span className="text-[10px] text-[#6E6359] uppercase tracking-wider block font-sans">
-                              Account Name
-                            </span>
-                            <span className="text-xs font-bold text-[#1A1410] font-sans">
-                              Lamsparks Photography
-                            </span>
-                          </div>
-                          <ShieldCheck className="w-4 h-4 text-[#C9A96E]" />
+                        <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]/80">
+                          <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
+                            Account Name
+                          </span>
+                          <span className="font-bold text-[#1A1410] text-sm">LamSparks Photography</span>
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-[#F8F4EE] border border-[#E5DECF] flex items-center justify-between">
+                        <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]/80 flex items-center justify-between">
                           <div>
-                            <span className="text-[10px] text-[#6E6359] uppercase tracking-wider block font-sans">
-                              Transfer Remarks / Reference
+                            <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
+                              Payment Reference
                             </span>
-                            <span className="text-sm font-bold text-[#1A1410]">
+                            <span className="font-mono font-bold text-[#C9A96E] text-sm">
                               {activeBooking.referenceCode}
                             </span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => copyToClipboard(activeBooking.referenceCode, "ref")}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A1410] text-[#FDFBF8] text-[11px] font-sans font-semibold hover:bg-[#C9A96E] hover:text-[#1A1410] transition-colors"
+                            onClick={() => copyToClipboard(activeBooking.referenceCode, "Booking Ref Copied")}
+                            className="p-2 rounded-xl hover:bg-white text-[#6E6359] hover:text-[#1A1410] transition-colors"
+                            title="Copy Reference"
                           >
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>{copyFeedback === "ref" ? "Copied!" : "Copy"}</span>
+                            <Copy className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
 
-                      <p className="text-[11px] text-[#6E6359] leading-relaxed">
-                        Please use reference <strong className="text-[#1A1410]">{activeBooking.referenceCode}</strong> in your transfer narrative so your deposit is auto-matched immediately.
-                      </p>
+                      {copyFeedback && (
+                        <div className="text-center text-xs font-semibold text-emerald-700 bg-emerald-50 py-1.5 rounded-lg border border-emerald-200">
+                          ✓ {copyFeedback}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Step 2: Send Receipt with WhatsApp Fallback & Direct AI Upload */}
-                    <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-4">
-                      <div className="flex items-center justify-between pb-3 border-b border-[#E5DECF]">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-mono font-bold flex items-center justify-center">
-                            2
-                          </span>
-                          <h3 className="font-serif text-lg text-[#1A1410] font-semibold">
-                            Send Receipt Screenshot
-                          </h3>
-                        </div>
-                        <span className="text-[10px] font-mono text-[#6E6359] uppercase tracking-wider">
-                          Instant Verification
+                    {/* Step 2 Card: WhatsApp Handoff & Direct Receipt Upload Zone */}
+                    <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6">
+                      <div className="flex items-center gap-2.5 pb-3 border-b border-[#E5DECF]">
+                        <span className="w-6 h-6 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-bold flex items-center justify-center font-mono">
+                          2
                         </span>
+                        <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">
+                          Confirm Deposit &amp; Send Receipt
+                        </h3>
                       </div>
 
-                      {/* Primary Gold Fallback Button */}
-                      <div className="space-y-3">
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#1A1410] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-md group text-center"
-                        >
-                          <MessageCircle className="w-4 h-4 text-[#1A1410] group-hover:scale-110 transition-transform" />
-                          <span>I&apos;ve Made My Deposit: Send Receipt on WhatsApp</span>
-                        </a>
+                      <p className="text-xs text-[#6E6359] leading-relaxed">
+                        To lock your session immediately, choose your preferred method below: send your receipt directly to Osemene on WhatsApp, or upload it here for automated studio reconciliation.
+                      </p>
 
-                        <div className="relative flex items-center justify-center">
-                          <div className="border-t border-[#E5DECF] w-full" />
-                          <span className="bg-[#FDFBF8] px-3 text-[10px] font-mono uppercase text-[#6E6359] tracking-wider absolute">
-                            Or Upload Directly For AI Parsing
-                          </span>
-                        </div>
+                      {/* Primary Action: Gold Button for WhatsApp Confirmation */}
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-3 p-4 rounded-2xl bg-[#C9A96E] hover:bg-[#b5955a] text-[#1A1410] font-sans font-bold text-xs uppercase tracking-wider transition-all shadow-md group text-center"
+                      >
+                        <MessageCircle className="w-5 h-5 text-[#1A1410]" />
+                        <span>I&apos;ve made my deposit: send receipt on WhatsApp</span>
+                        <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      </a>
 
-                        {/* Direct Screenshot Upload Zone */}
-                        <div className="p-4 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] space-y-3">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div>
-                              <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block">
-                                Direct Upload &amp; AI Extraction
-                              </span>
-                              <p className="text-xs text-[#6E6359] mt-0.5">
-                                Upload your transfer screenshot to auto-extract transaction reference &amp; speed up confirmation.
-                              </p>
-                            </div>
+                      {/* Direct Upload Zone (Add-on fallback) */}
+                      <div className="pt-4 border-t border-[#E5DECF] space-y-3">
+                        <span className="text-[10px] uppercase tracking-wider font-bold text-[#6E6359] block">
+                          Or Direct Studio Upload (Instant AI Receipt Verification)
+                        </span>
 
-                            <label className="cursor-pointer shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1A1410] hover:bg-[#C9A96E] hover:text-[#1A1410] text-[#FDFBF8] text-xs font-semibold transition-all shadow-sm">
-                              {isUploadingReceipt ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-[#C9A96E]" />
-                              ) : (
-                                <UploadCloud className="w-4 h-4 text-[#C9A96E]" />
-                              )}
-                              <span>{isUploadingReceipt ? "Analyzing Receipt..." : "Upload Screenshot"}</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                disabled={isUploadingReceipt}
-                                className="hidden"
-                                onChange={handleUploadReceipt}
-                              />
-                            </label>
+                        <label className="block p-5 rounded-2xl border-2 border-dashed border-[#E5DECF] hover:border-[#C9A96E] bg-[#F8F4EE]/60 hover:bg-[#F8F4EE] transition-colors cursor-pointer text-center space-y-2">
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={handleUploadReceipt}
+                            disabled={isUploadingReceipt}
+                            className="hidden"
+                          />
+                          <UploadCloud className="w-8 h-8 text-[#C9A96E] mx-auto" />
+                          <div className="text-xs font-semibold text-[#1A1410]">
+                            {isUploadingReceipt ? "Analyzing receipt with AI..." : "Click to upload transfer screenshot"}
                           </div>
+                          <p className="text-[11px] text-[#6E6359]">
+                            JPEG, PNG or PDF. Extracted details will be matched against your session deposit.
+                          </p>
+                        </label>
 
-                          {/* AI Receipt Verification Display */}
-                          {(aiAnalysisResult || receiptReported) && (
-                            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-2 mt-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-                                  <FileCheck2 className="w-4 h-4 text-emerald-600" />
-                                  <span>Transfer Proof Recorded</span>
-                                </div>
-                                {aiAnalysisResult?.accountingCheck?.badge && (
-                                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-200/80 text-emerald-900">
-                                    {aiAnalysisResult.accountingCheck.badge.label}
-                                  </span>
-                                )}
-                              </div>
-
-                              {aiAnalysisResult?.extractedAmount ? (
-                                <div className="space-y-1 text-[11px] text-emerald-800">
-                                  <p>
-                                    <strong>AI Extracted:</strong> ₦{aiAnalysisResult.extractedAmount.toLocaleString()}{" "}
-                                    {aiAnalysisResult.recipientBank ? `to ${aiAnalysisResult.recipientBank}` : "to Fidelity Bank"}
-                                  </p>
-                                  {aiAnalysisResult.senderName && (
-                                    <p><strong>Sender:</strong> {aiAnalysisResult.senderName}</p>
-                                  )}
-                                  {aiAnalysisResult.reference && (
-                                    <p className="font-mono"><strong>Ref / Session ID:</strong> {aiAnalysisResult.reference}</p>
-                                  )}
-                                </div>
-                              ) : (
-                                <p className="text-[11px] text-emerald-800">
-                                  Screenshot uploaded. Studio staff will verify your payment against our bank ledger.
-                                </p>
-                              )}
+                        {/* Upload Status / AI Verification Pill */}
+                        {receiptReported && (
+                          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+                            <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold">
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              <span>Receipt Uploaded Successfully</span>
                             </div>
-                          )}
-                        </div>
+                            {aiAnalysisResult && (
+                              <div className="text-[11px] text-emerald-700 space-y-1 pt-1 border-t border-emerald-200">
+                                <div>Bank: {aiAnalysisResult.bankName || "Detected"}</div>
+                                <div>Amount: ₦{Number(aiAnalysisResult.extractedAmount || 0).toLocaleString()}</div>
+                                <div>Status: {aiAnalysisResult.statusMessage || "Pending Studio Review"}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Shareable Booking URL Box */}
-                    <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-serif text-base text-[#1A1410] font-semibold flex items-center gap-2">
-                          <Share2 className="w-4 h-4 text-[#C9A96E]" />
-                          <span>Your Personal Booking Link</span>
-                        </h4>
-                        <span className="text-[10px] uppercase font-mono tracking-wider text-[#6E6359]">
-                          No Login Required
+                    {/* Save Your Booking Link Card */}
+                    <div className="p-6 rounded-3xl bg-[#F8F4EE] border border-[#E5DECF] flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="space-y-1 text-center sm:text-left">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#C9A96E] block">
+                          Revisitable Link
                         </span>
+                        <h4 className="font-serif text-lg text-[#1A1410]">Save Your Personal Booking Link</h4>
+                        <p className="text-xs text-[#6E6359]">
+                          Bookmark this URL to track deposit confirmation, reschedule, or cancel anytime.
+                        </p>
                       </div>
-                      <p className="text-xs text-[#6E6359]">
-                        Bookmark or save this link. You can revisit this page at any time to monitor deposit status, move your session date, or cancel:
-                      </p>
-                      <div className="p-3 rounded-xl bg-[#F8F4EE] border border-[#E5DECF] flex items-center justify-between gap-3">
-                        <span className="font-mono text-xs text-[#1A1410] truncate select-all">
-                          {shareableBookingUrl}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(shareableBookingUrl, "url")}
-                          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A1410] text-[#FDFBF8] text-xs font-semibold hover:bg-[#C9A96E] hover:text-[#1A1410] transition-colors"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>{copyFeedback === "url" ? "Copied!" : "Copy Link"}</span>
-                        </button>
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(window.location.href, "Booking Link Copied")}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#1A1410] text-[#FDFBF8] hover:bg-[#C9A96E] hover:text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors shrink-0 shadow-sm"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>Copy Link</span>
+                      </button>
                     </div>
                   </div>
 
-                  {/* Right Column: Order Summary, Shoot Operability Details & Calendar (Sticky on Desktop) */}
-                  <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
-                    {/* Session Summary Card */}
-                    <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
-                      {/* Bespoke Service Image Banner in Summary Card */}
-                      <div className="relative h-36 sm:h-44 w-full rounded-xl overflow-hidden mb-4 border border-[#E5DECF] bg-[#F8F4EE]">
+                  {/* Right Column: Sticky Summary & Self-Serve Controls */}
+                  <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
+                    <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
+                      {/* Bespoke Editorial Image Banner */}
+                      <div className="relative h-40 sm:h-48 w-full rounded-2xl overflow-hidden border border-[#E5DECF] bg-[#F8F4EE]">
                         <img
                           src={liveSessions[activeBooking.sessionType || sessionType]?.heroImage || "/images/client/weddings_3.jpg"}
                           alt={liveSessions[activeBooking.sessionType || sessionType]?.title}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent flex items-end p-3">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-white font-bold bg-[#1A1410]/75 px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-white font-bold bg-[#1A1410]/80 px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20">
                             {liveSessions[activeBooking.sessionType || sessionType]?.title}
                           </span>
                         </div>
                       </div>
 
-                      <div className="pb-4 border-b border-[#E5DECF]">
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block mb-1">
-                          Session Summary
-                        </span>
-                        <h3 className="font-serif text-2xl text-[#1A1410] font-normal">
-                          {liveSessions[activeBooking.sessionType || sessionType]?.title || activeBooking.sessionType}
+                      {/* Session Header */}
+                      <div className="pb-3 border-b border-[#E5DECF]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-[#C9A96E] uppercase tracking-wider font-bold">
+                            Session Summary
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold uppercase">
+                            Awaiting Deposit
+                          </span>
+                        </div>
+                        <h3 className="font-serif text-2xl text-[#1A1410] mt-1">
+                          {liveSessions[activeBooking.sessionType || sessionType]?.title}
                         </h3>
                         <p className="text-xs text-[#6E6359] mt-0.5">
-                          {activeBooking.answers?.packageName || selectedPackage?.name || "Bespoke Collection"}
+                          {activeBooking.answers?.packageName || selectedPackage?.name}
                         </p>
                       </div>
 
-                      {/* Shoot Date & Time */}
+                      {/* Shoot Details */}
                       <div className="space-y-3 text-xs">
-                        <div className="flex items-start gap-3">
-                          <CalendarIcon className="w-4 h-4 text-[#C9A96E] shrink-0 mt-0.5" />
+                        <div className="flex items-center gap-3">
+                          <CalendarIcon className="w-4 h-4 text-[#C9A96E] shrink-0" />
                           <div>
-                            <span className="text-[#6E6359] block">Shoot Date &amp; Time</span>
-                            <span className="font-semibold text-[#1A1410] text-sm">
-                              {activeBooking.shootStart
-                                ? new Date(activeBooking.shootStart).toLocaleString("en-US", {
-                                    weekday: "long",
-                                    day: "numeric",
-                                    month: "long",
-                                    year: "numeric",
-                                    hour: "numeric",
-                                    minute: "2-digit",
-                                  })
-                                : selectedDate && timeSlot
-                                ? `${selectedDate} at ${timeSlot}`
-                                : "Date to be scheduled"}
+                            <span className="text-[#6E6359] block text-[10px] uppercase">Shoot Date &amp; Time</span>
+                            <span className="font-semibold text-[#1A1410]">
+                              {activeBooking.shootStart || `${selectedDate} at ${timeSlot}`}
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
-                          <Clock className="w-4 h-4 text-[#C9A96E] shrink-0 mt-0.5" />
+                        <div className="flex items-center gap-3">
+                          <MapPin className="w-4 h-4 text-[#C9A96E] shrink-0" />
                           <div>
-                            <span className="text-[#6E6359] block">Studio Location</span>
+                            <span className="text-[#6E6359] block text-[10px] uppercase">Studio Location</span>
                             <span className="font-semibold text-[#1A1410]">
                               LamSparks Private Abuja Studio
                             </span>
                           </div>
                         </div>
-
-                        {/* Prior Flow Shoot Operability Details */}
-                        {activeBooking.answers && (
-                          <div className="pt-3 border-t border-[#E5DECF] space-y-1.5 text-[11px] text-[#6E6359]">
-                            {activeBooking.answers.childName && (
-                              <p><strong>Child:</strong> {activeBooking.answers.childName} ({activeBooking.answers.childAge || "Milestone"})</p>
-                            )}
-                            {activeBooking.answers.partnerName && (
-                              <p><strong>Partner:</strong> {activeBooking.answers.partnerName}</p>
-                            )}
-                            {activeBooking.answers.feeling && (
-                              <p><strong>Desired Mood:</strong> &ldquo;{activeBooking.answers.feeling}&rdquo;</p>
-                            )}
-                            {activeBooking.answers.reelsAddon && (
-                              <p className="text-[#C9A96E] font-semibold">✓ Cinematic Content Reels Included</p>
-                            )}
-                            {activeBooking.answers.priorityEditing && (
-                              <p className="text-[#C9A96E] font-semibold">✓ Express Priority Delivery Included</p>
-                            )}
-                          </div>
-                        )}
                       </div>
 
-                      {/* Financial Breakdown */}
+                      {/* Mathematically Correct Financial Breakdown */}
                       <div className="pt-4 border-t border-[#E5DECF] space-y-2.5 text-xs">
                         <div className="flex items-center justify-between text-[#6E6359]">
                           <span>Total Investment:</span>
@@ -1030,18 +913,24 @@ function BookingWizard() {
                             ₦{(activeBooking.estimate?.total || estimate.total).toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-amber-900 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/60 font-semibold">
-                          <span>Deposit to Book ({activeBooking.estimate?.depositPercent || estimate.depositPercent}%):</span>
-                          <span>
-                            ₦{(activeBooking.estimate?.depositAmount || estimate.depositAmount).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-[#6E6359]">
-                          <span>Balance on Shoot Day ({100 - (activeBooking.estimate?.depositPercent || estimate.depositPercent)}%):</span>
-                          <span className="font-semibold text-[#1A1410]">
-                            ₦{(activeBooking.estimate?.balanceAmount || estimate.balanceAmount).toLocaleString()}
-                          </span>
-                        </div>
+                        {(() => {
+                          const tot = activeBooking.estimate?.total || estimate.total;
+                          const dep = activeBooking.estimate?.depositAmount || estimate.depositAmount;
+                          const bal = activeBooking.estimate?.balanceAmount || estimate.balanceAmount;
+                          const pct = tot > 0 ? Math.round((dep / tot) * 100) : (activeBooking.estimate?.depositPercent || estimate.depositPercent || 70);
+                          return (
+                            <>
+                              <div className="flex items-center justify-between text-amber-900 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/60 font-semibold">
+                                <span>Deposit to Book ({pct}%):</span>
+                                <span>₦{dep.toLocaleString()}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-[#6E6359]">
+                                <span>Balance on Shoot Day ({100 - pct}%):</span>
+                                <span className="font-semibold text-[#1A1410]">₦{bal.toLocaleString()}</span>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
 
                       {/* Add to Calendar Buttons */}
@@ -1122,14 +1011,14 @@ function BookingWizard() {
                     </label>
                     <input
                       type="date"
-                      min={todayStr}
+                      min={new Date().toISOString().split("T")[0]}
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full p-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                      className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
                     />
                   </div>
 
-                  {/* Time Slot Picker */}
+                  {/* Time Slots */}
                   <div className="space-y-2">
                     <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
                       Select New Time Slot
@@ -1140,10 +1029,10 @@ function BookingWizard() {
                           key={slot.id}
                           type="button"
                           onClick={() => setTimeSlot(slot.id)}
-                          className={`p-2.5 rounded-xl text-xs font-semibold border transition-all ${
+                          className={`p-2.5 rounded-xl text-xs font-semibold transition-all border ${
                             timeSlot === slot.id
                               ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
-                              : "bg-[#F8F4EE] text-[#1A1410] border-[#E5DECF] hover:border-[#C9A96E]"
+                              : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
                           }`}
                         >
                           {slot.label}
@@ -1152,19 +1041,19 @@ function BookingWizard() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-[#E5DECF] flex items-center justify-end gap-3">
+                  <div className="pt-3 border-t border-[#E5DECF] flex items-center justify-end gap-3">
                     <button
                       type="button"
                       onClick={() => setIsRescheduleOpen(false)}
                       className="px-5 py-2.5 rounded-full text-xs font-semibold text-[#6E6359] hover:text-[#1A1410]"
                     >
-                      Cancel
+                      Keep Current Time
                     </button>
                     <button
                       type="button"
                       disabled={isUpdatingBooking || !selectedDate || !timeSlot}
                       onClick={handleReschedule}
-                      className="px-6 py-2.5 rounded-full bg-[#1A1410] hover:bg-[#C9A96E] hover:text-[#1A1410] text-[#FDFBF8] text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                      className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
                     >
                       {isUpdatingBooking ? "Updating..." : "Confirm New Slot"}
                     </button>
@@ -1173,29 +1062,32 @@ function BookingWizard() {
               </div>
             )}
 
-            {/* Cancel Modal */}
+            {/* Calm Bespoke Atelier Cancel Modal (Inspired by Reference 01:03) */}
             {isCancelModalOpen && (
               <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl p-6 sm:p-8 border border-[#E5DECF] shadow-2xl space-y-5">
-                  <div className="flex items-center gap-3 text-rose-700">
-                    <AlertCircle className="w-6 h-6 shrink-0" />
-                    <h3 className="font-serif text-2xl text-[#1A1410]">Cancel This Session?</h3>
+                <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl p-6 sm:p-8 border border-[#E5DECF] shadow-2xl space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="space-y-1 text-center sm:text-left">
+                    <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#C9A96E] font-bold block">
+                      Atelier Schedule Update
+                    </span>
+                    <h3 className="font-headline uppercase tracking-tight text-2xl sm:text-3xl text-[#1A1410] font-black">
+                      CANCEL THIS SESSION?
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed pt-1">
+                      Your time goes back on the calendar for someone else.
+                    </p>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed">
-                    Are you sure you want to cancel your session with LamSparks? Releasing this slot will make it available for another client.
-                  </p>
-
                   <div className="space-y-1.5">
-                    <label className="block text-xs uppercase tracking-wider font-bold text-[#6E6359]">
-                      Reason (Optional)
+                    <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                      Reason (optional)
                     </label>
-                    <textarea
-                      rows={2}
+                    <input
+                      type="text"
                       placeholder="e.g. Schedule conflict, travel dates changed..."
                       value={cancelReason}
                       onChange={(e) => setCancelReason(e.target.value)}
-                      className="w-full p-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-xs text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                      className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-xs text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
                     />
                   </div>
 
@@ -1203,17 +1095,17 @@ function BookingWizard() {
                     <button
                       type="button"
                       onClick={() => setIsCancelModalOpen(false)}
-                      className="px-5 py-2.5 rounded-full text-xs font-semibold text-[#1A1410] bg-[#F8F4EE] hover:bg-[#E5DECF] transition-colors"
+                      className="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider text-[#1A1410] border border-[#E5DECF] bg-white hover:bg-[#F8F4EE] transition-colors"
                     >
-                      Keep It (Safe)
+                      Keep it
                     </button>
                     <button
                       type="button"
                       disabled={isUpdatingBooking}
                       onClick={handleCancelBooking}
-                      className="px-5 py-2.5 rounded-full bg-rose-700 hover:bg-rose-800 text-[#FDFBF8] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                      className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
                     >
-                      {isUpdatingBooking ? "Cancelling..." : "Yes, Cancel It"}
+                      {isUpdatingBooking ? "Updating..." : "Yes, cancel it"}
                     </button>
                   </div>
                 </div>
@@ -1223,22 +1115,23 @@ function BookingWizard() {
         )}
 
         {/* ========================================================================= */}
-        {/* NEW BOOKING WIZARD (STREAMLINED 4-STEP SELF-SERVE PATH)                   */}
+        {/* NEW 5-STEP BESPOKE BOOKING WIZARD                                         */}
         {/* ========================================================================= */}
         {!isLoadingBooking && !isExistingBookingView && (
           <div className="space-y-8 animate-fade-up">
-            {/* Stepper Progress Bar */}
+            {/* 5-Step Stepper Header */}
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs uppercase tracking-wider text-[#6E6359] font-medium">
                 <span>LamSparks Atelier Booking</span>
-                <span>Step {step} of 4</span>
+                <span>Step {step} of 5</span>
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                 {[
-                  { num: 1, label: "Package" },
-                  { num: 2, label: "Date & Time" },
-                  { num: 3, label: "Details & Vision" },
-                  { num: 4, label: "Deposit" },
+                  { num: 1, label: "Session" },
+                  { num: 2, label: "Package" },
+                  { num: 3, label: "Date & time" },
+                  { num: 4, label: "Your details" },
+                  { num: 5, label: "Deposit" },
                 ].map((s) => (
                   <div key={s.num} className="space-y-1.5">
                     <div
@@ -1258,13 +1151,92 @@ function BookingWizard() {
               </div>
             </div>
 
-            {/* STEP 1: PACKAGE PICKER (Inspired by Reference Video 00:21 - 00:24) */}
+            {/* STEP 1: SESSION DISCOVERY ("WHAT ARE WE SHOOTING?") */}
             {step === 1 && (
-              <div className="space-y-8">
-                {/* Category Chips at Top */}
+              <div className="space-y-8 animate-fade-up">
+                <div className="text-center max-w-2xl mx-auto space-y-2">
+                  <h1 className="font-headline uppercase tracking-tight text-[#1A1410] font-black text-4xl sm:text-6xl md:text-7xl leading-[0.95]">
+                    WHAT ARE WE <span className="text-[#C9A96E]">SHOOTING?</span>
+                  </h1>
+                  <p className="text-xs sm:text-sm text-[#6E6359] font-sans">
+                    Choose a session to see its packages, prices and terms.
+                  </p>
+                </div>
+
+                {/* 4-Column Responsive Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                  {Object.values(liveSessions).map((st: any) => {
+                    const lowestPrice = livePackages
+                      .filter((p) => p.sessionType === st.slug && p.price !== null)
+                      .reduce((min, p) => (p.price && p.price < min ? p.price : min), Infinity);
+                    const displayPrice = lowestPrice !== Infinity ? lowestPrice : st.fromPrice;
+
+                    return (
+                      <div
+                        key={st.slug}
+                        className="group relative rounded-3xl overflow-hidden bg-[#1A1410] border border-[#E5DECF] shadow-md flex flex-col justify-end min-h-[380px] sm:min-h-[420px] transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+                      >
+                        {/* Background Image */}
+                        <img
+                          src={st.heroImage || "/images/client/weddings_1.jpg"}
+                          alt={st.title}
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                        {/* Soft Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10" />
+
+                        {/* Card Details */}
+                        <div className="relative z-10 p-5 text-white flex flex-col justify-end space-y-3">
+                          <div className="space-y-1">
+                            <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#C9A96E] block font-mono">
+                              {st.standardDeliveryDays ? `${st.standardDeliveryDays} · ` : ""}
+                              {displayPrice ? `From ₦${displayPrice.toLocaleString()}` : "Bespoke Consultation"}
+                            </span>
+                            <h3 className="font-headline text-2xl sm:text-3xl uppercase tracking-tight text-white font-black leading-none">
+                              {st.title}
+                            </h3>
+                          </div>
+                          <p className="text-xs text-white/80 line-clamp-2 font-sans font-normal leading-relaxed">
+                            {st.tagline || st.description}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSession(st.slug)}
+                            className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-all shadow-sm group-hover:shadow"
+                          >
+                            <span>See packages →</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: PACKAGE PICKER (Inspired by Reference Video 00:21 - 00:24) */}
+            {step === 2 && (
+              <div className="space-y-8 animate-fade-up">
+                {/* Top Breadcrumb Navigation */}
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359] mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="inline-flex items-center gap-1 font-semibold text-[#1A1410] hover:text-[#C9A96E] transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Change session</span>
+                  </button>
+                  <span>/</span>
+                  <span className="text-[#C9A96E] font-medium">{liveSessions[sessionType]?.title}</span>
+                  <span>/</span>
+                  <span>Choose a package</span>
+                </div>
+
+                {/* Quick Category Chips */}
                 <div className="space-y-2">
                   <span className="text-[10px] uppercase tracking-[0.2em] text-[#C9A96E] font-bold block">
-                    1. Select Category
+                    Session Experience
                   </span>
                   <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                     {Object.values(liveSessions).map((st: any) => (
@@ -1288,14 +1260,11 @@ function BookingWizard() {
 
                 {/* Headline: "Pick your package" with key word in gold */}
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-[#6E6359] mb-1">
-                    {liveSessions[sessionType]?.title || "Session"} / Choose a package
-                  </div>
                   <h1 className="font-serif text-3xl sm:text-5xl text-[#1A1410] font-normal">
                     Pick your <span className="text-[#C9A96E] italic font-serif">package</span>
                   </h1>
                   <p className="text-xs sm:text-sm text-[#6E6359] mt-1.5">
-                    Select the collection that fits your celebration. Duration, setups, and inclusions are clearly detailed.
+                    Select the collection that fits your celebration. Duration, outfit counts, and inclusions are clearly detailed.
                   </p>
                 </div>
 
@@ -1338,8 +1307,8 @@ function BookingWizard() {
                     </div>
                   </div>
 
-                  {/* Right Column: Package Cards Grid */}
-                  <div className="lg:col-span-8 space-y-4">
+                  {/* Right Column: Package Cards Grid & Terms Card */}
+                  <div className="lg:col-span-8 space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {currentPackages.map((pkg) => {
                         const isSelected = selectedPackage?.id === pkg.id;
@@ -1407,6 +1376,48 @@ function BookingWizard() {
                         );
                       })}
                     </div>
+
+                    {/* Terms & Conditions Card Under Packages (Inspired by Video 00:24) */}
+                    <div className="p-5 sm:p-6 rounded-3xl bg-[#F8F4EE] border border-[#E5DECF] space-y-4">
+                      <div className="flex items-center gap-2 text-[#1A1410]">
+                        <ShieldCheck className="w-4 h-4 text-[#C9A96E]" />
+                        <span className="font-bold text-xs uppercase tracking-widest text-[#1A1410]">
+                          Terms &amp; Conditions
+                        </span>
+                      </div>
+                      <ul className="space-y-2.5 text-xs text-[#6E6359] leading-relaxed">
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#C9A96E] shrink-0 mt-1.5" />
+                          <span>
+                            <strong className="text-[#1A1410]">Booking Deposit:</strong> A {estimate.depositPercent}% non-refundable deposit is required to reserve your date and studio time. The remaining balance ({100 - estimate.depositPercent}%) is due on or before shoot day.
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#C9A96E] shrink-0 mt-1.5" />
+                          <span>
+                            <strong className="text-[#1A1410]">Delivery Turnaround:</strong> Retouched soft-copy images are delivered within {liveSessions[sessionType]?.standardDeliveryDays || "5 to 7 business days"} via your private, high-resolution online gallery.
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#C9A96E] shrink-0 mt-1.5" />
+                          <span>
+                            <strong className="text-[#1A1410]">Additional Edited Copies:</strong> Extra retouched images can be ordered at ₦10,000 each after your private gallery preview.
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#C9A96E] shrink-0 mt-1.5" />
+                          <span>
+                            <strong className="text-[#1A1410]">Atelier Studio Suite:</strong> Private dressing suite, climate-controlled studio, and professional lighting director are included with all sessions.
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#C9A96E] shrink-0 mt-1.5" />
+                          <span>
+                            <strong className="text-[#1A1410]">Rescheduling:</strong> Rescheduling is complimentary when requested at least 48 hours before your session time.
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
 
@@ -1423,8 +1434,8 @@ function BookingWizard() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#1A1410] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-md group"
+                    onClick={() => setStep(3)}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-md group"
                   >
                     <span>Choose a Date</span>
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
@@ -1433,14 +1444,28 @@ function BookingWizard() {
               </div>
             )}
 
-            {/* STEP 2: LIVE CALENDAR & TIME (Inspired by Reference Video 00:27 - 00:30) */}
-            {step === 2 && (
-              <div className="space-y-8">
-                {/* Breadcrumb & Header */}
+            {/* STEP 3: LIVE CALENDAR & TIME (Inspired by Reference Video 00:27 - 00:30) */}
+            {step === 3 && (
+              <div className="space-y-8 animate-fade-up">
+                {/* Breadcrumb Navigation */}
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359] mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="inline-flex items-center gap-1 font-semibold text-[#1A1410] hover:text-[#C9A96E] transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Packages</span>
+                  </button>
+                  <span>/</span>
+                  <span className="text-[#C9A96E] font-medium">{liveSessions[sessionType]?.title}</span>
+                  <span>/</span>
+                  <span className="text-[#6E6359]">{selectedPackage?.name}</span>
+                  <span>/</span>
+                  <span>Date &amp; Time</span>
+                </div>
+
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-[#6E6359] mb-1">
-                    {liveSessions[sessionType]?.title} / {selectedPackage?.name} / Date and Time
-                  </div>
                   <h1 className="font-serif text-3xl sm:text-5xl text-[#1A1410] font-normal">
                     Free or booked,{" "}
                     <span className="text-[#C9A96E] italic font-serif">at a glance</span>
@@ -1462,69 +1487,57 @@ function BookingWizard() {
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => {
-                            setCurrentCalendarDate(new Date(year, month - 1, 1));
-                          }}
-                          className="w-8 h-8 rounded-full border border-[#E5DECF] hover:border-[#1A1410] flex items-center justify-center text-[#1A1410] transition-colors"
+                          onClick={prevMonth}
+                          className="w-9 h-9 rounded-full border border-[#E5DECF] hover:border-[#1A1410] flex items-center justify-center text-[#1A1410] hover:bg-[#F8F4EE] transition-colors"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            setCurrentCalendarDate(new Date(year, month + 1, 1));
-                          }}
-                          className="w-8 h-8 rounded-full border border-[#E5DECF] hover:border-[#1A1410] flex items-center justify-center text-[#1A1410] transition-colors"
+                          onClick={nextMonth}
+                          className="w-9 h-9 rounded-full border border-[#E5DECF] hover:border-[#1A1410] flex items-center justify-center text-[#1A1410] hover:bg-[#F8F4EE] transition-colors"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
 
-                    {/* Day Headers (Mon - Sun) */}
-                    <div className="grid grid-cols-7 text-center text-xs font-semibold uppercase text-[#6E6359] tracking-wider">
-                      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                        <div key={d} className="py-1">
-                          {d}
-                        </div>
+                    {/* Day-of-week header */}
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                        <span key={day} className="text-[11px] uppercase tracking-wider font-bold text-[#6E6359] py-1">
+                          {day}
+                        </span>
                       ))}
                     </div>
 
-                    {/* Calendar Days Matrix */}
-                    <div className="grid grid-cols-7 gap-2">
-                      {/* Empty padding days */}
-                      {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                        <div key={`empty-${i}`} className="p-2 h-10 sm:h-12" />
-                      ))}
+                    {/* Calendar Day Grid */}
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {calendarDays.map((cd, idx) => {
+                        if (!cd.isCurrentMonth) {
+                          return <div key={idx} className="aspect-square" />;
+                        }
 
-                      {/* Day cells */}
-                      {Array.from({ length: daysInMonth }).map((_, i) => {
-                        const dayNum = i + 1;
-                        const dateFormatted = `${year}-${String(month + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-                        const isPast = dateFormatted < todayStr;
-                        const isSelected = selectedDate === dateFormatted;
+                        const isSelected = selectedDate === cd.dateStr;
 
                         return (
                           <button
-                            key={dayNum}
+                            key={cd.dateStr}
                             type="button"
-                            disabled={isPast}
-                            onClick={() => setSelectedDate(dateFormatted)}
-                            className={`h-10 sm:h-12 rounded-xl text-xs sm:text-sm font-semibold transition-all flex flex-col items-center justify-center relative ${
-                              isPast
-                                ? "text-[#E5DECF] cursor-not-allowed"
-                                : isSelected
-                                ? "bg-[#1A1410] text-[#FDFBF8] ring-2 ring-[#C9A96E] shadow-sm font-bold"
-                                : "bg-[#F8F4EE] text-[#1A1410] hover:bg-[#C9A96E]/20 hover:border-[#C9A96E]"
+                            disabled={cd.isPast}
+                            onClick={() => setSelectedDate(cd.dateStr)}
+                            className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative text-sm font-medium transition-all ${
+                              isSelected
+                                ? "bg-[#1A1410] text-[#FDFBF8] shadow-md ring-2 ring-[#C9A96E]"
+                                : cd.isPast
+                                ? "text-[#6E6359]/30 cursor-not-allowed bg-transparent"
+                                : "hover:bg-[#F8F4EE] text-[#1A1410] hover:text-[#C9A96E] border border-transparent hover:border-[#E5DECF]"
                             }`}
                           >
-                            <span>{dayNum}</span>
-                            {!isPast && (
-                              <span
-                                className={`w-1 h-1 rounded-full mt-0.5 ${
-                                  isSelected ? "bg-[#C9A96E]" : "bg-[#C9A96E]/60"
-                                }`}
-                              />
+                            <span>{cd.dayNum}</span>
+                            {/* Available slot indicator */}
+                            {!cd.isPast && !isSelected && (
+                              <span className="w-1 h-1 rounded-full bg-emerald-500 mt-1" />
                             )}
                           </button>
                         );
@@ -1532,133 +1545,146 @@ function BookingWizard() {
                     </div>
 
                     {/* Legend */}
-                    <div className="pt-4 border-t border-[#E5DECF] flex items-center justify-between text-xs text-[#6E6359]">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#C9A96E]" />
-                        <span>Free</span>
+                    <div className="pt-4 border-t border-[#E5DECF] flex items-center gap-6 text-xs text-[#6E6359]">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span>Free Slot</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#1A1410]" />
-                        <span>Selected</span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#1A1410]" />
+                        <span>Selected Day</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#E5DECF]" />
-                        <span>Unavailable / Past</span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#E5DECF]" />
+                        <span>Past / Closed</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Col: Selected Day's Time Slots */}
+                  {/* Right Col: Time Slots grouped by Morning, Afternoon, Evening */}
                   <div className="lg:col-span-5 p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6">
                     <div>
                       <span className="text-[10px] text-[#C9A96E] uppercase tracking-wider font-bold block mb-1">
-                        Selected Date
+                        Select Session Time
                       </span>
-                      <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">
+                      <h3 className="font-serif text-2xl text-[#1A1410]">
                         {selectedDate
-                          ? new Date(selectedDate + "T12:00:00Z").toLocaleDateString("en-US", {
+                          ? new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
                               weekday: "long",
-                              day: "numeric",
                               month: "long",
-                              year: "numeric",
+                              day: "numeric",
                             })
-                          : "Choose a day on the calendar"}
+                          : "Pick a date first"}
                       </h3>
+                      <p className="text-xs text-[#6E6359] mt-0.5">
+                        Sessions are scheduled with generous intervals for personal styling and lighting setup.
+                      </p>
                     </div>
 
-                    {selectedDate ? (
-                      <div className="space-y-4">
-                        {["Morning", "Afternoon", "Evening (Golden Hour)"].map((period) => {
-                          const slotsInPeriod = TIME_SLOTS.filter((s) => s.period.startsWith(period.split(" ")[0]));
-                          return (
-                            <div key={period} className="space-y-2">
-                              <span className="text-[10px] uppercase font-bold text-[#6E6359] tracking-wider block">
-                                {period}
-                              </span>
-                              <div className="grid grid-cols-2 gap-2">
-                                {slotsInPeriod.map((slot) => {
-                                  const isSlotSelected = timeSlot === slot.id;
-                                  return (
-                                    <button
-                                      key={slot.id}
-                                      type="button"
-                                      onClick={() => setTimeSlot(slot.id)}
-                                      className={`p-3 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-between ${
-                                        isSlotSelected
-                                          ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410] ring-1 ring-[#C9A96E] shadow-sm"
-                                          : "bg-[#F8F4EE] text-[#1A1410] border-[#E5DECF] hover:border-[#C9A96E]"
-                                      }`}
-                                    >
-                                      <span>{slot.label}</span>
-                                      {isSlotSelected && (
-                                        <Check className="w-3.5 h-3.5 text-[#C9A96E]" />
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                    <div className="space-y-4">
+                      {["Morning", "Afternoon", "Evening (Golden Hour)"].map((period) => {
+                        const slots = TIME_SLOTS.filter((s) => s.period.startsWith(period.split(" ")[0]));
+                        return (
+                          <div key={period} className="space-y-2">
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-[#6E6359] block">
+                              {period}
+                            </span>
+                            <div className="grid grid-cols-2 gap-2">
+                              {slots.map((slot) => {
+                                const isSelected = timeSlot === slot.id;
+                                return (
+                                  <button
+                                    key={slot.id}
+                                    type="button"
+                                    onClick={() => setTimeSlot(slot.id)}
+                                    className={`p-3 rounded-xl border text-xs font-semibold transition-all flex items-center justify-between ${
+                                      isSelected
+                                        ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410] shadow-sm"
+                                        : "bg-[#F8F4EE] text-[#1A1410] border-[#E5DECF] hover:border-[#C9A96E]"
+                                    }`}
+                                  >
+                                    <span>{slot.label}</span>
+                                    <Clock className={`w-3.5 h-3.5 ${isSelected ? "text-[#C9A96E]" : "text-[#6E6359]"}`} />
+                                  </button>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="p-8 text-center text-xs text-[#6E6359] border border-dashed border-[#E5DECF] rounded-2xl">
-                        Please select an available date on the calendar to see available time slots.
-                      </div>
-                    )}
-
-                    <div className="pt-4 border-t border-[#E5DECF] flex items-center justify-between gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setStep(1)}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold text-[#1A1410] hover:text-[#C9A96E]"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Back</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={!selectedDate || !timeSlot}
-                        onClick={() => setStep(3)}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#1A1410] hover:bg-[#C9A96E] hover:text-[#1A1410] text-[#FDFBF8] text-xs uppercase tracking-wider font-bold transition-all disabled:opacity-40 shadow-sm"
-                      >
-                        <span>Continue</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                          </div>
+                        );
+                      })}
                     </div>
+                  </div>
+                </div>
+
+                {/* Sticky Bottom Total Bar */}
+                <div className="sticky bottom-4 z-30 p-4 sm:p-5 rounded-2xl bg-[#1A1410] text-[#FDFBF8] shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] text-[#C9A96E] uppercase tracking-widest font-bold block">
+                      {selectedPackage?.name} · {selectedDate || "Select day"} {timeSlot ? `at ${timeSlot}` : ""}
+                    </span>
+                    <div className="text-sm sm:text-base font-medium">
+                      Deposit to lock slot: ₦{estimate.depositAmount.toLocaleString()} ({estimate.depositPercent}%)
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      className="px-5 py-3 rounded-full text-xs font-semibold text-[#FDFBF8] hover:text-[#C9A96E]"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!selectedDate || !timeSlot}
+                      onClick={() => setStep(4)}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-8 py-3 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-md group disabled:opacity-40"
+                    >
+                      <span>Continue to Details</span>
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* STEP 3: YOUR DETAILS & SHOOT OPERABILITY (Prior Flow Specifics Re-integrated) */}
-            {step === 3 && (
-              <div className="space-y-8">
-                {/* Breadcrumb & Header */}
+            {/* STEP 4: YOUR DETAILS (Decluttered, Frictionless & Under 30s) */}
+            {step === 4 && (
+              <div className="space-y-8 animate-fade-up">
+                {/* Breadcrumb Navigation */}
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359] mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    className="inline-flex items-center gap-1 font-semibold text-[#1A1410] hover:text-[#C9A96E] transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Date &amp; Time</span>
+                  </button>
+                  <span>/</span>
+                  <span>Almost Done</span>
+                </div>
+
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-[#6E6359] mb-1">
-                    {liveSessions[sessionType]?.title} / {selectedPackage?.name} / {selectedDate} ({timeSlot})
-                  </div>
                   <h1 className="font-serif text-3xl sm:text-5xl text-[#1A1410] font-normal">
                     Almost <span className="text-[#C9A96E] italic font-serif">done</span>
                   </h1>
                   <p className="text-xs sm:text-sm text-[#6E6359] mt-1.5">
-                    Provide your contact details and session specifics so Osemene can tailor your shoot to perfection.
+                    Your contact details and wardrobe notes for session day.
                   </p>
                 </div>
 
                 {/* 2-Column Layout: Form on Left, Sticky Summary on Right */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Left Column: Form with Prior Flow Details */}
+                  {/* Left Column: Clean Frictionless Form */}
                   <div className="lg:col-span-7 p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6">
-                    {/* Section 1: Contact Information */}
+                    {/* Section 1: Contact Details */}
                     <div className="space-y-4">
                       <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block pb-1 border-b border-[#E5DECF]">
-                        1. Contact Information
+                        Client Information
                       </span>
 
-                      {/* Name */}
+                      {/* Full Name */}
                       <div>
                         <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
                           Full Name <span className="text-[#C9A96E]">*</span>
@@ -1687,7 +1713,7 @@ function BookingWizard() {
                           className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E]"
                         />
                         <span className="text-[11px] text-[#6E6359] mt-1 block">
-                          Nigerian numbers normalized automatically. Used for WhatsApp confirmation &amp; gallery delivery.
+                          Nigerian numbers normalized automatically. Used for shoot coordination &amp; online gallery delivery.
                         </span>
                       </div>
 
@@ -1706,224 +1732,27 @@ function BookingWizard() {
                       </div>
                     </div>
 
-                    {/* Section 2: Session Heart & Vision (From Prior Flow) */}
+                    {/* Section 2: Helpful Session Notes & Wardrobe Ideas */}
                     <div className="space-y-4 pt-2">
                       <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block pb-1 border-b border-[#E5DECF]">
-                        2. Session Heart &amp; Vision
+                        Session Notes &amp; Wardrobe Ideas
                       </span>
 
                       <div>
                         <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                          What is this session celebrating or for?
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. 1st Birthday, Maternity milestone, New executive headshots..."
-                          value={purpose}
-                          onChange={(e) => setPurpose(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                          What feeling do you want from the photographs?
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Peaceful and regal, full of giggles and warmth, commanding and editorial..."
-                          value={feeling}
-                          onChange={(e) => setFeeling(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E]"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Section 3: Session Specifics for Photographer Operability */}
-                    <div className="space-y-4 pt-2">
-                      <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block pb-1 border-b border-[#E5DECF]">
-                        3. Specifics &amp; Shoot Logistics
-                      </span>
-
-                      {/* Toddler Specifics */}
-                      {sessionType === "toddler" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                              Child&apos;s Name
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. Zara"
-                              value={childName}
-                              onChange={(e) => setChildName(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                              Child&apos;s Age / Turning Age
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. 1 year old"
-                              value={childAge}
-                              onChange={(e) => setChildAge(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                              Additional Siblings / Family (+₦30k each)
-                            </label>
-                            <input
-                              type="number"
-                              min={0}
-                              max={6}
-                              value={additionalFamilyCount}
-                              onChange={(e) => setAdditionalFamilyCount(parseInt(e.target.value) || 0)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                              Twins or Multiples (+50% per child)
-                            </label>
-                            <input
-                              type="number"
-                              min={0}
-                              max={3}
-                              value={additionalChildCount}
-                              onChange={(e) => setAdditionalChildCount(parseInt(e.target.value) || 0)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Maternity Specifics */}
-                      {sessionType === "maternity" && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                              Weeks Pregnant (at preferred date)
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. 30–34 weeks"
-                              value={weeksPregnant}
-                              onChange={(e) => setWeeksPregnant(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                              Partner Joining Session? (Partner&apos;s Name)
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. Emeka"
-                              value={partnerName}
-                              onChange={(e) => setPartnerName(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Couples / Weddings Partner */}
-                      {(sessionType === "couple" || sessionType === "wedding") && (
-                        <div>
-                          <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                            Partner / Spouse Name
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Ose"
-                            value={partnerName}
-                            onChange={(e) => setPartnerName(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                          />
-                        </div>
-                      )}
-
-                      {/* Location Preference */}
-                      <div>
-                        <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                          Studio vs Location Preference
-                        </label>
-                        <select
-                          value={locationType}
-                          onChange={(e) => setLocationType(e.target.value as any)}
-                          className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                        >
-                          <option value="studio">Private Abuja Studio (Default)</option>
-                          <option value="outside">Outdoor / On Location in Abuja</option>
-                          <option value="both">Both Studio &amp; Outdoor Session</option>
-                        </select>
-                      </div>
-
-                      {/* Add-on Toggles */}
-                      <div className="pt-2 space-y-3">
-                        <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] cursor-pointer hover:border-[#C9A96E] transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={priorityEditing}
-                            onChange={(e) => setPriorityEditing(e.target.checked)}
-                            className="mt-1 w-4 h-4 rounded border-[#E5DECF] text-[#C9A96E] focus:ring-[#C9A96E]"
-                          />
-                          <div>
-                            <span className="text-xs font-bold text-[#1A1410] flex items-center gap-1.5">
-                              <Zap className="w-3.5 h-3.5 text-[#C9A96E]" />
-                              <span>Express Priority Delivery (+₦30,000)</span>
-                            </span>
-                            <span className="text-[11px] text-[#6E6359] block mt-0.5">
-                              Expedites fine-art editing turnaround to 3–5 business days (or 24–48 hours for events).
-                            </span>
-                          </div>
-                        </label>
-
-                        <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] cursor-pointer hover:border-[#C9A96E] transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={reelsAddon}
-                            onChange={(e) => setReelsAddon(e.target.checked)}
-                            className="mt-1 w-4 h-4 rounded border-[#E5DECF] text-[#C9A96E] focus:ring-[#C9A96E]"
-                          />
-                          <div>
-                            <span className="text-xs font-bold text-[#1A1410] flex items-center gap-1.5">
-                              <Film className="w-3.5 h-3.5 text-[#C9A96E]" />
-                              <span>
-                                Short Cinematic Content Reels (+₦{sessionType === "event" ? "200,000" : "150,000"})
-                              </span>
-                            </span>
-                            <span className="text-[11px] text-[#6E6359] block mt-0.5">
-                              2 professionally edited vertical video reels delivered digitally for Instagram/TikTok.
-                            </span>
-                          </div>
-                        </label>
-                      </div>
-
-                      {/* Notes Box */}
-                      <div>
-                        <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                          Additional Requests or Wardrobe Notes
+                          Shoot Details &amp; Special Requests
                         </label>
                         <textarea
-                          rows={2}
-                          placeholder="Outfits, number of people, makeup artist, special props..."
+                          rows={3}
+                          placeholder="Location ideas, outfits, number of people or children, makeup artist, special requests..."
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
-                          className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                          className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E] leading-relaxed"
                         />
                       </div>
 
                       {/* Terms & Conditions Checkbox */}
-                      <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] cursor-pointer hover:border-[#C9A96E]/60 transition-colors">
+                      <label className="flex items-start gap-3 p-3.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] cursor-pointer hover:border-[#C9A96E]/60 transition-colors">
                         <input
                           type="checkbox"
                           checked={termsAgreed}
@@ -1931,7 +1760,7 @@ function BookingWizard() {
                           className="mt-1 w-4 h-4 rounded border-[#E5DECF] text-[#C9A96E] focus:ring-[#C9A96E]"
                         />
                         <span className="text-xs text-[#1A1410] leading-relaxed">
-                          I agree to the {estimate.depositPercent}% booking deposit requirement to hold this studio slot and confirm I have reviewed LamSparks&apos; booking policy. <span className="text-[#C9A96E]">*</span>
+                          I agree to the {estimate.depositPercent}% booking deposit requirement to hold this studio time. Remaining balance is due on shoot day. <span className="text-[#C9A96E]">*</span>
                         </span>
                       </label>
 
@@ -1944,7 +1773,7 @@ function BookingWizard() {
                           className="mt-1 w-4 h-4 rounded border-[#E5DECF] text-[#C9A96E] focus:ring-[#C9A96E]"
                         />
                         <span className="text-[11px] text-[#6E6359] leading-relaxed">
-                          Optional: Consent to feature selected photographs in LamSparks&apos; private portfolio. Unticked by default.
+                          Optional: I am comfortable with LamSparks featuring selected frames in the atelier portfolio.
                         </span>
                       </label>
                     </div>
@@ -1952,7 +1781,7 @@ function BookingWizard() {
                     <div className="pt-4 border-t border-[#E5DECF] flex items-center justify-between">
                       <button
                         type="button"
-                        onClick={() => setStep(2)}
+                        onClick={() => setStep(3)}
                         className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold text-[#1A1410] hover:text-[#C9A96E]"
                       >
                         <ArrowLeft className="w-4 h-4" />
@@ -1963,11 +1792,11 @@ function BookingWizard() {
                         type="button"
                         disabled={isSubmitting || !clientName.trim() || !whatsappPhone.trim() || !termsAgreed}
                         onClick={handleCreateBooking}
-                        className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#1A1410] font-sans text-xs uppercase tracking-wider font-bold transition-all disabled:opacity-40 shadow-md group"
+                        className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] font-sans text-xs uppercase tracking-wider font-bold transition-all disabled:opacity-40 shadow-md group"
                       >
                         {isSubmitting ? (
                           <>
-                            <Loader2 className="w-4 h-4 animate-spin text-[#1A1410]" />
+                            <Loader2 className="w-4 h-4 animate-spin text-[#111111]" />
                             <span>Reserving Slot...</span>
                           </>
                         ) : (
@@ -1980,23 +1809,23 @@ function BookingWizard() {
                     </div>
                   </div>
 
-                  {/* Right Column: Sticky Live Summary */}
+                  {/* Right Column: Sticky Order Summary */}
                   <div className="lg:col-span-5 p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6 sticky top-24">
                     {/* Bespoke Service Image Banner in Summary Card */}
-                    <div className="relative h-36 sm:h-44 w-full rounded-xl overflow-hidden border border-[#E5DECF] bg-[#F8F4EE]">
+                    <div className="relative h-36 sm:h-44 w-full rounded-2xl overflow-hidden border border-[#E5DECF] bg-[#F8F4EE]">
                       <img
                         src={liveSessions[sessionType]?.heroImage || "/images/client/weddings_3.jpg"}
                         alt={liveSessions[sessionType]?.title}
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent flex items-end p-3">
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-white font-bold bg-[#1A1410]/75 px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent flex items-end p-3">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-white font-bold bg-[#1A1410]/80 px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20">
                           {liveSessions[sessionType]?.title}
                         </span>
                       </div>
                     </div>
 
-                    <div className="pb-4 border-b border-[#E5DECF]">
+                    <div className="pb-3 border-b border-[#E5DECF]">
                       <span className="text-[10px] text-[#C9A96E] uppercase tracking-wider font-bold block mb-1">
                         Order Summary
                       </span>
@@ -2019,33 +1848,19 @@ function BookingWizard() {
                       <div className="flex items-center justify-between">
                         <span className="text-[#6E6359]">Session Length:</span>
                         <span className="font-semibold text-[#1A1410]">
-                          {(selectedPackage as any)?.durationMinutes ? `${(selectedPackage as any).durationMinutes} mins` : "2 hours"}
+                          {(selectedPackage as any)?.durationMinutes ? `${(selectedPackage as any).durationMinutes} mins` : "Standard Duration"}
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <span className="text-[#6E6359]">Location:</span>
-                        <span className="font-semibold text-[#1A1410] capitalize">
-                          {locationType === "studio" ? "Private Abuja Studio" : locationType === "outside" ? "Outdoor / Location" : "Studio & Outdoor"}
+                        <span className="text-[#6E6359]">Studio Location:</span>
+                        <span className="font-semibold text-[#1A1410]">
+                          LamSparks Private Abuja Studio
                         </span>
                       </div>
-
-                      {/* Itemised Add-ons in Summary */}
-                      {estimate.lineItems.length > 1 && (
-                        <div className="pt-3 border-t border-[#E5DECF] space-y-1.5">
-                          <span className="text-[10px] uppercase font-bold text-[#C9A96E] tracking-wider block">
-                            Included Inclusions &amp; Add-ons
-                          </span>
-                          {estimate.lineItems.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between text-[11px] text-[#6E6359]">
-                              <span className="truncate max-w-[200px]">{item.label}</span>
-                              <span className="font-semibold text-[#1A1410]">₦{item.amount.toLocaleString()}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
+                    {/* Financial Breakdown with Mathematically Correct Percentages */}
                     <div className="pt-4 border-t border-[#E5DECF] space-y-2.5 text-xs">
                       <div className="flex items-center justify-between text-[#6E6359]">
                         <span>Total Investment:</span>
@@ -2064,6 +1879,13 @@ function BookingWizard() {
                         <span className="font-semibold text-[#1A1410]">
                           ₦{estimate.balanceAmount.toLocaleString()}
                         </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <div className="p-3 rounded-xl bg-[#F8F4EE] border border-[#E5DECF] text-[11px] text-[#6E6359] flex items-center justify-between">
+                        <span>Delivery Timeline</span>
+                        <span className="font-semibold text-[#1A1410]">{estimate.deliveryTimeline}</span>
                       </div>
                     </div>
                   </div>
