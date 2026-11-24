@@ -1014,13 +1014,14 @@ function BookingWizard() {
               </>
             )}
 
-            {/* Reschedule Modal */}
+            {/* Reschedule Modal (Responsive, Non-cutoff, Scrollable Body with Pinned Actions) */}
             {isRescheduleOpen && (
-              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                <div className="bg-[#FDFBF8] max-w-lg w-full rounded-3xl p-6 sm:p-8 border border-[#E5DECF] shadow-2xl space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#E5DECF]">
+              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6 py-6 sm:py-10">
+                <div className="bg-[#FDFBF8] max-w-lg w-full rounded-3xl border border-[#E5DECF] shadow-2xl flex flex-col max-h-[calc(100vh-3rem)] overflow-hidden animate-in zoom-in-95 duration-200">
+                  {/* Pinned Modal Header */}
+                  <div className="p-5 sm:p-6 pb-4 border-b border-[#E5DECF] shrink-0 flex items-center justify-between">
                     <div>
-                      <h3 className="font-serif text-2xl text-[#1A1410]">Move to Another Time</h3>
+                      <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">Move to Another Time</h3>
                       <p className="text-xs text-[#6E6359] mt-0.5">
                         Choose a new date and time slot for booking {activeBooking.referenceCode}
                       </p>
@@ -1028,50 +1029,54 @@ function BookingWizard() {
                     <button
                       type="button"
                       onClick={() => setIsRescheduleOpen(false)}
-                      className="w-8 h-8 rounded-full bg-[#F8F4EE] flex items-center justify-center text-[#6E6359] hover:text-[#1A1410]"
+                      className="w-8 h-8 rounded-full bg-[#F8F4EE] flex items-center justify-center text-[#6E6359] hover:text-[#1A1410] shrink-0 ml-2"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Date Input */}
-                  <div className="space-y-2">
-                    <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                      Select New Date
-                    </label>
-                    <input
-                      type="date"
-                      min={new Date().toISOString().split("T")[0]}
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                    />
-                  </div>
+                  {/* Scrollable Modal Body */}
+                  <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
+                    {/* Date Input */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                        Select New Date
+                      </label>
+                      <input
+                        type="date"
+                        min={new Date().toISOString().split("T")[0]}
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                      />
+                    </div>
 
-                  {/* Time Slots */}
-                  <div className="space-y-2">
-                    <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                      Select New Time Slot
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {TIME_SLOTS.map((slot) => (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          onClick={() => setTimeSlot(slot.id)}
-                          className={`p-2.5 rounded-xl text-xs font-semibold transition-all border ${
-                            timeSlot === slot.id
-                              ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
-                              : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
-                          }`}
-                        >
-                          {slot.label}
-                        </button>
-                      ))}
+                    {/* Time Slots */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                        Select New Time Slot
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {TIME_SLOTS.map((slot) => (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            onClick={() => setTimeSlot(slot.id)}
+                            className={`p-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                              timeSlot === slot.id
+                                ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
+                                : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
+                            }`}
+                          >
+                            {slot.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-[#E5DECF] flex items-center justify-end gap-3">
+                  {/* Pinned Modal Footer */}
+                  <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
                     <button
                       type="button"
                       onClick={() => setIsRescheduleOpen(false)}
@@ -1083,7 +1088,7 @@ function BookingWizard() {
                       type="button"
                       disabled={isUpdatingBooking || !selectedDate || !timeSlot}
                       onClick={handleReschedule}
-                      className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                      className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
                     >
                       {isUpdatingBooking ? "Updating..." : "Confirm New Slot"}
                     </button>
@@ -1092,11 +1097,11 @@ function BookingWizard() {
               </div>
             )}
 
-            {/* Calm Bespoke Atelier Cancel Modal (Inspired by Reference 01:03) */}
+            {/* Calm Bespoke Atelier Cancel Modal (Responsive & Non-cutoff) */}
             {isCancelModalOpen && (
-              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-                <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl p-6 sm:p-8 border border-[#E5DECF] shadow-2xl space-y-6 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="space-y-1 text-center sm:text-left">
+              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6 py-6 sm:py-10">
+                <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl border border-[#E5DECF] shadow-2xl flex flex-col max-h-[calc(100vh-3rem)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="p-5 sm:p-6 pb-3 border-b border-[#E5DECF] shrink-0 space-y-1 text-center sm:text-left">
                     <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#C9A96E] font-bold block">
                       Atelier Schedule Update
                     </span>
@@ -1108,7 +1113,7 @@ function BookingWizard() {
                     </p>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="p-5 sm:p-6 space-y-1.5 overflow-y-auto flex-1">
                     <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
                       Reason (optional)
                     </label>
@@ -1121,7 +1126,7 @@ function BookingWizard() {
                     />
                   </div>
 
-                  <div className="pt-3 border-t border-[#E5DECF] flex items-center justify-end gap-3">
+                  <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
                     <button
                       type="button"
                       onClick={() => setIsCancelModalOpen(false)}
