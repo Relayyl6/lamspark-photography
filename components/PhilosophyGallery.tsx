@@ -372,18 +372,18 @@ export function PhilosophyGallery() {
           style={{ marginTop: 22 * u, fontSize: Math.max(11, 11 * u) }}
         >
           <Link
-            href="/about"
+            href="/portfolio"
             className="font-sans uppercase font-semibold tracking-[0.18em] pb-1 border-b transition-colors hover:text-[#B8893A] hover:border-[#B8893A]"
             style={{ color: INK, borderColor: "rgba(43,41,39,.4)" }}
           >
-            Read Osemene’s Story →
+            View The Curated Archive →
           </Link>
           <Link
-            href="/portfolio"
+            href="/book"
             className="font-sans uppercase font-semibold tracking-[0.18em] pb-1 border-b transition-colors hover:opacity-80"
             style={{ color: GOLD, borderColor: "rgba(184,137,58,.5)" }}
           >
-            View The Archive →
+            Reserve Your Session →
           </Link>
         </div>
       )}

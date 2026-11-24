@@ -48,10 +48,8 @@ export function Nav() {
 
   const galleryLinks = [
     { href: "/portfolio", label: "Curated Portfolio", desc: "Archival Series 02 · Vintage camera matte board & fine art works" },
-    { href: "/stories", label: "Session Stories", desc: "3D Flippable chronicles & behind-the-scenes craft alchemy" },
     { href: "/love-notes", label: "Client Love Notes", desc: "Real memories & words from families across Nigeria" },
     { href: "/faq", label: "Session FAQ & Prep", desc: "Timing, booking steps, and studio suite details" },
-    { href: "/about", label: "The Atelier Story", desc: "Honouring Lametu · Meet Osemene & the Abuja Atelier" },
   ];
 
   return (

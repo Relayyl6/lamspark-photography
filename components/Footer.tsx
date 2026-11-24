@@ -193,13 +193,13 @@ export function Footer() {
             </h4>
             <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
               <li>
-                <Link href="/about" className="hover:text-gold transition-colors">
-                  About Osemene
+                <Link href="/find-booking" className="hover:text-gold transition-colors">
+                  Find My Booking
                 </Link>
               </li>
               <li>
-                <Link href="/stories" className="hover:text-gold transition-colors">
-                  Session Stories
+                <Link href="/love-notes" className="hover:text-gold transition-colors">
+                  Client Love Notes
                 </Link>
               </li>
               <li>

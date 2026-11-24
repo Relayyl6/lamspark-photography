@@ -380,10 +380,10 @@ export function ScrollWorld() {
 
             <div className="pt-2">
               <Link
-                href="/stories"
+                href="/portfolio"
                 className="w-full inline-flex items-center justify-center gap-2 bg-deep hover:bg-brown text-warm-white font-body text-xs uppercase tracking-wider font-semibold py-3 rounded-full transition-all shadow-editorial"
               >
-                <span>Read Full Family Stories</span>
+                <span>Explore Curated Portfolio</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
