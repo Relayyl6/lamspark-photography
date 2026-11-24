@@ -26,6 +26,12 @@ import {
   UploadCloud,
   X,
   AlertCircle,
+  Heart,
+  User,
+  Film,
+  Zap,
+  MapPin,
+  FileCheck2,
 } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -111,7 +117,7 @@ function BookingWizard() {
   const initialSession = (searchParams.get("session") as SessionTypeSlug) || "toddler";
   const initialPkg = searchParams.get("pkg") || undefined;
 
-  // Step state: 1: Package, 2: Date & Time, 3: Your Details, 4: Deposit & Time Held
+  // Step state: 1: Package, 2: Date & Time, 3: Your Details & Shoot Operability, 4: Deposit & Time Held
   const [step, setStep] = useState(1);
 
   // Core selections
@@ -120,10 +126,24 @@ function BookingWizard() {
   const [selectedDate, setSelectedDate] = useState<string>(""); // YYYY-MM-DD
   const [timeSlot, setTimeSlot] = useState<string>("");
 
-  // Details
+  // Client contact
   const [clientName, setClientName] = useState("");
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [clientEmail, setClientEmail] = useState("");
+
+  // Prior flow specifics for photographer operability
+  const [purpose, setPurpose] = useState("");
+  const [feeling, setFeeling] = useState("");
+  const [childName, setChildName] = useState("");
+  const [childAge, setChildAge] = useState("");
+  const [additionalFamilyCount, setAdditionalFamilyCount] = useState(0);
+  const [additionalChildCount, setAdditionalChildCount] = useState(0);
+  const [weeksPregnant, setWeeksPregnant] = useState("");
+  const [partnerName, setPartnerName] = useState("");
+  const [locationType, setLocationType] = useState<"studio" | "outside" | "both">("studio");
+  const [priorityEditing, setPriorityEditing] = useState(false);
+  const [reelsAddon, setReelsAddon] = useState(false);
+  const [extraHours, setExtraHours] = useState(0);
   const [notes, setNotes] = useState("");
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [portfolioConsent, setPortfolioConsent] = useState(false);
@@ -144,10 +164,11 @@ function BookingWizard() {
   const [cancelReason, setCancelReason] = useState("");
   const [isUpdatingBooking, setIsUpdatingBooking] = useState(false);
 
-  // Receipt upload state
+  // Receipt upload & AI check state
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [receiptReported, setReceiptReported] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
 
   // Calendar month state
   const [currentCalendarDate, setCurrentCalendarDate] = useState(() => new Date());
@@ -196,6 +217,9 @@ function BookingWizard() {
             setReceiptUrl(data.booking.payment.receiptUrl);
             setReceiptReported(true);
           }
+          if (data.booking.payment?.aiCheck) {
+            setAiAnalysisResult(data.booking.payment.aiCheck);
+          }
         }
       })
       .catch((err) => console.error("Failed to load booking:", err))
@@ -224,16 +248,46 @@ function BookingWizard() {
     return currentPackages.find((p) => p.id === packageId) || currentPackages[0] || null;
   }, [currentPackages, packageId]);
 
-  // Estimate calculation
+  // Comprehensive answers object feeding both estimate engine & photographer shoot sheet
   const bookingAnswers: BookingAnswers = useMemo(
     () => ({
-      purpose: notes || `${liveSessions[sessionType]?.title || sessionType} Session`,
+      purpose: purpose || notes || `${liveSessions[sessionType]?.title || sessionType} Session`,
+      feeling: feeling || undefined,
       packageId: selectedPackage?.id,
-      locationType: "studio",
+      childName: childName || undefined,
+      childAge: childAge || undefined,
+      additionalFamilyCount,
+      additionalChildCount,
+      weeksPregnant: weeksPregnant || undefined,
+      partnerName: partnerName || undefined,
+      locationType,
+      priorityEditing,
+      reelsAddon,
+      extraHours,
       selectedDate,
       timeSlot,
+      notes,
     }),
-    [notes, liveSessions, sessionType, selectedPackage, selectedDate, timeSlot]
+    [
+      purpose,
+      feeling,
+      notes,
+      liveSessions,
+      sessionType,
+      selectedPackage,
+      childName,
+      childAge,
+      additionalFamilyCount,
+      additionalChildCount,
+      weeksPregnant,
+      partnerName,
+      locationType,
+      priorityEditing,
+      reelsAddon,
+      extraHours,
+      selectedDate,
+      timeSlot,
+    ]
   );
 
   const estimate: EstimateResult = useMemo(() => {
@@ -289,8 +343,7 @@ function BookingWizard() {
           timeSlot,
           answers: {
             ...bookingAnswers,
-            notes: notes.trim(),
-            packageId: selectedPackage?.id,
+            packageName: selectedPackage?.name,
           },
           priceAgreed: true,
           messagingConsent: true,
@@ -313,6 +366,7 @@ function BookingWizard() {
             shootStart: `${selectedDate} ${timeSlot}`,
             client: { name: clientName, whatsapp: whatsappPhone, email: clientEmail },
             estimate,
+            answers: bookingAnswers,
             holdExpiresAt: data.holdExpiresAt,
           });
         }
@@ -402,17 +456,23 @@ function BookingWizard() {
     }
   }
 
-  // Handle Direct Receipt Upload
+  // Direct Receipt Upload with AI Parsing & Accounting Check
   async function handleUploadReceipt(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !activeBooking?.referenceCode) return;
 
     setIsUploadingReceipt(true);
     try {
+      const targetDeposit = activeBooking.estimate?.depositAmount || estimate.depositAmount;
+      const targetTotal = activeBooking.estimate?.total || estimate.total;
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("partition", "private");
       formData.append("sessionType", activeBooking.sessionType || sessionType);
+      formData.append("referenceCode", activeBooking.referenceCode);
+      formData.append("expectedDeposit", String(targetDeposit));
+      formData.append("totalAmount", String(targetTotal));
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -425,7 +485,12 @@ function BookingWizard() {
         setReceiptUrl(uploadedUrl);
         setReceiptReported(true);
 
-        // Report deposit to DB
+        const aiCheckData = data.aiCheck || null;
+        if (aiCheckData) {
+          setAiAnalysisResult(aiCheckData);
+        }
+
+        // Report deposit to DB with AI verification metadata
         await fetch("/api/booking", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -433,14 +498,21 @@ function BookingWizard() {
             referenceCode: activeBooking.referenceCode,
             action: "report_deposit",
             receiptUrl: uploadedUrl,
+            aiCheck: aiCheckData,
+            amountExpected: targetDeposit,
+            amountRecorded: aiCheckData?.extractedAmount || null,
+            bankReference: aiCheckData?.reference || activeBooking.referenceCode,
           }),
         });
 
         // Refresh booking
         const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}`);
         const refData = await refresh.json();
-        if (refData.success) {
+        if (refData.success && refData.booking) {
           setActiveBooking(refData.booking);
+          if (refData.booking.payment?.aiCheck) {
+            setAiAnalysisResult(refData.booking.payment.aiCheck);
+          }
         }
       } else {
         alert(data.error || "Receipt upload failed.");
@@ -452,7 +524,7 @@ function BookingWizard() {
     }
   }
 
-  // WhatsApp Pre-filled Handoff
+  // WhatsApp Pre-filled Fallback Handoff
   const whatsappUrl = useMemo(() => {
     const businessNumber = "2348130847299"; // LamSparks Studio Line (Osemene)
     const ref = activeBooking?.referenceCode || "LS-REF";
@@ -482,7 +554,7 @@ function BookingWizard() {
       (receiptReported || receiptUrl
         ? `I have uploaded my bank transfer receipt for verification.\n`
         : `I am transferring the deposit now and sharing my receipt screenshot here.\n`) +
-      `Looking forward to confirming our date!`;
+      `Looking forward to confirming our date with Osemene!`;
 
     return `https://wa.me/${businessNumber}?text=${encodeURIComponent(text)}`;
   }, [activeBooking, clientName, liveSessions, sessionType, selectedPackage, estimate, selectedDate, timeSlot, receiptReported, receiptUrl]);
@@ -497,8 +569,8 @@ function BookingWizard() {
       startDate = new Date(shootStart);
       endDate = new Date(startDate.getTime() + 7200000);
     } else if (selectedDate && timeSlot) {
-      const [year, month, day] = selectedDate.split("-").map((n) => parseInt(n, 10));
-      startDate = new Date(year, month - 1, day, 11, 0, 0);
+      const [y, m, d] = selectedDate.split("-").map((n) => parseInt(n, 10));
+      startDate = new Date(y, m - 1, d, 11, 0, 0);
       endDate = new Date(startDate.getTime() + 7200000);
     }
 
@@ -521,7 +593,6 @@ function BookingWizard() {
     return `${window.location.origin}/book?ref=${encodeURIComponent(ref)}`;
   }, [activeBooking, refParam]);
 
-  // Determine if viewing existing/confirmed booking
   const isExistingBookingView = Boolean(activeBooking && activeBooking.referenceCode);
 
   return (
@@ -648,7 +719,7 @@ function BookingWizard() {
 
                 {/* 2-Column Details & Payment Card */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
-                  {/* Left Column: Payment & Deposit Steps */}
+                  {/* Left Column: Payment & Deposit Steps with AI Verification */}
                   <div className="lg:col-span-7 space-y-6">
                     {/* Step 1: Studio Bank Account Details */}
                     <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
@@ -733,59 +804,106 @@ function BookingWizard() {
                       </p>
                     </div>
 
-                    {/* Step 2: Send Receipt on WhatsApp / Upload */}
+                    {/* Step 2: Send Receipt with WhatsApp Fallback & Direct AI Upload */}
                     <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-4">
-                      <div className="flex items-center gap-2 pb-3 border-b border-[#E5DECF]">
-                        <span className="w-6 h-6 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-mono font-bold flex items-center justify-center">
-                          2
+                      <div className="flex items-center justify-between pb-3 border-b border-[#E5DECF]">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-mono font-bold flex items-center justify-center">
+                            2
+                          </span>
+                          <h3 className="font-serif text-lg text-[#1A1410] font-semibold">
+                            Send Receipt Screenshot
+                          </h3>
+                        </div>
+                        <span className="text-[10px] font-mono text-[#6E6359] uppercase tracking-wider">
+                          Instant Verification
                         </span>
-                        <h3 className="font-serif text-lg text-[#1A1410] font-semibold">
-                          Send Receipt Screenshot
-                        </h3>
                       </div>
 
-                      {receiptReported || activeBooking.payment?.status === "reported" ? (
-                        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-2">
-                          <div className="flex items-center gap-2 font-bold text-emerald-900">
-                            <CheckCircle className="w-4 h-4 text-emerald-600" />
-                            <span>Proof of transfer received!</span>
-                          </div>
-                          <p className="text-[11px] text-emerald-800 leading-relaxed">
-                            Our studio team has your transfer receipt on file and will confirm against our bank statement shortly. You may also notify Osemene directly on WhatsApp.
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-[#6E6359] leading-relaxed">
-                          Screenshot your bank transfer receipt and share it with Osemene on WhatsApp or upload it directly below:
-                        </p>
-                      )}
-
-                      <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                      {/* Primary Gold Fallback Button */}
+                      <div className="space-y-3">
                         <a
                           href={whatsappUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#1A1410] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-sm group"
+                          className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#1A1410] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-md group text-center"
                         >
                           <MessageCircle className="w-4 h-4 text-[#1A1410] group-hover:scale-110 transition-transform" />
-                          <span>I&apos;ve Made My Deposit: Send on WhatsApp</span>
+                          <span>I&apos;ve Made My Deposit: Send Receipt on WhatsApp</span>
                         </a>
 
-                        <label className="cursor-pointer inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full border border-[#E5DECF] hover:border-[#1A1410] bg-[#FDFBF8] text-xs font-semibold text-[#1A1410] transition-colors">
-                          {isUploadingReceipt ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-[#C9A96E]" />
-                          ) : (
-                            <UploadCloud className="w-4 h-4 text-[#6E6359]" />
+                        <div className="relative flex items-center justify-center">
+                          <div className="border-t border-[#E5DECF] w-full" />
+                          <span className="bg-[#FDFBF8] px-3 text-[10px] font-mono uppercase text-[#6E6359] tracking-wider absolute">
+                            Or Upload Directly For AI Parsing
+                          </span>
+                        </div>
+
+                        {/* Direct Screenshot Upload Zone */}
+                        <div className="p-4 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block">
+                                Direct Upload &amp; AI Extraction
+                              </span>
+                              <p className="text-xs text-[#6E6359] mt-0.5">
+                                Upload your transfer screenshot to auto-extract transaction reference &amp; speed up confirmation.
+                              </p>
+                            </div>
+
+                            <label className="cursor-pointer shrink-0 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1A1410] hover:bg-[#C9A96E] hover:text-[#1A1410] text-[#FDFBF8] text-xs font-semibold transition-all shadow-sm">
+                              {isUploadingReceipt ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-[#C9A96E]" />
+                              ) : (
+                                <UploadCloud className="w-4 h-4 text-[#C9A96E]" />
+                              )}
+                              <span>{isUploadingReceipt ? "Analyzing Receipt..." : "Upload Screenshot"}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={isUploadingReceipt}
+                                className="hidden"
+                                onChange={handleUploadReceipt}
+                              />
+                            </label>
+                          </div>
+
+                          {/* AI Receipt Verification Display */}
+                          {(aiAnalysisResult || receiptReported) && (
+                            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-2 mt-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                                  <FileCheck2 className="w-4 h-4 text-emerald-600" />
+                                  <span>Transfer Proof Recorded</span>
+                                </div>
+                                {aiAnalysisResult?.accountingCheck?.badge && (
+                                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-200/80 text-emerald-900">
+                                    {aiAnalysisResult.accountingCheck.badge.label}
+                                  </span>
+                                )}
+                              </div>
+
+                              {aiAnalysisResult?.extractedAmount ? (
+                                <div className="space-y-1 text-[11px] text-emerald-800">
+                                  <p>
+                                    <strong>AI Extracted:</strong> ₦{aiAnalysisResult.extractedAmount.toLocaleString()}{" "}
+                                    {aiAnalysisResult.recipientBank ? `to ${aiAnalysisResult.recipientBank}` : "to Fidelity Bank"}
+                                  </p>
+                                  {aiAnalysisResult.senderName && (
+                                    <p><strong>Sender:</strong> {aiAnalysisResult.senderName}</p>
+                                  )}
+                                  {aiAnalysisResult.reference && (
+                                    <p className="font-mono"><strong>Ref / Session ID:</strong> {aiAnalysisResult.reference}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-[11px] text-emerald-800">
+                                  Screenshot uploaded. Studio staff will verify your payment against our bank ledger.
+                                </p>
+                              )}
+                            </div>
                           )}
-                          <span>{isUploadingReceipt ? "Uploading..." : "Upload Receipt"}</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            disabled={isUploadingReceipt}
-                            className="hidden"
-                            onChange={handleUploadReceipt}
-                          />
-                        </label>
+                        </div>
                       </div>
                     </div>
 
@@ -819,7 +937,7 @@ function BookingWizard() {
                     </div>
                   </div>
 
-                  {/* Right Column: Order Summary, Calendar & Self-Serve Controls */}
+                  {/* Right Column: Order Summary, Shoot Operability Details & Calendar */}
                   <div className="lg:col-span-5 space-y-6">
                     {/* Session Summary Card */}
                     <div className="p-6 rounded-2xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
@@ -867,6 +985,27 @@ function BookingWizard() {
                             </span>
                           </div>
                         </div>
+
+                        {/* Prior Flow Shoot Operability Details */}
+                        {activeBooking.answers && (
+                          <div className="pt-3 border-t border-[#E5DECF] space-y-1.5 text-[11px] text-[#6E6359]">
+                            {activeBooking.answers.childName && (
+                              <p><strong>Child:</strong> {activeBooking.answers.childName} ({activeBooking.answers.childAge || "Milestone"})</p>
+                            )}
+                            {activeBooking.answers.partnerName && (
+                              <p><strong>Partner:</strong> {activeBooking.answers.partnerName}</p>
+                            )}
+                            {activeBooking.answers.feeling && (
+                              <p><strong>Desired Mood:</strong> &ldquo;{activeBooking.answers.feeling}&rdquo;</p>
+                            )}
+                            {activeBooking.answers.reelsAddon && (
+                              <p className="text-[#C9A96E] font-semibold">✓ Cinematic Content Reels Included</p>
+                            )}
+                            {activeBooking.answers.priorityEditing && (
+                              <p className="text-[#C9A96E] font-semibold">✓ Express Priority Delivery Included</p>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Financial Breakdown */}
@@ -1084,7 +1223,7 @@ function BookingWizard() {
                 {[
                   { num: 1, label: "Package" },
                   { num: 2, label: "Date & Time" },
-                  { num: 3, label: "Your Details" },
+                  { num: 3, label: "Details & Vision" },
                   { num: 4, label: "Deposit" },
                 ].map((s) => (
                   <div key={s.num} className="space-y-1.5">
@@ -1437,7 +1576,7 @@ function BookingWizard() {
               </div>
             )}
 
-            {/* STEP 3: YOUR DETAILS & LIVE SUMMARY (Inspired by Reference Video 00:33 - 00:42) */}
+            {/* STEP 3: YOUR DETAILS & SHOOT OPERABILITY (Prior Flow Specifics Re-integrated) */}
             {step === 3 && (
               <div className="space-y-8">
                 {/* Breadcrumb & Header */}
@@ -1449,15 +1588,20 @@ function BookingWizard() {
                     Almost <span className="text-[#C9A96E] italic font-serif">done</span>
                   </h1>
                   <p className="text-xs sm:text-sm text-[#6E6359] mt-1.5">
-                    Enter your contact details. Your time slot is locked on Osemene&apos;s calendar immediately upon booking.
+                    Provide your contact details and session specifics so Osemene can tailor your shoot to perfection.
                   </p>
                 </div>
 
                 {/* 2-Column Layout: Form on Left, Sticky Summary on Right */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Left Column: Form */}
+                  {/* Left Column: Form with Prior Flow Details */}
                   <div className="lg:col-span-7 p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6">
+                    {/* Section 1: Contact Information */}
                     <div className="space-y-4">
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block pb-1 border-b border-[#E5DECF]">
+                        1. Contact Information
+                      </span>
+
                       {/* Name */}
                       <div>
                         <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
@@ -1487,7 +1631,7 @@ function BookingWizard() {
                           className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E]"
                         />
                         <span className="text-[11px] text-[#6E6359] mt-1 block">
-                          Used for your booking confirmation, prep guide, and private gallery.
+                          Nigerian numbers normalized automatically. Used for WhatsApp confirmation &amp; gallery delivery.
                         </span>
                       </div>
 
@@ -1504,18 +1648,221 @@ function BookingWizard() {
                           className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E]"
                         />
                       </div>
+                    </div>
+
+                    {/* Section 2: Session Heart & Vision (From Prior Flow) */}
+                    <div className="space-y-4 pt-2">
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block pb-1 border-b border-[#E5DECF]">
+                        2. Session Heart &amp; Vision
+                      </span>
+
+                      <div>
+                        <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                          What is this session celebrating or for?
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 1st Birthday, Maternity milestone, New executive headshots..."
+                          value={purpose}
+                          onChange={(e) => setPurpose(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                          What feeling do you want from the photographs?
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Peaceful and regal, full of giggles and warmth, commanding and editorial..."
+                          value={feeling}
+                          onChange={(e) => setFeeling(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Section 3: Session Specifics for Photographer Operability */}
+                    <div className="space-y-4 pt-2">
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-[#C9A96E] block pb-1 border-b border-[#E5DECF]">
+                        3. Specifics &amp; Shoot Logistics
+                      </span>
+
+                      {/* Toddler Specifics */}
+                      {sessionType === "toddler" && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                              Child&apos;s Name
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Zara"
+                              value={childName}
+                              onChange={(e) => setChildName(e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                              Child&apos;s Age / Turning Age
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 1 year old"
+                              value={childAge}
+                              onChange={(e) => setChildAge(e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                              Additional Siblings / Family (+₦30k each)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={6}
+                              value={additionalFamilyCount}
+                              onChange={(e) => setAdditionalFamilyCount(parseInt(e.target.value) || 0)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                              Twins or Multiples (+50% per child)
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={3}
+                              value={additionalChildCount}
+                              onChange={(e) => setAdditionalChildCount(parseInt(e.target.value) || 0)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Maternity Specifics */}
+                      {sessionType === "maternity" && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                              Weeks Pregnant (at preferred date)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 30–34 weeks"
+                              value={weeksPregnant}
+                              onChange={(e) => setWeeksPregnant(e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                              Partner Joining Session? (Partner&apos;s Name)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Emeka"
+                              value={partnerName}
+                              onChange={(e) => setPartnerName(e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Couples / Weddings Partner */}
+                      {(sessionType === "couple" || sessionType === "wedding") && (
+                        <div>
+                          <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                            Partner / Spouse Name
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Ose"
+                            value={partnerName}
+                            onChange={(e) => setPartnerName(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                          />
+                        </div>
+                      )}
+
+                      {/* Location Preference */}
+                      <div>
+                        <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
+                          Studio vs Location Preference
+                        </label>
+                        <select
+                          value={locationType}
+                          onChange={(e) => setLocationType(e.target.value as any)}
+                          className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                        >
+                          <option value="studio">Private Abuja Studio (Default)</option>
+                          <option value="outside">Outdoor / On Location in Abuja</option>
+                          <option value="both">Both Studio &amp; Outdoor Session</option>
+                        </select>
+                      </div>
+
+                      {/* Add-on Toggles */}
+                      <div className="pt-2 space-y-3">
+                        <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] cursor-pointer hover:border-[#C9A96E] transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={priorityEditing}
+                            onChange={(e) => setPriorityEditing(e.target.checked)}
+                            className="mt-1 w-4 h-4 rounded border-[#E5DECF] text-[#C9A96E] focus:ring-[#C9A96E]"
+                          />
+                          <div>
+                            <span className="text-xs font-bold text-[#1A1410] flex items-center gap-1.5">
+                              <Zap className="w-3.5 h-3.5 text-[#C9A96E]" />
+                              <span>Express Priority Delivery (+₦30,000)</span>
+                            </span>
+                            <span className="text-[11px] text-[#6E6359] block mt-0.5">
+                              Expedites fine-art editing turnaround to 3–5 business days (or 24–48 hours for events).
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className="flex items-start gap-3 p-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] cursor-pointer hover:border-[#C9A96E] transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={reelsAddon}
+                            onChange={(e) => setReelsAddon(e.target.checked)}
+                            className="mt-1 w-4 h-4 rounded border-[#E5DECF] text-[#C9A96E] focus:ring-[#C9A96E]"
+                          />
+                          <div>
+                            <span className="text-xs font-bold text-[#1A1410] flex items-center gap-1.5">
+                              <Film className="w-3.5 h-3.5 text-[#C9A96E]" />
+                              <span>
+                                Short Cinematic Content Reels (+₦{sessionType === "event" ? "200,000" : "150,000"})
+                              </span>
+                            </span>
+                            <span className="text-[11px] text-[#6E6359] block mt-0.5">
+                              2 professionally edited vertical video reels delivered digitally for Instagram/TikTok.
+                            </span>
+                          </div>
+                        </label>
+                      </div>
 
                       {/* Notes Box */}
                       <div>
                         <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410] mb-1.5">
-                          Session Notes &amp; Vision
+                          Additional Requests or Wardrobe Notes
                         </label>
                         <textarea
-                          rows={3}
-                          placeholder="Location ideas, outfits, number of people, makeup artist, special requests..."
+                          rows={2}
+                          placeholder="Outfits, number of people, makeup artist, special props..."
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:bg-[#FDFBF8] focus:outline-none focus:border-[#C9A96E]"
+                          className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
                         />
                       </div>
 
@@ -1608,29 +1955,44 @@ function BookingWizard() {
 
                       <div className="flex items-center justify-between">
                         <span className="text-[#6E6359]">Location:</span>
-                        <span className="font-semibold text-[#1A1410]">
-                          LamSparks Private Abuja Studio
+                        <span className="font-semibold text-[#1A1410] capitalize">
+                          {locationType === "studio" ? "Private Abuja Studio" : locationType === "outside" ? "Outdoor / Location" : "Studio & Outdoor"}
                         </span>
                       </div>
+
+                      {/* Itemised Add-ons in Summary */}
+                      {estimate.lineItems.length > 1 && (
+                        <div className="pt-3 border-t border-[#E5DECF] space-y-1.5">
+                          <span className="text-[10px] uppercase font-bold text-[#C9A96E] tracking-wider block">
+                            Included Inclusions &amp; Add-ons
+                          </span>
+                          {estimate.lineItems.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between text-[11px] text-[#6E6359]">
+                              <span className="truncate max-w-[200px]">{item.label}</span>
+                              <span className="font-semibold text-[#1A1410]">₦{item.amount.toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-4 border-t border-[#E5DECF] space-y-2.5 text-xs">
                       <div className="flex items-center justify-between text-[#6E6359]">
                         <span>Total Investment:</span>
                         <span className="font-semibold text-[#1A1410] text-sm">
-                          ₦{(selectedPackage?.price || 0).toLocaleString()}
+                          ₦{estimate.total.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-amber-900 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/60 font-semibold">
                         <span>Deposit to Book (70%):</span>
                         <span>
-                          ₦{Math.round((selectedPackage?.price || 0) * 0.7).toLocaleString()}
+                          ₦{estimate.depositAmount.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[#6E6359]">
                         <span>Balance on Shoot Day (30%):</span>
                         <span className="font-semibold text-[#1A1410]">
-                          ₦{Math.round((selectedPackage?.price || 0) * 0.3).toLocaleString()}
+                          ₦{estimate.balanceAmount.toLocaleString()}
                         </span>
                       </div>
                     </div>

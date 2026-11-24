@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { uploadObject, PUBLIC_BUCKET, PRIVATE_BUCKET, getPrivateObjectUrl } from "@/lib/storage";
 import { db } from "@/db";
 import { assets, payments } from "@/db/schema";
-import { analyzeReceiptWithGemini } from "@/lib/ai/service";
+import { analyzeReceiptWithGemini, verifyDepositAccounting } from "@/lib/ai/service";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -68,15 +68,28 @@ export async function POST(req: NextRequest) {
         console.warn("AI receipt analysis skipped:", aiErr);
       }
 
+      const expectedDeposit = Number(formData.get("expectedDeposit")) || 0;
+      const totalAmount = Number(formData.get("totalAmount")) || 0;
+      let accountingCheck = null;
+      if (expectedDeposit > 0) {
+        accountingCheck = verifyDepositAccounting(aiResult, expectedDeposit, totalAmount || undefined);
+      }
+
+      const combinedAiCheck = {
+        ...aiResult,
+        accountingCheck,
+      };
+
       // If enquiryId is provided, record reported payment
       if (enquiryId) {
         await db.insert(payments).values({
           enquiryId,
           kind: "deposit",
-          amountExpected: aiResult.extractedAmount || 0,
+          amountExpected: expectedDeposit || aiResult.extractedAmount || 0,
+          amountRecorded: aiResult.extractedAmount || null,
           status: "reported",
           screenshotAssetId: newAsset.id,
-          aiCheck: aiResult,
+          aiCheck: combinedAiCheck,
           bankReference: aiResult.reference || null,
         });
       }
@@ -87,8 +100,8 @@ export async function POST(req: NextRequest) {
         storageKey,
         privateUrl: signedUrl,
         url: signedUrl,
-        aiCheck: aiResult,
-        message: "Receipt uploaded successfully.",
+        aiCheck: combinedAiCheck,
+        message: "Receipt uploaded and analyzed by AI successfully.",
       });
     }
 

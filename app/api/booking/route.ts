@@ -101,6 +101,8 @@ export async function GET(req: NextRequest) {
         p.amount_recorded,
         p.status as payment_status,
         p.screenshot_asset_id,
+        p.bank_reference,
+        p.ai_check,
         es.total,
         es.deposit_percent,
         es.deposit_amount,
@@ -177,6 +179,10 @@ export async function GET(req: NextRequest) {
           id: b.payment_id,
           status: b.payment_status,
           receiptUrl: b.screenshot_asset_id,
+          amountExpected: b.amount_expected,
+          amountRecorded: b.amount_recorded,
+          bankReference: b.bank_reference,
+          aiCheck: typeof b.ai_check === "string" ? JSON.parse(b.ai_check) : b.ai_check || null,
         },
       },
     });
@@ -531,22 +537,28 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Receipt URL is required." }, { status: 400 });
       }
 
+      const aiCheckData = body.aiCheck || {
+        summary: "Receipt uploaded via Client Booking Self-Service. Pending staff bank verification.",
+        reference: cleanRef,
+        status: "pending_verification",
+      };
+      const amountExpected = body.amountExpected || 0;
+      const amountRecorded = aiCheckData.extractedAmount || body.amountRecorded || null;
+      const bankRef = aiCheckData.reference || body.bankReference || cleanRef;
+
       await sql.query(
         `INSERT INTO payment (
-          id, enquiry_id, kind, status, screenshot_asset_id, ai_check, created_at, updated_at
+          id, enquiry_id, kind, status, screenshot_asset_id, amount_expected, amount_recorded, bank_reference, ai_check, created_at, updated_at
         ) VALUES (
-          gen_random_uuid(), $1, 'deposit', 'reported', $2,
-          $3, NOW(), NOW()
-        )
-        ON CONFLICT DO NOTHING`,
+          gen_random_uuid(), $1, 'deposit', 'reported', $2, $3, $4, $5, $6, NOW(), NOW()
+        )`,
         [
           enquiry_id,
           receiptUrl,
-          JSON.stringify({
-            summary: "Receipt uploaded via Client Booking Self-Service. Pending staff bank verification.",
-            reference: cleanRef,
-            status: "pending_verification",
-          }),
+          amountExpected,
+          amountRecorded,
+          bankRef,
+          JSON.stringify(aiCheckData),
         ]
       );
 
@@ -562,6 +574,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({
         success: true,
         message: "Receipt reported successfully. Verification in progress.",
+        aiCheck: aiCheckData,
       });
     }
 
