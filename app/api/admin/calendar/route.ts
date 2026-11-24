@@ -61,3 +61,44 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+// DELETE: remove a scheduled content item from the editorial calendar
+export async function DELETE(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get("id");
+
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = body.id;
+      } catch (_) {}
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "Content item id is required" }, { status: 400 });
+    }
+
+    const deleted = await sql.query(
+      `DELETE FROM content_item WHERE id = $1 RETURNING id`,
+      [id]
+    );
+
+    if (deleted.length === 0) {
+      return NextResponse.json({ error: "Content item not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      deletedId: deleted[0].id,
+      message: "Content item deleted successfully",
+    });
+  } catch (err: any) {
+    console.error("[calendar DELETE error]", err);
+    return NextResponse.json({ error: err.message || "Failed to delete content item" }, { status: 500 });
+  }
+}
+

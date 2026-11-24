@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
+import { expireStaleHeldBookings, HOLD_DURATION_MS } from "@/lib/booking-hold";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -10,6 +11,8 @@ export async function GET() {
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    await expireStaleHeldBookings(sql);
+
     const rawBookings = await sql.query(`
       SELECT 
         b.id,
@@ -21,6 +24,7 @@ export async function GET() {
         b.status as booking_status,
         b.reschedule_count,
         b.created_at,
+        b.updated_at,
         e.reference_code,
         e.session_type,
         e.purpose_text,
@@ -51,6 +55,7 @@ export async function GET() {
       const answers = typeof b.answers === "string" ? JSON.parse(b.answers) : (b.answers || {});
       const agreedPrice = answers.agreedPrice || (b.amount_expected ? Math.round(b.amount_expected / 0.7) : 0);
       const balanceDue = Math.max(0, agreedPrice - (b.amount_recorded || b.amount_expected || 0));
+      const holdAnchor = new Date(b.updated_at || b.created_at).getTime();
 
       return {
         id: b.id,
@@ -60,6 +65,10 @@ export async function GET() {
         location_type: b.location_type,
         location_detail: b.location_detail,
         status: b.booking_status,
+        hold_expires_at:
+          b.booking_status === "held"
+            ? new Date(holdAnchor + HOLD_DURATION_MS).toISOString()
+            : null,
         reschedule_count: b.reschedule_count,
         reference_code: b.reference_code,
         session_type: b.session_type,

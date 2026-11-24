@@ -166,6 +166,8 @@ export function StudioCalendarManager() {
           sessionType: quickSessionType,
           clientName: quickClientName.trim(),
           whatsappPhone: quickClientPhone.trim(),
+          selectedDate: selectedDateStr,
+          timeSlot: quickTimeSlot,
           shootStart: shootStartIso,
           answers: {
             purpose: `Direct Studio Phone/Walk-in Reservation (${quickSessionType})`,

@@ -189,14 +189,16 @@ export default function FindBookingPage() {
                         {b.status && (
                           <span
                             className={`text-[9.5px] font-mono uppercase font-bold px-2 py-0.5 rounded-full ${
-                              b.status === "confirmed"
+                              b.status === "confirmed" || b.status === "completed"
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                                 : b.status === "cancelled"
                                 ? "bg-neutral-200 text-neutral-700 border border-neutral-300"
+                                : b.status === "expired"
+                                ? "bg-rose-100 text-rose-800 border border-rose-200"
                                 : "bg-amber-100 text-amber-900 border border-amber-300/60"
                             }`}
                           >
-                            {b.status.replace("_", " ")}
+                            {b.status === "expired" ? "hold expired" : b.status.replace("_", " ")}
                           </span>
                         )}
                       </div>

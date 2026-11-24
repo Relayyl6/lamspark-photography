@@ -35,7 +35,8 @@ interface BookingItem {
   shoot_end: string;
   location_type: string;
   location_detail: string | null;
-  status: "confirmed" | "rescheduled" | "completed" | "cancelled" | "shooting" | "held";
+  status: "confirmed" | "rescheduled" | "completed" | "cancelled" | "shooting" | "held" | "expired";
+  hold_expires_at?: string | null;
   reschedule_count: number;
   reference_code: string;
   session_type: string;
@@ -295,7 +296,7 @@ export function BookingsTracker() {
 
           {/* Status Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-            {["All", "Held", "Confirmed", "Shooting", "Rescheduled", "Completed"].map((st) => (
+            {["All", "Held", "Confirmed", "Expired", "Shooting", "Rescheduled", "Completed"].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
@@ -360,10 +361,16 @@ export function BookingsTracker() {
                           ? "bg-blue-100 text-blue-800 border border-blue-200"
                           : b.status === "held"
                           ? "bg-amber-100 text-amber-900 border border-amber-300 animate-pulse"
+                          : b.status === "expired"
+                          ? "bg-rose-50 text-rose-800 border border-rose-200"
                           : "bg-cream text-muted"
                       }`}
                     >
-                      {b.status === "held" ? "Held · Pending Deposit" : b.status}
+                      {b.status === "held"
+                        ? "Held · 2h Hold"
+                        : b.status === "expired"
+                        ? "Hold Expired"
+                        : b.status}
                     </span>
                   </div>
 
@@ -386,6 +393,7 @@ export function BookingsTracker() {
                     <Calendar className="w-3.5 h-3.5 text-gold" />
                     <span>
                       {startDate.toLocaleDateString("en-NG", {
+                        timeZone: "Africa/Lagos",
                         weekday: "short",
                         month: "short",
                         day: "numeric",
@@ -393,7 +401,7 @@ export function BookingsTracker() {
                       })}
                     </span>
                     <span className="text-muted font-mono font-normal">
-                      · {startDate.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}
+                      · {startDate.toLocaleTimeString("en-NG", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
 

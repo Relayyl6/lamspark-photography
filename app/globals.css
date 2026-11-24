@@ -28,7 +28,7 @@
   body {
     background-color: var(--cream);
     color: var(--deep);
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -308,9 +308,32 @@ html.js-ready .duration-slow {
   .animate-fade-up,
   .animate-fade-down,
   .animate-fade-in,
-  .animate-blur-in {
+  .animate-blur-in,
+  .animate-collections-marquee {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
   }
 }
+
+@keyframes collectionsMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-collections-marquee {
+  display: flex;
+  width: max-content;
+  animation: collectionsMarquee 48s linear infinite;
+  will-change: transform;
+}
+
+.collections-marquee-wrap:hover .animate-collections-marquee,
+.collections-marquee-wrap:active .animate-collections-marquee {
+  animation-play-state: paused;
+}
+

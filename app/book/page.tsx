@@ -112,6 +112,8 @@ function BookingWizard() {
 
   const refParam = searchParams.get("ref");
   const rawSession = searchParams.get("session") as SessionTypeSlug | null;
+  const initialDate = searchParams.get("date") || "";
+  const initialTime = searchParams.get("time") || "";
   const initialSession = rawSession || "toddler";
   const initialPkg = searchParams.get("pkg") || undefined;
 
@@ -121,8 +123,8 @@ function BookingWizard() {
   // Core selections
   const [sessionType, setSessionType] = useState<SessionTypeSlug>(initialSession);
   const [packageId, setPackageId] = useState<string>(initialPkg || "");
-  const [selectedDate, setSelectedDate] = useState<string>(""); // YYYY-MM-DD
-  const [timeSlot, setTimeSlot] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>(initialDate); // YYYY-MM-DD
+  const [timeSlot, setTimeSlot] = useState<string>(initialTime);
 
   // Client contact (Decluttered)
   const [clientName, setClientName] = useState("");
@@ -136,11 +138,18 @@ function BookingWizard() {
   const [livePackages, setLivePackages] = useState(PACKAGES);
   const [liveSessions, setLiveSessions] = useState<Record<string, any>>(SESSION_TYPES);
 
+  // Live Calendar Availability state (for Step 3 & Reschedule Modal)
+  const [bookedSlots, setBookedSlots] = useState<Array<{ date: string; timeSlot: string; status: string }>>([]);
+  const [lockedSlots, setLockedSlots] = useState<Array<{ date: string; timeSlot: string; reason?: string }>>([]);
+  const [blockedDays, setBlockedDays] = useState<string[]>([]);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+
   // Booking management / status state
   const [activeBooking, setActiveBooking] = useState<any>(null);
   const [isLoadingBooking, setIsLoadingBooking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [holdRemainingMs, setHoldRemainingMs] = useState<number | null>(null);
 
   // Modals for self-serve management
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
@@ -155,7 +164,13 @@ function BookingWizard() {
   const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
 
   // Calendar month state
-  const [currentCalendarDate, setCurrentCalendarDate] = useState(() => new Date());
+  const [currentCalendarDate, setCurrentCalendarDate] = useState(() => {
+    if (initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate)) {
+      const [y, m] = initialDate.split("-").map((v) => parseInt(v, 10));
+      return new Date(y, m - 1, 1);
+    }
+    return new Date();
+  });
 
   // Copy helper
   const copyToClipboard = (text: string, label: string) => {
@@ -239,6 +254,46 @@ function BookingWizard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
 
+  // Fetch live availability for current calendar month & reschedule modal
+  const activeAvailMonth = useMemo(() => {
+    if (isRescheduleOpen && selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+      return selectedDate.slice(0, 7);
+    }
+    return `${currentCalendarDate.getFullYear()}-${pad(currentCalendarDate.getMonth() + 1)}`;
+  }, [currentCalendarDate, isRescheduleOpen, selectedDate]);
+
+  useEffect(() => {
+    setIsLoadingAvailability(true);
+    fetch(`/api/availability?month=${activeAvailMonth}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setBookedSlots(data.bookedSlots || []);
+          setLockedSlots(data.lockedSlots || []);
+          setBlockedDays(data.blockedDays || []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingAvailability(false));
+  }, [activeAvailMonth, step]);
+
+  // Live 1-second countdown for the 2-hour temporary hold
+  useEffect(() => {
+    if (!activeBooking?.holdExpiresAt || activeBooking?.status !== "awaiting_deposit") {
+      setHoldRemainingMs(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const diff = new Date(activeBooking.holdExpiresAt).getTime() - Date.now();
+      setHoldRemainingMs(Math.max(0, diff));
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [activeBooking?.holdExpiresAt, activeBooking?.status]);
+
   // Available packages for current session
   const currentPackages = useMemo(() => {
     return livePackages.filter((p) => p.sessionType === sessionType);
@@ -253,6 +308,7 @@ function BookingWizard() {
     () => ({
       purpose: notes || `${liveSessions[sessionType]?.title || sessionType} Session`,
       packageId: selectedPackage?.id,
+      packageName: selectedPackage?.name,
       selectedDate,
       timeSlot,
       notes,
@@ -275,7 +331,8 @@ function BookingWizard() {
     let start = new Date();
     let end = new Date(Date.now() + 2 * 60 * 60 * 1000);
 
-    const bookingShootStart = activeBooking?.shootStart || (selectedDate && timeSlot ? `${selectedDate} ${timeSlot}` : null);
+    const bookingShootStart =
+      activeBooking?.shootStart || (selectedDate && timeSlot ? `${selectedDate} ${timeSlot}` : null);
 
     if (bookingShootStart) {
       const match = bookingShootStart.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
@@ -285,9 +342,16 @@ function BookingWizard() {
         const mins = parseInt(minStr, 10);
         if (ampm.toUpperCase() === "PM" && hours < 12) hours += 12;
         if (ampm.toUpperCase() === "AM" && hours === 12) hours = 0;
-        const [y, m, d] = datePart.split("-").map((v: string) => parseInt(v, 10));
-        start = new Date(Date.UTC(y, m - 1, d, hours, mins));
-        end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+        start = new Date(`${datePart}T${pad(hours)}:${pad(mins)}:00+01:00`);
+        end = new Date(start.getTime() + 90 * 60 * 1000);
+      } else {
+        const parsed = new Date(bookingShootStart);
+        if (!isNaN(parsed.getTime())) {
+          start = parsed;
+          end = activeBooking?.shootEnd
+            ? new Date(activeBooking.shootEnd)
+            : new Date(parsed.getTime() + 90 * 60 * 1000);
+        }
       }
     }
 
@@ -314,18 +378,25 @@ function BookingWizard() {
     setCurrentCalendarDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
-  // Build Calendar Days for the Month
+  // Build Calendar Days for the Month with live availability counts
   const calendarDays = useMemo(() => {
     const year = currentCalendarDate.getFullYear();
     const month = currentCalendarDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    const days: { dateStr: string; dayNum: number; isCurrentMonth: boolean; isPast: boolean; isToday: boolean }[] = [];
+    const days: {
+      dateStr: string;
+      dayNum: number;
+      isCurrentMonth: boolean;
+      isPast: boolean;
+      isToday: boolean;
+      isBlocked: boolean;
+      openCount: number;
+    }[] = [];
 
     const todayStr = new Date().toISOString().split("T")[0];
 
-    // Padding for previous month days
     for (let i = 0; i < firstDay; i++) {
       days.push({
         dateStr: "",
@@ -333,25 +404,50 @@ function BookingWizard() {
         isCurrentMonth: false,
         isPast: true,
         isToday: false,
+        isBlocked: false,
+        openCount: 0,
       });
     }
 
-    // Days in current month
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
       const isPast = dateStr < todayStr;
       const isToday = dateStr === todayStr;
+      const isBlocked = blockedDays.includes(dateStr);
+      const bookedCount =
+        bookedSlots.filter((b) => b.date === dateStr).length +
+        lockedSlots.filter((l) => l.date === dateStr).length;
+      const openCount = isPast || isBlocked ? 0 : Math.max(0, TIME_SLOTS.length - bookedCount);
+
       days.push({
         dateStr,
         dayNum: d,
         isCurrentMonth: true,
         isPast,
         isToday,
+        isBlocked,
+        openCount,
       });
     }
 
     return days;
-  }, [currentCalendarDate]);
+  }, [currentCalendarDate, bookedSlots, lockedSlots, blockedDays]);
+
+  // Helper to check availability status of a specific slot on selectedDate
+  const getSlotStatus = (dateStr: string, slotLabel: string) => {
+    if (!dateStr) return { available: true, badge: "" };
+    if (blockedDays.includes(dateStr)) return { available: false, badge: "Closed" };
+    const locked = lockedSlots.find((l) => l.date === dateStr && l.timeSlot === slotLabel);
+    if (locked) return { available: false, badge: "Reserved" };
+    const booked = bookedSlots.find((b) => b.date === dateStr && b.timeSlot === slotLabel);
+    if (booked) {
+      return {
+        available: false,
+        badge: booked.status === "held" ? "Held (2h)" : "Booked",
+      };
+    }
+    return { available: true, badge: "" };
+  };
 
   // Handle Session Selection on Step 1
   const handleSelectSession = (slug: SessionTypeSlug) => {
@@ -389,6 +485,8 @@ function BookingWizard() {
           clientName: clientName.trim(),
           clientEmail: clientEmail.trim() || undefined,
           whatsappPhone: whatsappPhone.trim(),
+          selectedDate,
+          timeSlot,
           shootStart: shootStartIso,
           answers: bookingAnswers,
           estimate,
@@ -515,6 +613,38 @@ function BookingWizard() {
     }
   }
 
+  // Handle Re-Reserving an Expired 2-Hour Hold
+  async function handleReholdBooking() {
+    if (!activeBooking?.referenceCode) return;
+
+    setIsUpdatingBooking(true);
+    try {
+      const res = await fetch("/api/booking", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referenceCode: activeBooking.referenceCode,
+          action: "rehold",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}`);
+        const refData = await refresh.json();
+        if (refData.success && refData.booking) {
+          setActiveBooking(refData.booking);
+        }
+      } else {
+        alert(data.error || "This slot was claimed after expiration. Please pick another time.");
+        setIsRescheduleOpen(true);
+      }
+    } catch (err: any) {
+      alert("Re-reserve failed: " + err.message);
+    } finally {
+      setIsUpdatingBooking(false);
+    }
+  }
+
   // Direct Receipt Upload with AI Parsing & Accounting Check
   async function handleUploadReceipt(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -541,16 +671,10 @@ function BookingWizard() {
       const uploadedUrl = data.url || data.privateUrl || data.storageKey;
 
       if (uploadedUrl) {
-        setReceiptUrl(uploadedUrl);
-        setReceiptReported(true);
-
         const aiCheckData = data.aiCheck || null;
-        if (aiCheckData) {
-          setAiAnalysisResult(aiCheckData);
-        }
 
         // Report deposit to DB with AI verification metadata
-        await fetch("/api/booking", {
+        const patchRes = await fetch("/api/booking", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -563,6 +687,21 @@ function BookingWizard() {
             bankReference: aiCheckData?.reference || activeBooking.referenceCode,
           }),
         });
+        const patchData = await patchRes.json();
+
+        if (!patchRes.ok) {
+          alert(patchData.error || "Could not attach deposit receipt.");
+          if (patchRes.status === 409) {
+            setIsRescheduleOpen(true);
+          }
+          return;
+        }
+
+        setReceiptUrl(uploadedUrl);
+        setReceiptReported(true);
+        if (aiCheckData) {
+          setAiAnalysisResult(aiCheckData);
+        }
 
         // Refresh booking
         const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}`);
@@ -661,28 +800,103 @@ function BookingWizard() {
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : activeBooking.status === "expired" || (activeBooking.status === "awaiting_deposit" && holdRemainingMs === 0) ? (
               <>
-                {/* Hold Banner */}
-                <div className="p-5 sm:p-6 rounded-3xl bg-amber-50 border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                {/* Expired 2-Hour Hold Banner */}
+                <div className="p-5 sm:p-6 rounded-3xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                    <AlertCircle className="w-5 h-5 text-rose-700 shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-amber-800 block">
-                        Slot Held Temporarily
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-rose-800 block">
+                        2-Hour Hold Expired · Slot Released
                       </span>
-                      <p className="text-xs sm:text-sm text-amber-900 font-medium">
-                        Reserved for you for 2 hours. Please transfer your deposit to lock this session.
+                      <p className="text-xs sm:text-sm text-rose-900 font-medium mt-0.5">
+                        The 2-hour reservation window for {activeBooking.referenceCode} has elapsed without a deposit receipt, so the time slot returned to the public calendar.
                       </p>
                     </div>
                   </div>
-                  <div className="shrink-0 flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-300">
-                      70% Deposit Required
-                    </span>
+                  <div className="shrink-0 flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      disabled={isUpdatingBooking}
+                      onClick={handleReholdBooking}
+                      className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-[#1A1410] hover:bg-[#C9A96E] text-[#FDFBF8] hover:text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors"
+                    >
+                      {isUpdatingBooking ? "Checking..." : "Re-Reserve Slot (2h)"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsRescheduleOpen(true)}
+                      className="flex-1 sm:flex-initial px-4 py-2 rounded-full border border-rose-300 bg-white text-rose-900 hover:bg-rose-100 text-xs font-bold uppercase tracking-wider transition-colors"
+                    >
+                      Choose New Time
+                    </button>
                   </div>
                 </div>
+              </>
+            ) : activeBooking.status === "confirmed" || activeBooking.status === "completed" ? (
+              <div className="p-5 sm:p-6 rounded-3xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-800 block">
+                      Session Confirmed &amp; Locked
+                    </span>
+                    <p className="text-xs sm:text-sm text-emerald-900 font-medium">
+                      Your deposit is verified and your date is permanently reserved on Osemene&apos;s Maitama calendar.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/15 text-emerald-900 border border-emerald-300 shrink-0">
+                  Slot Locked ✓
+                </span>
+              </div>
+            ) : activeBooking.status === "reported" ? (
+              <div className="p-5 sm:p-6 rounded-3xl bg-amber-50/90 border border-gold/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="w-5 h-5 text-[#B88746] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#8C6226] block">
+                      Deposit Receipt Uploaded · Slot Protected
+                    </span>
+                    <p className="text-xs sm:text-sm text-[#1A1410] font-medium">
+                      We have received your transfer slip. Your time slot is safely protected from expiring while our studio confirms bank settlement.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-gold/20 text-[#1A1410] border border-gold/40 shrink-0">
+                  Verifying Transfer
+                </span>
+              </div>
+            ) : (
+              /* Active 2-Hour Temporary Hold Banner with Live Countdown */
+              <div className="p-5 sm:p-6 rounded-3xl bg-amber-50 border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-amber-800 block">
+                      Slot Held Temporarily (2 Hours)
+                    </span>
+                    <p className="text-xs sm:text-sm text-amber-900 font-medium">
+                      Reserved temporarily for 2 hours. Complete your deposit transfer and upload your receipt to lock this session.
+                    </p>
+                  </div>
+                </div>
+                <div className="shrink-0 flex flex-wrap items-center gap-2">
+                  {holdRemainingMs !== null && holdRemainingMs > 0 && (
+                    <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#1A1410] text-[#E8D5B0] shadow-xs">
+                      {pad(Math.floor(holdRemainingMs / 3600000))}h : {pad(Math.floor((holdRemainingMs % 3600000) / 60000))}m : {pad(Math.floor((holdRemainingMs % 60000) / 1000))}s left
+                    </span>
+                  )}
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-300">
+                    {(activeBooking.estimate?.depositPercent || estimate.depositPercent || 70)}% Deposit Required
+                  </span>
+                </div>
+              </div>
+            )}
 
+            {activeBooking.status !== "cancelled" && (
+              <>
                 {/* Main 2-Column Self-Serve Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                   {/* Left Column: Bank Transfer & Receipt Flow */}
@@ -900,8 +1114,26 @@ function BookingWizard() {
                           <span className="text-[10px] text-[#C9A96E] uppercase tracking-wider font-bold">
                             Session Summary
                           </span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold uppercase">
-                            Awaiting Deposit
+                          <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                              activeBooking.status === "confirmed" || activeBooking.status === "completed"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : activeBooking.status === "reported"
+                                ? "bg-gold/25 text-[#1A1410]"
+                                : activeBooking.status === "expired" ||
+                                  (activeBooking.status === "awaiting_deposit" && holdRemainingMs === 0)
+                                ? "bg-rose-100 text-rose-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {activeBooking.status === "confirmed" || activeBooking.status === "completed"
+                              ? "Confirmed"
+                              : activeBooking.status === "reported"
+                              ? "Verifying Deposit"
+                              : activeBooking.status === "expired" ||
+                                (activeBooking.status === "awaiting_deposit" && holdRemainingMs === 0)
+                              ? "Hold Expired"
+                              : "Awaiting Deposit"}
                           </span>
                         </div>
                         <h3 className="font-serif text-2xl text-[#1A1410] mt-1">
@@ -919,7 +1151,26 @@ function BookingWizard() {
                           <div>
                             <span className="text-[#6E6359] block text-[10px] uppercase">Shoot Date &amp; Time</span>
                             <span className="font-semibold text-[#1A1410]">
-                              {activeBooking.shootStart || `${selectedDate} at ${timeSlot}`}
+                              {activeBooking.shootDateFormatted && activeBooking.shootTimeSlot
+                                ? `${new Date(`${activeBooking.shootDateFormatted}T12:00:00`).toLocaleDateString("en-NG", {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })} at ${activeBooking.shootTimeSlot}`
+                                : activeBooking.shootStart
+                                ? `${new Date(activeBooking.shootStart).toLocaleDateString("en-NG", {
+                                    timeZone: "Africa/Lagos",
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })} at ${new Date(activeBooking.shootStart).toLocaleTimeString("en-NG", {
+                                    timeZone: "Africa/Lagos",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}`
+                                : `${selectedDate} at ${timeSlot}`}
                             </span>
                           </div>
                         </div>
@@ -1057,20 +1308,32 @@ function BookingWizard() {
                         Select New Time Slot
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {TIME_SLOTS.map((slot) => (
-                          <button
-                            key={slot.id}
-                            type="button"
-                            onClick={() => setTimeSlot(slot.id)}
-                            className={`p-2.5 rounded-xl text-xs font-semibold transition-all border ${
-                              timeSlot === slot.id
-                                ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
-                                : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
-                            }`}
-                          >
-                            {slot.label}
-                          </button>
-                        ))}
+                        {TIME_SLOTS.map((slot) => {
+                          const { available, badge } = getSlotStatus(selectedDate, slot.id);
+                          const isSelected = timeSlot === slot.id;
+                          return (
+                            <button
+                              key={slot.id}
+                              type="button"
+                              disabled={!available}
+                              onClick={() => setTimeSlot(slot.id)}
+                              className={`p-2.5 rounded-xl text-xs font-semibold transition-all border flex flex-col items-center justify-center ${
+                                isSelected
+                                  ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
+                                  : !available
+                                  ? "bg-[#F8F4EE]/50 text-[#6E6359]/40 border-transparent cursor-not-allowed line-through"
+                                  : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
+                              }`}
+                            >
+                              <span>{slot.label}</span>
+                              {!available && (
+                                <span className="text-[9px] font-mono uppercase no-underline mt-0.5 text-rose-700/70">
+                                  {badge}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1529,33 +1792,36 @@ function BookingWizard() {
                       ))}
                     </div>
 
-                    {/* Calendar Day Grid */}
+                    {/* Calendar Day Grid (Compact Proportion) */}
                     <div className="grid grid-cols-7 gap-1.5">
                       {calendarDays.map((cd, idx) => {
                         if (!cd.isCurrentMonth) {
-                          return <div key={idx} className="aspect-square" />;
+                          return <div key={idx} className="h-11 sm:h-12 md:h-14" />;
                         }
 
                         const isSelected = selectedDate === cd.dateStr;
+                        const isUnavailable = cd.isPast || cd.isBlocked || cd.openCount === 0;
 
                         return (
                           <button
                             key={cd.dateStr}
                             type="button"
-                            disabled={cd.isPast}
-                            onClick={() => setSelectedDate(cd.dateStr)}
-                            className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative text-sm font-medium transition-all ${
+                            disabled={isUnavailable}
+                            onClick={() => {
+                              setSelectedDate(cd.dateStr);
+                              setTimeSlot("");
+                            }}
+                            className={`h-11 sm:h-12 md:h-14 rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
                               isSelected
                                 ? "bg-[#1A1410] text-[#FDFBF8] shadow-md ring-2 ring-[#C9A96E]"
-                                : cd.isPast
+                                : isUnavailable
                                 ? "text-[#6E6359]/30 cursor-not-allowed bg-transparent"
                                 : "hover:bg-[#F8F4EE] text-[#1A1410] hover:text-[#C9A96E] border border-transparent hover:border-[#E5DECF]"
                             }`}
                           >
                             <span>{cd.dayNum}</span>
-                            {/* Available slot indicator */}
-                            {!cd.isPast && !isSelected && (
-                              <span className="w-1 h-1 rounded-full bg-emerald-500 mt-1" />
+                            {!isUnavailable && !isSelected && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5" />
                             )}
                           </button>
                         );
@@ -1563,24 +1829,31 @@ function BookingWizard() {
                     </div>
 
                     {/* Legend */}
-                    <div className="pt-4 border-t border-[#E5DECF] flex items-center gap-6 text-xs text-[#6E6359]">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <span>Free Slot</span>
+                    <div className="pt-4 border-t border-[#E5DECF] flex items-center justify-between flex-wrap gap-4 text-xs text-[#6E6359]">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span>Free Slot</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#1A1410]" />
+                          <span>Selected Day</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#E5DECF]" />
+                          <span>Full / Closed</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#1A1410]" />
-                        <span>Selected Day</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#E5DECF]" />
-                        <span>Past / Closed</span>
-                      </div>
+                      {isLoadingAvailability && (
+                        <span className="text-[11px] font-mono text-[#C9A96E] flex items-center gap-1">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Syncing live calendar...
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Right Col: Time Slots grouped by Morning, Afternoon, Evening */}
-                  <div className="lg:col-span-5 p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6">
+                  {/* Right Col: Sticky Time Slots grouped by Morning, Afternoon, Evening */}
+                  <div className="lg:col-span-5 lg:sticky lg:top-24 p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6">
                     <div>
                       <span className="text-[10px] text-[#C9A96E] uppercase tracking-wider font-bold block mb-1">
                         Select Session Time
@@ -1595,7 +1868,9 @@ function BookingWizard() {
                           : "Pick a date first"}
                       </h3>
                       <p className="text-xs text-[#6E6359] mt-0.5">
-                        Sessions are scheduled with generous intervals for personal styling and lighting setup.
+                        {blockedDays.includes(selectedDate)
+                          ? "Studio is closed on this selected date."
+                          : "Booked slots & active 2-hour holds are locked in real time."}
                       </p>
                     </div>
 
@@ -1610,19 +1885,29 @@ function BookingWizard() {
                             <div className="grid grid-cols-2 gap-2">
                               {slots.map((slot) => {
                                 const isSelected = timeSlot === slot.id;
+                                const { available, badge } = getSlotStatus(selectedDate, slot.id);
                                 return (
                                   <button
                                     key={slot.id}
                                     type="button"
+                                    disabled={!selectedDate || !available}
                                     onClick={() => setTimeSlot(slot.id)}
                                     className={`p-3 rounded-xl border text-xs font-semibold transition-all flex items-center justify-between ${
                                       isSelected
                                         ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410] shadow-sm"
+                                        : !selectedDate || !available
+                                        ? "bg-[#F8F4EE]/50 text-[#6E6359]/40 border-transparent cursor-not-allowed line-through"
                                         : "bg-[#F8F4EE] text-[#1A1410] border-[#E5DECF] hover:border-[#C9A96E]"
                                     }`}
                                   >
                                     <span>{slot.label}</span>
-                                    <Clock className={`w-3.5 h-3.5 ${isSelected ? "text-[#C9A96E]" : "text-[#6E6359]"}`} />
+                                    {!available && selectedDate ? (
+                                      <span className="text-[9px] font-mono uppercase no-underline text-[#6E6359]/70">
+                                        {badge}
+                                      </span>
+                                    ) : (
+                                      <Clock className={`w-3.5 h-3.5 ${isSelected ? "text-[#C9A96E]" : "text-[#6E6359]"}`} />
+                                    )}
                                   </button>
                                 );
                               })}

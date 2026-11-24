@@ -1,42 +1,124 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Award, Clock, Heart, Shield, Sparkles, Star } from "lucide-react";
 import type { EditorialTestimonial } from "@/lib/testimonials-data";
+
+export interface TrustStatItem {
+  value: string;
+  label: string;
+  desc: string;
+  iconName?: string;
+}
+
+const DEFAULT_TRUST_STATS: TrustStatItem[] = [
+  {
+    value: "10+",
+    label: "Years of Empathy",
+    desc: "Gentle pacing, calm studio lighting, and patient direction built around every family's comfort.",
+    iconName: "Clock",
+  },
+  {
+    value: "1,200+",
+    label: "Heirloom Keepsakes",
+    desc: "Archival fine-art frames, museum-grade prints, and timeless digital collections delivered with care.",
+    iconName: "Award",
+  },
+  {
+    value: "100%",
+    label: "Unhurried Pace",
+    desc: "Dedicated time buffers for nursing, outfit changes, toddlers, and quiet moments—never rushed.",
+    iconName: "Heart",
+  },
+  {
+    value: "4.98★",
+    label: "Client Reverence",
+    desc: "Trusted by discerning Abuja & diaspora families for melanin tonal fidelity and discretion.",
+    iconName: "Sparkles",
+  },
+];
+
+function renderStatIcon(iconName?: string) {
+  const key = (iconName || "").trim().toLowerCase();
+  const cls = "w-4 h-4 stroke-[1.75]";
+  switch (key) {
+    case "clock":
+      return <Clock className={cls} />;
+    case "award":
+      return <Award className={cls} />;
+    case "heart":
+      return <Heart className={cls} />;
+    case "star":
+      return <Star className={cls} />;
+    case "shield":
+      return <Shield className={cls} />;
+    case "sparkles":
+    default:
+      return <Sparkles className={cls} />;
+  }
+}
 
 interface EditorialTestimonialSectionProps {
   autoAdvanceInterval?: number; // ms, default 7500
+  initialStats?: TrustStatItem[];
+  initialTestimonials?: EditorialTestimonial[];
 }
 
 export function EditorialTestimonialSection({
   autoAdvanceInterval = 7500,
+  initialStats,
+  initialTestimonials,
 }: EditorialTestimonialSectionProps) {
-  const [testimonials, setTestimonials] = useState<EditorialTestimonial[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hasInitialTestimonials =
+    Array.isArray(initialTestimonials) && initialTestimonials.length > 0;
+  const hasInitialStats = Array.isArray(initialStats) && initialStats.length > 0;
+
+  const [testimonials, setTestimonials] = useState<EditorialTestimonial[]>(
+    hasInitialTestimonials ? initialTestimonials! : []
+  );
+  const [stats, setStats] = useState<TrustStatItem[]>(
+    hasInitialStats ? initialStats! : DEFAULT_TRUST_STATS
+  );
+  const [loading, setLoading] = useState(!hasInitialTestimonials);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch live testimonials from Neon DB
+  // Fetch live testimonials from Neon DB if not hydrated from SSR
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/testimonials")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.testimonials) && data.testimonials.length > 0) {
-          setTestimonials(data.testimonials);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    if (!hasInitialTestimonials) {
+      setLoading(true);
+      fetch("/api/testimonials")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.testimonials) && data.testimonials.length > 0) {
+            setTestimonials(data.testimonials);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+
+    if (!hasInitialStats) {
+      fetch("/api/content?key=about_stats")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.value) && data.value.length > 0) {
+            setStats(data.value);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [hasInitialTestimonials, hasInitialStats]);
 
   const current = testimonials[currentIndex] || null;
-  const totalFormatted = testimonials.length.toString().padStart(2, "0");
+  const totalFormatted = Math.max(testimonials.length, 1).toString().padStart(2, "0");
+  const activeStat = stats.length > 0 ? stats[currentIndex % stats.length] : null;
+  const displayIndex = current?.index || String(currentIndex + 1).padStart(2, "0");
 
   const goToNext = useCallback(() => {
+    if (testimonials.length <= 1) return;
     setIsTransitioning(true);
     setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % testimonials.length);
@@ -45,7 +127,7 @@ export function EditorialTestimonialSection({
   }, [testimonials.length]);
 
   const goToIndex = (idx: number) => {
-    if (idx === currentIndex) return;
+    if (idx === currentIndex || testimonials.length === 0) return;
     setIsTransitioning(true);
     setTimeout(() => {
       setCurrentIndex(idx);
@@ -55,7 +137,7 @@ export function EditorialTestimonialSection({
 
   // Auto-advance timer (pauses on user interaction)
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || testimonials.length <= 1) return;
     timerRef.current = setInterval(() => {
       goToNext();
     }, autoAdvanceInterval);
@@ -63,7 +145,7 @@ export function EditorialTestimonialSection({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPaused, autoAdvanceInterval, goToNext]);
+  }, [isPaused, autoAdvanceInterval, goToNext, testimonials.length]);
 
   return (
     <section
@@ -102,14 +184,15 @@ export function EditorialTestimonialSection({
 
       {/* Grid Content Stage */}
       {loading || !current ? (
-        <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 min-h-[440px] lg:min-h-[500px] items-stretch">
+        <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 min-h-[460px] lg:min-h-[520px] items-stretch">
           <div className="md:col-span-3 flex flex-col justify-between pr-2 sm:pr-4 border-b md:border-b-0 border-deep/10 pb-6 md:pb-0">
             <div>
               <div className="h-16 w-24 bg-deep/10 rounded animate-pulse mb-8" />
               <div className="h-4 w-32 bg-deep/15 rounded animate-pulse mb-2" />
               <div className="h-3 w-40 bg-muted/20 rounded animate-pulse" />
             </div>
-            <div className="flex items-center gap-4 mt-8 md:mt-auto pt-6">
+            <div className="mt-6 sm:mt-8 h-32 rounded-2xl bg-[#FAF7F2]/80 border border-[#E5DECF] animate-pulse" />
+            <div className="flex items-center gap-4 mt-6 md:mt-auto pt-5">
               <div className="w-11 h-11 rounded-full bg-deep/10 animate-pulse" />
               <div className="flex -space-x-2">
                 <div className="w-8 h-8 rounded-full bg-gold/20 animate-pulse" />
@@ -136,15 +219,15 @@ export function EditorialTestimonialSection({
           </div>
         </div>
       ) : (
-      <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 min-h-[440px] lg:min-h-[500px] items-stretch">
+      <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 min-h-[460px] lg:min-h-[520px] items-stretch">
         
-        {/* LEFT COLUMN: Numeric Index, Author Details, Navigation Trigger, Avatars (md:col-span-3) */}
+        {/* LEFT COLUMN: Numeric Index, Author Details, Synced Studio Trust Box, Navigation Trigger, Avatars (md:col-span-3) */}
         <div className="md:col-span-3 flex flex-col justify-between pr-2 sm:pr-4 border-b md:border-b-0 border-deep/10 pb-6 md:pb-0 reveal-down">
           <div>
             {/* Index Counter 01 /08 */}
             <div className="flex items-baseline">
               <span className="font-display text-5xl sm:text-6xl lg:text-7xl font-light text-deep tracking-tighter">
-                {current.index}
+                {displayIndex}
               </span>
               <span className="font-body text-sm sm:text-base text-muted tracking-widest ml-1 font-normal">
                 /{totalFormatted}
@@ -152,7 +235,7 @@ export function EditorialTestimonialSection({
             </div>
 
             {/* Client Bracket Tag & Studio Role */}
-            <div className="mt-8 sm:mt-12">
+            <div className="mt-6 sm:mt-8">
               <h4 className="font-body text-xs sm:text-sm font-semibold tracking-wider text-deep">
                 [{current.clientName}]
               </h4>
@@ -162,8 +245,39 @@ export function EditorialTestimonialSection({
             </div>
           </div>
 
+          {/* Integrated Single Studio Trust Box (cycles with active testimonial, sourced from settings.about_stats) */}
+          {activeStat && (
+            <div
+              className={`mt-6 sm:mt-8 transition-all duration-300 transform ${
+                isTransitioning
+                  ? "opacity-0 translate-y-2"
+                  : "opacity-100 translate-y-0"
+              }`}
+            >
+              <div className="bg-[#FAF7F2]/95 border border-[#E5DECF] rounded-2xl p-4 sm:p-5 shadow-[0_6px_24px_rgba(26,20,16,0.04)] backdrop-blur-sm">
+                <div className="flex items-start justify-between gap-2.5 mb-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-gold/15 border border-gold/25 flex items-center justify-center text-gold shrink-0">
+                    {renderStatIcon(activeStat.iconName)}
+                  </div>
+                  <span className="font-body text-[9px] uppercase tracking-[0.2em] text-deep/45 font-semibold pt-1">
+                    Approach · {String((currentIndex % stats.length) + 1).padStart(2, "0")}
+                  </span>
+                </div>
+                <div className="font-display text-2xl sm:text-3xl font-normal text-deep leading-none mb-1.5">
+                  {activeStat.value}
+                </div>
+                <h5 className="font-body text-[11px] uppercase tracking-[0.14em] font-bold text-deep/85 mb-1">
+                  {activeStat.label}
+                </h5>
+                <p className="font-body text-xs text-muted leading-relaxed">
+                  {activeStat.desc}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Action Trigger & Avatar Previews Cluster */}
-          <div className="mt-8 md:mt-auto pt-6 flex items-center justify-between md:justify-start gap-4">
+          <div className="mt-6 md:mt-auto pt-5 flex items-center justify-between md:justify-start gap-4">
             {/* Circular Arrow Button (Advances to next) */}
             <button
               type="button"
@@ -174,7 +288,7 @@ export function EditorialTestimonialSection({
               <ArrowRight className="w-4 h-4 stroke-[1.5] group-hover:translate-x-0.5 transition-transform" />
             </button>
 
-            {/* Clickable Client Avatar Cluster */}
+            {/* Clickable Client Avatar Cluster (native img prevents Next optimizer failures on production) */}
             <div className="flex items-center -space-x-2 py-1">
               {testimonials.map((t, idx) => {
                 const isActive = idx === currentIndex;
@@ -191,18 +305,23 @@ export function EditorialTestimonialSection({
                     type="button"
                     onClick={() => goToIndex(idx)}
                     aria-label={`Jump to review by ${t.clientName}`}
-                    className={`relative rounded-full transition-all duration-300 overflow-hidden ${
+                    className={`relative rounded-full transition-all duration-300 overflow-hidden bg-sand ${
                       isActive
                         ? "w-9 h-9 ring-2 ring-gold z-10 scale-105"
-                        : "w-8 h-8 opacity-65 hover:opacity-100 ring-1 ring-deep/10 hover:scale-105"
+                        : "w-8 h-8 opacity-75 hover:opacity-100 ring-1 ring-deep/15 hover:scale-105"
                     }`}
                   >
-                    <Image
-                      src={t.avatarUrl}
+                    <img
+                      src={t.avatarUrl || "/images/client/events_2.jpg"}
                       alt={t.clientName}
-                      fill
-                      className="object-cover"
-                      sizes="36px"
+                      onError={(e) => {
+                        const img = e.currentTarget as HTMLImageElement;
+                        if (!img.dataset.fallbackApplied) {
+                          img.dataset.fallbackApplied = "true";
+                          img.src = "/images/client/events_2.jpg";
+                        }
+                      }}
+                      className="w-full h-full object-cover"
                     />
                   </button>
                 );

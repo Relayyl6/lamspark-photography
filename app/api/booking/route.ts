@@ -1,57 +1,124 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { calculateEstimate } from "@/lib/estimate/engine";
+import { getLivePackages, getLiveSessionTypes } from "@/lib/catalog/live";
+import {
+  expireStaleHeldBookings,
+  extractDateAndSlotWAT,
+  HOLD_DURATION_MS,
+  parseSlotToTimestampsWAT,
+} from "@/lib/booking-hold";
 import { BookingAnswers, SessionTypeSlug } from "@/lib/types";
 
 const sql = neon(process.env.DATABASE_URL!);
 
-// Helper: parse date and time slot into ISO timestamps
-function parseSlotToTimestamps(dateStr: string, timeSlot: string, durationMinutes: number = 120) {
-  try {
-    // Expected dateStr: "YYYY-MM-DD"
-    // Expected timeSlot: "09:00 AM", "01:30 PM", etc.
-    const match = timeSlot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (!match) {
-      const fallbackStart = new Date(dateStr);
-      const fallbackEnd = new Date(fallbackStart.getTime() + durationMinutes * 60000);
-      return { start: fallbackStart.toISOString(), end: fallbackEnd.toISOString() };
-    }
-    let [_, hoursStr, minsStr, ampm] = match;
-    let hours = parseInt(hoursStr, 10);
-    const mins = parseInt(minsStr, 10);
-    if (ampm.toUpperCase() === "PM" && hours < 12) hours += 12;
-    if (ampm.toUpperCase() === "AM" && hours === 12) hours = 0;
+/**
+ * Checks whether a target WAT date ("YYYY-MM-DD") and time slot ("11:00 AM")
+ * is blocked by studio locks or already held/booked by an active reservation.
+ */
+async function checkSlotConflict(
+  targetDate: string,
+  targetTimeSlot: string,
+  excludeEnquiryId?: string
+): Promise<{ conflict: boolean; reason?: string }> {
+  if (!targetDate || !targetTimeSlot) return { conflict: false };
 
-    const [year, month, day] = dateStr.split("-").map((n) => parseInt(n, 10));
-    const start = new Date(Date.UTC(year, month - 1, day, hours, mins, 0));
-    const end = new Date(start.getTime() + durationMinutes * 60000);
-    return { start: start.toISOString(), end: end.toISOString() };
-  } catch {
-    const now = new Date();
-    return { start: now.toISOString(), end: new Date(now.getTime() + 7200000).toISOString() };
+  // 1. Check studio calendar locks & blocked days
+  const lockRows = await sql
+    .query(`SELECT value FROM settings WHERE key = 'studio_calendar_locks' LIMIT 1`)
+    .catch(() => []);
+
+  if (lockRows.length > 0 && lockRows[0].value) {
+    const locks =
+      typeof lockRows[0].value === "string"
+        ? JSON.parse(lockRows[0].value)
+        : lockRows[0].value;
+
+    const isDayBlocked = (locks.blockedDays || []).some((b: any) =>
+      typeof b === "string" ? b === targetDate : b?.date === targetDate
+    );
+    if (isDayBlocked) {
+      return { conflict: true, reason: "Studio is closed on the selected date." };
+    }
+
+    const lockedSlot = (locks.lockedSlots || []).find(
+      (l: any) => l?.date === targetDate && l?.timeSlot === targetTimeSlot
+    );
+    if (lockedSlot) {
+      return {
+        conflict: true,
+        reason: `This time slot is reserved by the studio (${lockedSlot.reason || "Studio Locked"}).`,
+      };
+    }
   }
+
+  // 2. Check active bookings (non-cancelled, non-expired) on the target date
+  const activeRows = await sql.query(
+    `SELECT b.id, b.enquiry_id, b.shoot_start, b.status, b.updated_at, e.answers, e.stage, p.status as payment_status
+     FROM booking b
+     JOIN enquiry e ON b.enquiry_id = e.id
+     LEFT JOIN payment p ON p.enquiry_id = e.id AND p.kind = 'deposit'
+     WHERE b.status NOT IN ('cancelled', 'expired')
+       AND b.shoot_start >= ($1::date - INTERVAL '1 day')
+       AND b.shoot_start <= ($1::date + INTERVAL '2 days')
+       AND (
+         b.status != 'held'
+         OR b.updated_at >= NOW() - INTERVAL '2 hours'
+         OR p.status IN ('reported', 'confirmed', 'recorded')
+         OR e.stage IN ('deposit_reported', 'deposit_paid', 'preparation', 'confirmed', 'shot', 'editing', 'client_review', 'delivered', 'closed')
+       )`,
+    [targetDate]
+  ).catch(() => []);
+
+  for (const r of activeRows) {
+    if (excludeEnquiryId && r.enquiry_id === excludeEnquiryId) continue;
+    const ans = typeof r.answers === "string" ? JSON.parse(r.answers) : r.answers || {};
+    const { date, timeSlot } = extractDateAndSlotWAT(r.shoot_start, ans);
+    if (date === targetDate && timeSlot === targetTimeSlot) {
+      const label = r.status === "held" ? "temporarily held by another client" : "already booked";
+      return {
+        conflict: true,
+        reason: `Sorry, ${targetTimeSlot} on ${targetDate} is ${label}. Please select another open time slot.`,
+      };
+    }
+  }
+
+  return { conflict: false };
 }
 
 // GET: Query booking by ref code OR get calendar availability
 export async function GET(req: NextRequest) {
   try {
+    // Ensure expired 2-hour unpaid holds are released automatically
+    await expireStaleHeldBookings(sql);
+
     const { searchParams } = new URL(req.url);
     const ref = searchParams.get("ref");
     const availability = searchParams.get("availability");
     const month = searchParams.get("month"); // e.g. "2026-11"
 
-    // Availability lookup for live calendar
+    // Availability lookup
     if (availability === "true" || month) {
       const targetMonth = month || new Date().toISOString().slice(0, 7);
+      const [yearStr, monthStr] = targetMonth.split("-");
+      const lastDay = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10), 0).getDate();
       const startOfMonth = `${targetMonth}-01T00:00:00Z`;
-      const endOfMonth = `${targetMonth}-31T23:59:59Z`;
+      const endOfMonth = `${targetMonth}-${String(lastDay).padStart(2, "0")}T23:59:59Z`;
 
       const bookedRows = await sql.query(
-        `SELECT shoot_start, shoot_end, status 
-         FROM booking 
-         WHERE status != 'cancelled' 
-           AND shoot_start >= $1 
-           AND shoot_start <= $2`,
+        `SELECT b.shoot_start, b.shoot_end, b.status, b.updated_at, e.stage, p.status as payment_status
+         FROM booking b
+         LEFT JOIN enquiry e ON b.enquiry_id = e.id
+         LEFT JOIN payment p ON p.enquiry_id = e.id AND p.kind = 'deposit'
+         WHERE b.status NOT IN ('cancelled', 'expired')
+           AND b.shoot_start >= ($1::timestamptz - INTERVAL '1 day')
+           AND b.shoot_start <= ($2::timestamptz + INTERVAL '1 day')
+           AND (
+             b.status != 'held'
+             OR b.updated_at >= NOW() - INTERVAL '2 hours'
+             OR p.status IN ('reported', 'confirmed', 'recorded')
+             OR e.stage IN ('deposit_reported', 'deposit_paid', 'preparation', 'confirmed', 'shot', 'editing', 'client_review', 'delivered', 'closed')
+           )`,
         [startOfMonth, endOfMonth]
       );
 
@@ -96,6 +163,7 @@ export async function GET(req: NextRequest) {
         b.status as booking_status,
         b.reschedule_count,
         b.created_at as booking_created_at,
+        b.updated_at as booking_updated_at,
         p.id as payment_id,
         p.amount_expected,
         p.amount_recorded,
@@ -117,7 +185,7 @@ export async function GET(req: NextRequest) {
       WHERE e.reference_code = $1 
          OR b.id::text = $2 
          OR e.id::text = $2
-      ORDER BY b.created_at DESC NULLS LAST
+      ORDER BY b.created_at DESC NULLS LAST, p.created_at DESC NULLS LAST
       LIMIT 1`,
       [cleanRef, ref.trim()]
     );
@@ -129,21 +197,44 @@ export async function GET(req: NextRequest) {
     const b = rows[0];
     const answers = typeof b.answers === "string" ? JSON.parse(b.answers) : b.answers || {};
 
-    // Determine status
-    let status = b.booking_status || "held";
-    if (status === "cancelled" || b.enquiry_stage === "lost") {
+    // Canonical hold expiration timestamp (2 hours from last active hold anchor)
+    const holdAnchorTime = new Date(
+      b.booking_updated_at || b.booking_created_at || b.enquiry_created_at
+    ).getTime();
+    const holdExpiresAt = new Date(holdAnchorTime + HOLD_DURATION_MS).toISOString();
+    const isHoldPastDue = Date.now() >= holdAnchorTime + HOLD_DURATION_MS;
+
+    // Determine authoritative booking status
+    const confirmedStages = new Set([
+      "deposit_paid",
+      "deposit_confirmed",
+      "preparation",
+      "confirmed",
+      "shot",
+      "editing",
+      "client_review",
+      "delivered",
+      "closed",
+    ]);
+
+    let status: string;
+    if (b.booking_status === "cancelled" || b.enquiry_stage === "lost") {
       status = "cancelled";
-    } else if (b.payment_status === "confirmed" || b.enquiry_stage === "deposit_confirmed") {
-      status = "confirmed";
+    } else if (
+      ["confirmed", "completed", "rescheduled", "shooting"].includes(b.booking_status) ||
+      ["confirmed", "recorded"].includes(b.payment_status) ||
+      confirmedStages.has(b.enquiry_stage)
+    ) {
+      status = b.booking_status === "completed" ? "completed" : "confirmed";
     } else if (b.payment_status === "reported" || b.enquiry_stage === "deposit_reported") {
       status = "reported";
+    } else if (b.booking_status === "expired" || (b.booking_id && isHoldPastDue)) {
+      status = "expired";
     } else {
       status = "awaiting_deposit";
     }
 
-    // Calculate hold expiration (2 hours from creation by default)
-    const createdAtTime = new Date(b.booking_created_at || b.enquiry_created_at).getTime();
-    const holdExpiresAt = new Date(createdAtTime + 2 * 60 * 60 * 1000).toISOString();
+    const parsedSlot = b.shoot_start ? extractDateAndSlotWAT(b.shoot_start, answers) : null;
 
     return NextResponse.json({
       success: true,
@@ -155,6 +246,8 @@ export async function GET(req: NextRequest) {
         sessionType: b.session_type,
         shootStart: b.shoot_start,
         shootEnd: b.shoot_end,
+        shootDateFormatted: parsedSlot?.date || answers.selectedDate || null,
+        shootTimeSlot: parsedSlot?.timeSlot || answers.timeSlot || null,
         rescheduleCount: b.reschedule_count || 0,
         locationType: b.location_type || "Private Abuja Studio",
         locationDetail: b.location_detail,
@@ -169,8 +262,8 @@ export async function GET(req: NextRequest) {
         },
         estimate: {
           total: b.total || answers.agreedPrice || 0,
-          depositAmount: b.deposit_amount || Math.round((b.total || 0) * 0.7),
-          balanceAmount: b.balance_amount || Math.round((b.total || 0) * 0.3),
+          depositAmount: b.deposit_amount || Math.round((b.total || 0) * ((b.deposit_percent || 70) / 100)),
+          balanceAmount: b.balance_amount || Math.round((b.total || 0) * (1 - (b.deposit_percent || 70) / 100)),
           depositPercent: b.deposit_percent || 70,
           lineItems: typeof b.line_items === "string" ? JSON.parse(b.line_items) : b.line_items || [],
         },
@@ -192,9 +285,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: create a new booking
+// POST: create a new booking with atomic conflict & 2-hour hold enforcement
 export async function POST(req: NextRequest) {
   try {
+    // 0. Expire any stale 2-hour unpaid holds first so released slots can be booked
+    await expireStaleHeldBookings(sql);
+
     const body = await req.json();
     const {
       clientName,
@@ -217,7 +313,7 @@ export async function POST(req: NextRequest) {
       whatsappPhone: string;
       clientEmail?: string;
       sessionType: SessionTypeSlug;
-      answers: BookingAnswers;
+      answers: BookingAnswers & { selectedDate?: string; timeSlot?: string; packageName?: string };
       referenceCode?: string;
       selectedDate?: string;
       timeSlot?: string;
@@ -237,6 +333,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Resolve date & slot whether passed at top-level or inside answers / shootStart
+    let effectiveDate = selectedDate || answers?.selectedDate || "";
+    let effectiveTimeSlot = timeSlot || answers?.timeSlot || "";
+
+    if ((!effectiveDate || !effectiveTimeSlot) && explicitShootStart) {
+      const m = explicitShootStart.trim().match(/^(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2}\s*(?:AM|PM))$/i);
+      if (m) {
+        effectiveDate = effectiveDate || m[1];
+        effectiveTimeSlot = effectiveTimeSlot || m[2].toUpperCase();
+      }
+    }
+
+    // Enforce slot availability & 2-hour hold collision check
+    if (effectiveDate && effectiveTimeSlot) {
+      const conflictCheck = await checkSlotConflict(effectiveDate, effectiveTimeSlot);
+      if (conflictCheck.conflict) {
+        return NextResponse.json(
+          { error: conflictCheck.reason || "This time slot is unavailable." },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Resolve canonical UTC shootStart & shootEnd timestamps anchored to WAT (+01:00)
+    let shootStart: string | undefined;
+    let shootEnd: string | undefined;
+
+    if (effectiveDate && effectiveTimeSlot) {
+      const timestamps = parseSlotToTimestampsWAT(effectiveDate, effectiveTimeSlot);
+      shootStart = timestamps.start;
+      shootEnd = timestamps.end;
+    } else if (explicitShootStart) {
+      const parsed = new Date(explicitShootStart);
+      if (!isNaN(parsed.getTime())) {
+        shootStart = parsed.toISOString();
+        shootEnd = explicitShootEnd
+          ? new Date(explicitShootEnd).toISOString()
+          : new Date(parsed.getTime() + 90 * 60000).toISOString();
+      }
+    }
+
     // Normalise Nigerian WhatsApp phone number
     let cleanPhone = whatsappPhone.replace(/\D/g, "");
     if (cleanPhone.startsWith("0")) {
@@ -250,8 +387,18 @@ export async function POST(req: NextRequest) {
       referenceCode?.trim() ||
       "LS-" + Math.random().toString(36).substring(2, 6).toUpperCase();
 
-    // 1. Calculate live estimate
-    const estimate = calculateEstimate(sessionType, answers || {}, answers?.packageId);
+    // 1. Calculate live estimate against Neon session overrides
+    const [livePackages, liveSessions] = await Promise.all([
+      getLivePackages(sessionType),
+      getLiveSessionTypes(),
+    ]);
+    const estimate = calculateEstimate(
+      sessionType,
+      answers || {},
+      answers?.packageId,
+      livePackages,
+      liveSessions[sessionType]
+    );
 
     // 2. Insert or update client in DB
     const clientRows = await sql.query(
@@ -284,6 +431,13 @@ export async function POST(req: NextRequest) {
     const initialStage = receiptUrl ? "deposit_reported" : priceAgreed ? "agreed_to_price" : "enquiry";
     const initialWaitingOn = receiptUrl ? "us" : "client";
 
+    const normalizedAnswers = {
+      ...answers,
+      agreedPrice: estimate.total,
+      ...(effectiveDate ? { selectedDate: effectiveDate } : {}),
+      ...(effectiveTimeSlot ? { timeSlot: effectiveTimeSlot } : {}),
+    };
+
     // 3. Insert enquiry
     const enquiryRows = await sql.query(
       `INSERT INTO enquiry (
@@ -309,9 +463,9 @@ export async function POST(req: NextRequest) {
         initialWaitingOn,
         source,
         refCode,
-        answers?.purpose || `${sessionType} Session`,
+        answers?.purpose || `${liveSessions[sessionType]?.title || sessionType} Session`,
         answers?.feeling || null,
-        JSON.stringify({ ...answers, agreedPrice: estimate.total, selectedDate, timeSlot }),
+        JSON.stringify(normalizedAnswers),
         estimate.quoteRequired,
       ]
     );
@@ -340,20 +494,12 @@ export async function POST(req: NextRequest) {
       ]
     );
 
-    // 5. Create or update booking slot
+    // 5. Create held booking slot
     let bookingRecord = null;
-    let shootStart = explicitShootStart;
-    let shootEnd = explicitShootEnd;
-
-    if (!shootStart && selectedDate && timeSlot) {
-      const timestamps = parseSlotToTimestamps(selectedDate, timeSlot);
-      shootStart = timestamps.start;
-      shootEnd = timestamps.end;
-    }
-
     if (shootStart) {
       const locationType = answers?.locationType || "studio";
-      const locationDetail = locationType === "studio" ? "LamSparks Private Abuja Studio" : "Client Location / Outdoor";
+      const locationDetail =
+        locationType === "studio" ? "LamSparks Private Abuja Studio" : "Client Location / Outdoor";
 
       const bookingRows = await sql.query(
         `INSERT INTO booking (
@@ -368,7 +514,7 @@ export async function POST(req: NextRequest) {
         [
           enquiry.id,
           shootStart,
-          shootEnd || new Date(new Date(shootStart).getTime() + 7200000).toISOString(),
+          shootEnd || new Date(new Date(shootStart).getTime() + 90 * 60000).toISOString(),
           locationType,
           locationDetail,
         ]
@@ -404,8 +550,10 @@ export async function POST(req: NextRequest) {
       paymentRecord = paymentRows[0];
     }
 
-    // Hold deadline is 2 hours from now
-    const holdExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    const holdAnchor = bookingRecord
+      ? new Date(bookingRecord.updated_at || bookingRecord.created_at).getTime()
+      : Date.now();
+    const holdExpiresAt = new Date(holdAnchor + HOLD_DURATION_MS).toISOString();
 
     return NextResponse.json(
       {
@@ -427,9 +575,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH: self-serve manage booking (reschedule, cancel, upload receipt)
+// PATCH: self-serve manage booking (reschedule, cancel, rehold expired hold, report_deposit)
 export async function PATCH(req: NextRequest) {
   try {
+    await expireStaleHeldBookings(sql);
+
     const body = await req.json();
     const { referenceCode, action, newDate, newTimeSlot, reason, receiptUrl } = body;
 
@@ -439,12 +589,15 @@ export async function PATCH(req: NextRequest) {
 
     const cleanRef = referenceCode.trim().toUpperCase();
 
-    // Find the enquiry and associated booking
     const enquiryRows = await sql.query(
-      `SELECT e.id as enquiry_id, b.id as booking_id, b.reschedule_count
+      `SELECT e.id as enquiry_id, e.stage as enquiry_stage, e.answers,
+              b.id as booking_id, b.status as booking_status, b.shoot_start, b.reschedule_count,
+              p.status as payment_status
        FROM enquiry e
        LEFT JOIN booking b ON b.enquiry_id = e.id
+       LEFT JOIN payment p ON p.enquiry_id = e.id AND p.kind = 'deposit'
        WHERE e.reference_code = $1
+       ORDER BY b.created_at DESC NULLS LAST
        LIMIT 1`,
       [cleanRef]
     );
@@ -453,24 +606,49 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Booking not found." }, { status: 404 });
     }
 
-    const { enquiry_id, booking_id, reschedule_count } = enquiryRows[0];
+    const row = enquiryRows[0];
+    const { enquiry_id, booking_id, booking_status, payment_status, enquiry_stage } = row;
+    const answers = typeof row.answers === "string" ? JSON.parse(row.answers) : row.answers || {};
 
     if (action === "reschedule") {
       if (!newDate || !newTimeSlot) {
-        return NextResponse.json({ error: "newDate and newTimeSlot are required for rescheduling." }, { status: 400 });
+        return NextResponse.json(
+          { error: "newDate and newTimeSlot are required for rescheduling." },
+          { status: 400 }
+        );
       }
-      const { start, end } = parseSlotToTimestamps(newDate, newTimeSlot);
+
+      // Check availability conflict before rescheduling
+      const conflictCheck = await checkSlotConflict(newDate, newTimeSlot, enquiry_id);
+      if (conflictCheck.conflict) {
+        return NextResponse.json(
+          { error: conflictCheck.reason || "Selected time slot is unavailable." },
+          { status: 409 }
+        );
+      }
+
+      const { start, end } = parseSlotToTimestampsWAT(newDate, newTimeSlot);
+      const isAlreadyProtected =
+        ["confirmed", "rescheduled", "completed", "shooting"].includes(booking_status) ||
+        ["reported", "confirmed", "recorded"].includes(payment_status) ||
+        ["deposit_reported", "deposit_paid", "preparation", "confirmed"].includes(enquiry_stage);
+
+      const nextBookingStatus = isAlreadyProtected
+        ? booking_status === "held"
+          ? "held"
+          : "rescheduled"
+        : "held";
 
       if (booking_id) {
         await sql.query(
           `UPDATE booking 
            SET shoot_start = $1, 
                shoot_end = $2, 
-               status = 'held',
+               status = $3,
                reschedule_count = COALESCE(reschedule_count, 0) + 1, 
                updated_at = NOW() 
-           WHERE id = $3`,
-          [start, end, booking_id]
+           WHERE id = $4`,
+          [start, end, nextBookingStatus, booking_id]
         );
       } else {
         await sql.query(
@@ -479,13 +657,12 @@ export async function PATCH(req: NextRequest) {
              status, reschedule_count, created_at, updated_at
            ) VALUES (
              gen_random_uuid(), $1, $2, $3, 'studio', 'LamSparks Private Abuja Studio',
-             'held', 1, NOW(), NOW()
+             $4, 1, NOW(), NOW()
            )`,
-          [enquiry_id, start, end]
+          [enquiry_id, start, end, nextBookingStatus]
         );
       }
 
-      // Also record updated answers in enquiry
       await sql.query(
         `UPDATE enquiry 
          SET answers = jsonb_set(
@@ -502,6 +679,37 @@ export async function PATCH(req: NextRequest) {
         message: "Session successfully rescheduled.",
         shootStart: start,
         shootEnd: end,
+      });
+    }
+
+    if (action === "rehold") {
+      if (!booking_id) {
+        return NextResponse.json({ error: "No slot reservation found to re-hold." }, { status: 400 });
+      }
+      const { date, timeSlot } = extractDateAndSlotWAT(row.shoot_start, answers);
+      if (date && timeSlot) {
+        const conflictCheck = await checkSlotConflict(date, timeSlot, enquiry_id);
+        if (conflictCheck.conflict) {
+          return NextResponse.json(
+            { error: conflictCheck.reason || "This slot is no longer available. Please choose another time." },
+            { status: 409 }
+          );
+        }
+      }
+
+      await sql.query(
+        `UPDATE booking
+         SET status = 'held',
+             created_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $1`,
+        [booking_id]
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: "Slot temporarily re-reserved for 2 hours.",
+        holdExpiresAt: new Date(Date.now() + HOLD_DURATION_MS).toISOString(),
       });
     }
 
@@ -535,6 +743,26 @@ export async function PATCH(req: NextRequest) {
     if (action === "report_deposit") {
       if (!receiptUrl) {
         return NextResponse.json({ error: "Receipt URL is required." }, { status: 400 });
+      }
+
+      // Check if an expired unpaid hold lost its slot before reporting deposit
+      if (booking_status === "expired" && row.shoot_start) {
+        const { date, timeSlot } = extractDateAndSlotWAT(row.shoot_start, answers);
+        const conflictCheck = await checkSlotConflict(date, timeSlot, enquiry_id);
+        if (conflictCheck.conflict) {
+          return NextResponse.json(
+            {
+              error:
+                "Your 2-hour hold had expired and another client has since reserved this time slot. Please reschedule to an open time before submitting your deposit receipt.",
+            },
+            { status: 409 }
+          );
+        }
+        // Reclaim the slot cleanly as held while verifying
+        await sql.query(
+          `UPDATE booking SET status = 'held', updated_at = NOW() WHERE id = $1`,
+          [booking_id]
+        );
       }
 
       const aiCheckData = body.aiCheck || {
@@ -584,4 +812,3 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Failed to update booking" }, { status: 500 });
   }
 }
-

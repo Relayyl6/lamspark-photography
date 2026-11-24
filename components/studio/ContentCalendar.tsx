@@ -18,6 +18,8 @@ import {
   Instagram,
   Linkedin,
   Smartphone,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 interface ContentItem {
@@ -36,6 +38,8 @@ export function ContentCalendar() {
   const [items, setItems] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<ContentItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [platformFilter, setPlatformFilter] = useState("All");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -45,14 +49,14 @@ export function ContentCalendar() {
   }, []);
 
   useEffect(() => {
-    if (showAddModal) {
+    if (showAddModal || itemToDelete) {
       const prev = document.body.style.overflow;
       document.body.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = prev;
       };
     }
-  }, [showAddModal]);
+  }, [showAddModal, itemToDelete]);
 
   // Form State
   const [formPlatform, setFormPlatform] = useState("Instagram");
@@ -113,6 +117,28 @@ export function ContentCalendar() {
       console.error("Failed to schedule post:", err);
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeletePost(item: ContentItem) {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/calendar?id=${encodeURIComponent(item.id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setItems((prev) => prev.filter((x) => x.id !== item.id));
+        setItemToDelete(null);
+        setStatusMessage("Scheduled post deleted from editorial calendar.");
+        setTimeout(() => setStatusMessage(null), 3000);
+      } else {
+        alert(data.error || "Failed to delete scheduled post.");
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -257,13 +283,24 @@ export function ContentCalendar() {
                   </span>
                 </div>
 
-                {/* Footer Logistics */}
-                <div className="pt-2 border-t border-line flex items-center justify-between text-xs font-body text-muted">
-                  <div className="flex items-center gap-1.5 font-mono text-[11px]">
-                    <Clock className="w-3.5 h-3.5 text-gold" />
-                    <span>{dateStr}</span>
+                {/* Footer Logistics & Delete Action */}
+                <div className="pt-2 border-t border-line flex items-center justify-between text-xs font-body text-muted gap-2">
+                  <div className="flex items-center gap-1.5 font-mono text-[11px] min-w-0 truncate">
+                    <Clock className="w-3.5 h-3.5 text-gold shrink-0" />
+                    <span className="truncate">{dateStr}</span>
                   </div>
-                  <span className="text-deep font-semibold text-[11px]">Maitama Studio</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-deep font-semibold text-[11px]">Maitama Studio</span>
+                    <button
+                      type="button"
+                      onClick={() => setItemToDelete(item)}
+                      className="w-7 h-7 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 flex items-center justify-center transition-colors"
+                      title="Delete scheduled post"
+                      aria-label={`Delete ${item.purpose}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -395,6 +432,55 @@ export function ContentCalendar() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {mounted && itemToDelete && createPortal(
+        <div
+          className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setItemToDelete(null)}
+        >
+          <div
+            className="bg-warm-white rounded-2xl border border-line max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 text-rose-900">
+              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-700 shrink-0 mt-0.5">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg text-deep font-semibold">
+                  Delete Scheduled Post?
+                </h3>
+                <p className="text-xs text-rose-800 mt-1 leading-relaxed">
+                  Are you sure you want to remove{" "}
+                  <strong>&ldquo;{itemToDelete.purpose}&rdquo;</strong> from the content calendar? This cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-line flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setItemToDelete(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-muted hover:text-deep hover:bg-cream transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => handleDeletePost(itemToDelete)}
+                className="px-5 py-2.5 rounded-xl bg-rose-700 hover:bg-rose-800 text-warm-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+              >
+                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>{isDeleting ? "Deleting..." : "Yes, Delete Post"}</span>
+              </button>
+            </div>
           </div>
         </div>,
         document.body

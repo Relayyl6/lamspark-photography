@@ -128,17 +128,27 @@ export async function PUT(req: NextRequest) {
         [enquiryId]
       );
 
-      // 3. Create or confirm Booking in DB
-      await sql.query(
-        `INSERT INTO booking (
-           id, enquiry_id, shoot_start, shoot_end, location_type, status, created_at, updated_at
-         )
-         VALUES (
-           gen_random_uuid(), $1, NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days' + INTERVAL '2 hours', 'studio', 'confirmed', NOW(), NOW()
-         )
-         ON CONFLICT DO NOTHING`,
+      // 3. Confirm existing held/pending booking row or create fallback if none exists
+      const updatedBooking = await sql.query(
+        `UPDATE booking
+         SET status = 'confirmed',
+             updated_at = NOW()
+         WHERE enquiry_id = $1 AND status != 'cancelled'
+         RETURNING id`,
         [enquiryId]
       );
+
+      if (updatedBooking.length === 0) {
+        await sql.query(
+          `INSERT INTO booking (
+             id, enquiry_id, shoot_start, shoot_end, location_type, status, created_at, updated_at
+           )
+           VALUES (
+             gen_random_uuid(), $1, NOW() + INTERVAL '14 days', NOW() + INTERVAL '14 days' + INTERVAL '2 hours', 'studio', 'confirmed', NOW(), NOW()
+           )`,
+          [enquiryId]
+        );
+      }
 
       return NextResponse.json({
         success: true,

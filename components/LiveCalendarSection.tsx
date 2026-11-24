@@ -193,7 +193,11 @@ export function LiveCalendarSection() {
         (b) => b.date === selectedDayStr && b.timeSlot === slot
       );
       if (booked) {
-        return { slot, status: "booked", label: "Already Booked" };
+        return {
+          slot,
+          status: booked.status === "held" ? "held" : "booked",
+          label: booked.status === "held" ? "Held (2h)" : "Already Booked",
+        };
       }
 
       // Check if slot is locked by studio
@@ -205,7 +209,7 @@ export function LiveCalendarSection() {
       }
 
       if (selectedDayObj?.isPast) {
-        return { slot, status: "closed", label: "Closed" };
+        return { slot, status: "closed", label: "Past" };
       }
 
       if (selectedDayObj?.isBlocked) {
@@ -217,7 +221,9 @@ export function LiveCalendarSection() {
   }, [selectedDayStr, bookedSlots, lockedSlots, selectedDayObj]);
 
   const openSlotCount = slotStatuses.filter((s) => s.status === "open").length;
-  const bookedSlotCount = slotStatuses.filter((s) => s.status === "booked" || s.status === "locked").length;
+  const bookedSlotCount = slotStatuses.filter(
+    (s) => s.status === "booked" || s.status === "held" || s.status === "locked"
+  ).length;
 
   return (
     <section className="w-full py-12 sm:py-20 px-4 sm:px-8 lg:px-12 xl:px-16 space-y-8">
@@ -289,11 +295,11 @@ export function LiveCalendarSection() {
               ))}
             </div>
 
-            {/* Dates Grid */}
+            {/* Dates Grid (Compact & Responsive) */}
             <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
               {calendarDays.map((cd, idx) => {
                 if (!cd.isCurrentMonth) {
-                  return <div key={idx} className="aspect-square" />;
+                  return <div key={idx} className="h-11 sm:h-12 md:h-14" />;
                 }
 
                 const isSelected = selectedDayStr === cd.dateStr;
@@ -307,7 +313,7 @@ export function LiveCalendarSection() {
                       setSelectedDayStr(cd.dateStr);
                       setSelectedSlot(null);
                     }}
-                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
+                    className={`h-11 sm:h-12 md:h-14 rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
                       isSelected
                         ? "bg-[#1A1410] text-[#FDFBF8] shadow-md ring-2 ring-[#C9A96E]"
                         : cd.isPast || cd.isBlocked
@@ -315,7 +321,7 @@ export function LiveCalendarSection() {
                         : "bg-white hover:bg-warm-white text-[#1A1410] hover:text-[#C9A96E] border border-[#E5DECF]/70 hover:border-[#C9A96E] shadow-2xs"
                     }`}
                   >
-                    <span className="font-semibold">{cd.dayNum}</span>
+                    <span className="font-semibold leading-none">{cd.dayNum}</span>
 
                     {/* Visual Availability Dot */}
                     {!cd.isPast && !cd.isBlocked && !isSelected && (
@@ -347,8 +353,8 @@ export function LiveCalendarSection() {
             </div>
           </div>
 
-          {/* Right Column: Time Slots Box (5 cols on Desktop) */}
-          <div className="lg:col-span-5 p-6 sm:p-8 rounded-3xl bg-white border border-[#E5DECF] shadow-xs space-y-6">
+          {/* Right Column: Sticky Time Slots Box (5 cols on Desktop) */}
+          <div className="lg:col-span-5 lg:sticky lg:top-24 p-6 sm:p-8 rounded-3xl bg-white border border-[#E5DECF] shadow-xs space-y-6">
             <div className="space-y-1">
               <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#C9A96E] font-bold block">
                 {selectedCategory.label.toUpperCase()}
@@ -363,7 +369,7 @@ export function LiveCalendarSection() {
                   <span className="text-neutral-500">This date has already passed.</span>
                 ) : (
                   <span>
-                    <strong className="text-[#1A1410]">{openSlotCount} start times open</strong> · {bookedSlotCount} already booked
+                    <strong className="text-[#1A1410]">{openSlotCount} start times open</strong> · {bookedSlotCount} already reserved
                   </span>
                 )}
               </p>
@@ -391,8 +397,16 @@ export function LiveCalendarSection() {
                   >
                     <span>{item.slot}</span>
                     {isUnavailable ? (
-                      <span className="text-[9.5px] font-mono no-underline uppercase text-[#6E6359]/60">
-                        {item.status === "booked" ? "Booked" : "Held"}
+                      <span className="text-[9.5px] font-mono no-underline uppercase text-[#6E6359]/70">
+                        {item.status === "booked"
+                          ? "Booked"
+                          : item.status === "held"
+                          ? "Held (2h)"
+                          : item.status === "locked"
+                          ? "Locked"
+                          : item.status === "blocked"
+                          ? "Closed"
+                          : "Past"}
                       </span>
                     ) : (
                       <Clock className={`w-3.5 h-3.5 ${isSelected ? "text-[#C9A96E]" : "text-[#6E6359]"}`} />

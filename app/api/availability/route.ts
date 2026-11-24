@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
+import {
+  expireStaleHeldBookings,
+  extractDateAndSlotWAT,
+  HOLD_DURATION_MS,
+} from "@/lib/booking-hold";
 
 export const dynamic = "force-dynamic";
 
@@ -10,38 +15,52 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month") || new Date().toISOString().slice(0, 7); // "YYYY-MM"
 
-    // Construct start and end dates of target month
+    // 0. Automatically release any unpaid 2-hour temporary holds that have expired
+    await expireStaleHeldBookings(sql);
+
+    // Construct start and end dates of target month (include ±1 day buffer around month boundary for WAT +01:00)
     const [yearStr, monthStr] = month.split("-");
     const year = parseInt(yearStr, 10);
     const m = parseInt(monthStr, 10);
     const startDate = `${yearStr}-${monthStr.padStart(2, "0")}-01T00:00:00Z`;
-    // Last day of month
     const lastDay = new Date(year, m, 0).getDate();
     const endDate = `${yearStr}-${monthStr.padStart(2, "0")}-${String(lastDay).padStart(2, "0")}T23:59:59Z`;
 
-    // 1. Fetch real booked slots from Neon DB
+    // 1. Fetch active booked or non-expired held slots from Neon DB
     const bookedRows = await sql.query(
       `SELECT 
         b.id,
         b.shoot_start,
         b.shoot_end,
         b.status,
+        b.created_at,
+        b.updated_at,
         e.session_type,
         e.reference_code,
-        e.answers
+        e.answers,
+        e.stage,
+        p.status as payment_status
        FROM booking b
        JOIN enquiry e ON b.enquiry_id = e.id
-       WHERE b.status != 'cancelled'
-         AND b.shoot_start >= $1
-         AND b.shoot_start <= $2
+       LEFT JOIN payment p ON p.enquiry_id = e.id AND p.kind = 'deposit'
+       WHERE b.status NOT IN ('cancelled', 'expired')
+         AND b.shoot_start >= ($1::timestamptz - INTERVAL '1 day')
+         AND b.shoot_start <= ($2::timestamptz + INTERVAL '1 day')
+         AND (
+           b.status != 'held'
+           OR b.updated_at >= NOW() - INTERVAL '2 hours'
+           OR p.status IN ('reported', 'confirmed', 'recorded')
+           OR e.stage IN ('deposit_reported', 'deposit_paid', 'preparation', 'confirmed', 'shot', 'editing', 'client_review', 'delivered', 'closed')
+         )
        ORDER BY b.shoot_start ASC`,
       [startDate, endDate]
     ).catch(async () => {
-      // Fallback query if enquiry JOIN fails
+      // Fallback query if join fails
       return sql.query(
-        `SELECT id, shoot_start, shoot_end, status 
+        `SELECT id, shoot_start, shoot_end, status, created_at, updated_at
          FROM booking 
-         WHERE status != 'cancelled' 
+         WHERE status NOT IN ('cancelled', 'expired')
+           AND (status != 'held' OR updated_at >= NOW() - INTERVAL '2 hours')
            AND shoot_start >= $1 
            AND shoot_start <= $2
          ORDER BY shoot_start ASC`,
@@ -67,36 +86,44 @@ export async function GET(req: NextRequest) {
       calendarLocks = typeof val === "string" ? JSON.parse(val) : val;
     }
 
-    // Format booked slots with parsed date and time
-    const formattedBooked = bookedRows.map((r: any) => {
-      const start = new Date(r.shoot_start);
-      const dateStr = start.toISOString().split("T")[0];
-      // Format 12-hour slot
-      let hours = start.getUTCHours();
-      const minutes = start.getUTCMinutes();
-      const ampm = hours >= 12 ? "PM" : "AM";
-      hours = hours % 12;
-      hours = hours ? hours : 12;
-      const timeStr = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")} ${ampm}`;
+    // Format booked slots with WAT date & timeSlot
+    const formattedBooked = bookedRows
+      .map((r: any) => {
+        const answers =
+          typeof r.answers === "string" ? JSON.parse(r.answers) : r.answers || {};
+        const { date, timeSlot } = extractDateAndSlotWAT(r.shoot_start, answers);
+        const holdAnchor = new Date(r.updated_at || r.created_at).getTime();
+        const holdExpiresAt =
+          r.status === "held" &&
+          !["reported", "confirmed", "recorded"].includes(r.payment_status)
+            ? new Date(holdAnchor + HOLD_DURATION_MS).toISOString()
+            : null;
 
-      return {
-        id: r.id,
-        start: r.shoot_start,
-        end: r.shoot_end,
-        date: dateStr,
-        timeSlot: (r.answers?.timeSlot as string) || timeStr,
-        sessionType: r.session_type || "portrait",
-        status: r.status,
-        referenceCode: r.reference_code || null,
-      };
-    });
+        return {
+          id: r.id,
+          start: r.shoot_start,
+          end: r.shoot_end,
+          date,
+          timeSlot,
+          sessionType: r.session_type || "portrait",
+          status:
+            r.payment_status === "reported" && r.status === "held"
+              ? "reported"
+              : r.status,
+          referenceCode: r.reference_code || null,
+          holdExpiresAt,
+        };
+      })
+      .filter((slot: any) => slot.date.startsWith(month));
 
     return NextResponse.json({
       success: true,
       month,
       bookedSlots: formattedBooked,
       lockedSlots: calendarLocks.lockedSlots || [],
-      blockedDays: (calendarLocks.blockedDays || []).map((b) => (typeof b === "string" ? b : b.date)),
+      blockedDays: (calendarLocks.blockedDays || []).map((b) =>
+        typeof b === "string" ? b : b.date
+      ),
     });
   } catch (err: any) {
     console.error("[Availability API Error]", err);
