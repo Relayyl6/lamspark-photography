@@ -20,6 +20,8 @@ import {
   User,
   ArrowRight,
   SlidersHorizontal,
+  Eye,
+  Trash2,
 } from "lucide-react";
 import { PipelineStage, EnquiryRecord } from "@/lib/types";
 import { transitionEnquiry } from "@/lib/pipeline/transition";
@@ -633,7 +635,7 @@ export function KanbanBoard({
                             userSelect: "none",
                             touchAction: touchLiftedCardId === card.id ? "none" : "pan-x pan-y",
                           }}
-                          className={`group relative p-3.5 rounded-xl bg-warm-white hover:bg-white border border-line hover:border-gold shadow-xs hover:shadow-editorial cursor-grab active:cursor-grabbing transition-all space-y-2.5 select-none ${
+                          className={`group relative p-3.5 rounded-xl bg-warm-white hover:bg-white border border-line hover:border-gold shadow-xs hover:shadow-editorial cursor-grab active:cursor-grabbing transition-all space-y-2.5 select-none overflow-hidden w-full max-w-full min-w-0 ${
                             draggedCardId === card.id ? "opacity-50 scale-95" : ""
                           } ${
                             touchLiftedCardId === card.id
@@ -642,24 +644,31 @@ export function KanbanBoard({
                           }`}
                         >
                           {/* Top Bar with Reference & WhatsApp Link */}
-                          <div className="flex items-center justify-between text-[11px] font-mono">
-                            <span className="font-bold text-deep group-hover:text-gold transition-colors flex items-center gap-1.5">
-                              <GripVertical className="w-3 h-3 text-muted/60" />
-                              {card.reference_code}
+                          <div className="flex items-center justify-between text-[11px] font-mono gap-1.5 min-w-0 w-full">
+                            <span className="font-bold text-deep group-hover:text-gold transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap">
+                              <GripVertical className="w-3 h-3 text-muted/60 shrink-0" />
+                              <span>{card.reference_code}</span>
                             </span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="uppercase text-[9px] bg-cream px-1.5 py-0.5 rounded text-brown font-semibold border border-line">
-                                {card.source || "Website"}
+                            <div className="flex items-center gap-1 min-w-0 shrink overflow-hidden justify-end">
+                              <span
+                                className="uppercase text-[9px] bg-cream px-1.5 py-0.5 rounded text-brown font-semibold border border-line truncate max-w-[85px] block shrink"
+                                title={card.source || "Website"}
+                              >
+                                {card.source === "Website Booking Wizard" ? "Web Wizard" : (card.source || "Website")}
                               </span>
                               <a
-                                href={`https://wa.me/2348130847299?text=Hello%20regarding%20your%20LamSparks%20commission%20${card.reference_code}`}
+                                href={
+                                  (card as any).whatsapp
+                                    ? `https://wa.me/${String((card as any).whatsapp).replace(/\D/g, "")}?text=Hello%20${encodeURIComponent((card as any).client_name || "LamSparks Client")}%2C%20regarding%20your%20commission%20${card.reference_code}`
+                                    : `https://wa.me/2348130847299?text=Hello%20regarding%20your%20LamSparks%20commission%20${card.reference_code}`
+                                }
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                title="Chat with client on WhatsApp"
-                                className="w-5 h-5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors"
+                                title={`Chat with ${(card as any).client_name || "client"} on WhatsApp`}
+                                className="w-5 h-5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors shrink-0"
                               >
-                                <MessageCircle className="w-3 h-3" />
+                                <MessageCircle className="w-3 h-3 shrink-0" />
                               </a>
                             </div>
                           </div>
@@ -667,7 +676,7 @@ export function KanbanBoard({
                           {/* Client Name & Purpose */}
                           <div>
                             {(card as any).client_name && (
-                              <span className="font-body text-xs font-bold text-deep block mb-0.5">
+                              <span className="font-body text-xs font-bold text-deep block mb-0.5 truncate">
                                 {(card as any).client_name}
                               </span>
                             )}
@@ -680,8 +689,8 @@ export function KanbanBoard({
                           </div>
 
                           {/* Financials & Waiting Status */}
-                          <div className="pt-2 border-t border-line/60 flex items-center justify-between text-[11px]">
-                            <div>
+                          <div className="pt-2 border-t border-line/60 flex items-center justify-between text-[11px] gap-1">
+                            <div className="truncate">
                               {card.agreed_price ? (
                                 <span className="font-semibold text-deep">
                                   ₦{card.agreed_price.toLocaleString()}
@@ -691,7 +700,7 @@ export function KanbanBoard({
                               )}
                             </div>
 
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 shrink-0">
                               <span
                                 className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded ${
                                   card.waiting_on === "us"
@@ -704,23 +713,38 @@ export function KanbanBoard({
                             </div>
                           </div>
 
-                          {/* Accessible 1-tap Stage Selector & Advance Button */}
-                          <div className="pt-1 flex items-center justify-between gap-1 text-[10px]">
-                            <button
-                              type="button"
-                              onClick={(e) => handleOpenMoveModal(e, card)}
-                              className="text-deep font-semibold inline-flex items-center gap-1 px-2 py-1 rounded bg-cream hover:bg-gold/20 border border-line transition-all shrink-0"
-                            >
-                              <span>Move</span>
-                              <ChevronRight className="w-2.5 h-2.5 text-gold" />
-                            </button>
+                          {/* Accessible 1-tap Stage Selector, Details & Advance Button */}
+                          <div className="pt-1.5 border-t border-line/50 flex items-center justify-between gap-1 text-[10px] min-w-0 w-full overflow-hidden">
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectEnquiry(card);
+                                }}
+                                className="text-deep font-semibold inline-flex items-center gap-0.5 px-1.5 py-1 rounded bg-gold/15 hover:bg-gold/30 text-gold-darker border border-gold/40 transition-all shrink-0 whitespace-nowrap"
+                                title="View full booking specifications, financials & delete"
+                              >
+                                <Eye className="w-2.5 h-2.5" />
+                                <span>Details</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleOpenMoveModal(e, card)}
+                                className="text-deep font-semibold inline-flex items-center gap-0.5 px-1.5 py-1 rounded bg-cream hover:bg-gold/20 border border-line transition-all shrink-0 whitespace-nowrap"
+                                title="Move to stage"
+                              >
+                                <span>Move</span>
+                                <ChevronRight className="w-2.5 h-2.5 text-gold" />
+                              </button>
+                            </div>
 
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 min-w-0 shrink overflow-hidden justify-end">
                               <select
                                 value={card.stage}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => handleDropCard(card.id, e.target.value as PipelineStage)}
-                                className="bg-cream/60 border border-line rounded px-1.5 py-1 text-deep font-body text-[10px] focus:outline-none focus:border-gold"
+                                className="bg-cream/60 border border-line rounded px-1 py-1 text-deep font-body text-[10px] focus:outline-none focus:border-gold max-w-[105px] truncate shrink min-w-0"
                               >
                                 {ALL_11_STAGES.map((s) => (
                                   <option key={s.id} value={s.id}>
@@ -732,7 +756,8 @@ export function KanbanBoard({
                               {card.stage !== "closed" && (
                                 <button
                                   onClick={(e) => handleQuickAdvance(e, card)}
-                                  className="text-gold hover:text-deep font-semibold inline-flex items-center gap-0.5 px-2 py-1 rounded hover:bg-cream transition-colors"
+                                  className="text-gold hover:text-deep font-semibold inline-flex items-center gap-0.5 px-1.5 py-1 rounded hover:bg-cream transition-colors shrink-0 whitespace-nowrap"
+                                  title="Next stage"
                                 >
                                   <span>Next</span>
                                   <ChevronRight className="w-3 h-3" />
@@ -852,7 +877,7 @@ export function KanbanBoard({
                               userSelect: "none",
                               touchAction: touchLiftedCardId === card.id ? "none" : "pan-x pan-y",
                             }}
-                            className={`p-3 rounded-lg bg-warm-white border border-line hover:border-gold shadow-2xs cursor-grab active:cursor-grabbing text-xs space-y-2 transition-all select-none ${
+                            className={`p-3 rounded-lg bg-warm-white border border-line hover:border-gold shadow-2xs cursor-grab active:cursor-grabbing text-xs space-y-2 transition-all select-none overflow-hidden w-full max-w-full min-w-0 ${
                               draggedCardId === card.id ? "opacity-50" : ""
                             } ${
                               touchLiftedCardId === card.id
@@ -860,13 +885,29 @@ export function KanbanBoard({
                                 : ""
                             }`}
                           >
-                            <div className="flex items-center justify-between font-mono text-[10px]">
-                              <span className="font-bold text-deep">{card.reference_code}</span>
-                              <span className="text-gold font-bold uppercase">{card.session_type}</span>
+                            <div className="flex items-center justify-between font-mono text-[10px] gap-1 min-w-0 w-full">
+                              <span className="font-bold text-deep shrink-0 whitespace-nowrap">{card.reference_code}</span>
+                              <div className="flex items-center gap-1 min-w-0 shrink overflow-hidden justify-end">
+                                <span className="text-gold font-bold uppercase truncate max-w-[80px]">{card.session_type}</span>
+                                <a
+                                  href={
+                                    (card as any).whatsapp
+                                      ? `https://wa.me/${String((card as any).whatsapp).replace(/\D/g, "")}?text=Hello%20${encodeURIComponent((card as any).client_name || "LamSparks Client")}%2C%20regarding%20your%20commission%20${card.reference_code}`
+                                      : `https://wa.me/2348130847299?text=Hello%20regarding%20your%20LamSparks%20commission%20${card.reference_code}`
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title={`Chat on WhatsApp`}
+                                  className="w-4 h-4 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors shrink-0"
+                                >
+                                  <MessageCircle className="w-2.5 h-2.5 shrink-0" />
+                                </a>
+                              </div>
                             </div>
 
                             {(card as any).client_name && (
-                              <span className="font-body text-xs font-semibold text-deep block">
+                              <span className="font-body text-xs font-semibold text-deep block truncate">
                                 {(card as any).client_name}
                               </span>
                             )}
@@ -875,22 +916,36 @@ export function KanbanBoard({
                               {card.purpose_text}
                             </p>
 
-                            <div className="pt-1.5 border-t border-line/50 flex items-center justify-between gap-1 text-[10px]">
-                              <button
-                                type="button"
-                                onClick={(e) => handleOpenMoveModal(e, card)}
-                                className="text-deep font-semibold inline-flex items-center gap-1 px-2 py-1 rounded bg-cream hover:bg-gold/20 border border-line transition-all shrink-0"
-                              >
-                                <span>Move</span>
-                                <ChevronRight className="w-2.5 h-2.5 text-gold" />
-                              </button>
+                            <div className="pt-1.5 border-t border-line/50 flex items-center justify-between gap-1 text-[10px] min-w-0 w-full overflow-hidden">
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectEnquiry(card);
+                                  }}
+                                  className="text-deep font-semibold inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gold/15 hover:bg-gold/30 text-gold-darker border border-gold/40 transition-all shrink-0 whitespace-nowrap"
+                                  title="View full booking specifications, financials & delete"
+                                >
+                                  <Eye className="w-2.5 h-2.5" />
+                                  <span>Details</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenMoveModal(e, card)}
+                                  className="text-deep font-semibold inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-cream hover:bg-gold/20 border border-line transition-all shrink-0 whitespace-nowrap"
+                                >
+                                  <span>Move</span>
+                                  <ChevronRight className="w-2.5 h-2.5 text-gold" />
+                                </button>
+                              </div>
 
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 min-w-0 shrink overflow-hidden justify-end">
                                 <select
                                   value={card.stage}
                                   onClick={(e) => e.stopPropagation()}
                                   onChange={(e) => handleDropCard(card.id, e.target.value as PipelineStage)}
-                                  className="bg-cream/60 border border-line rounded px-1.5 py-1 text-deep font-body text-[10px] focus:outline-none"
+                                  className="bg-cream/60 border border-line rounded px-1 py-0.5 text-deep font-body text-[10px] focus:outline-none max-w-[95px] truncate shrink min-w-0"
                                 >
                                   {ALL_11_STAGES.map((s) => (
                                     <option key={s.id} value={s.id}>
@@ -902,7 +957,7 @@ export function KanbanBoard({
                                 {card.stage !== "closed" && (
                                   <button
                                     onClick={(e) => handleQuickAdvance(e, card)}
-                                    className="text-gold hover:text-deep font-semibold inline-flex items-center gap-0.5 px-2 py-1 rounded hover:bg-cream transition-colors"
+                                    className="text-gold hover:text-deep font-semibold inline-flex items-center gap-0.5 px-1 py-0.5 rounded hover:bg-cream transition-colors shrink-0 whitespace-nowrap"
                                   >
                                     <span>Next</span>
                                     <ChevronRight className="w-3 h-3" />

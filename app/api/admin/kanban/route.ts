@@ -206,3 +206,72 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+// DELETE: delete an enquiry and its associated records (payment, booking, estimate_snapshot)
+export async function DELETE(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get("id");
+    let ref = searchParams.get("ref");
+
+    if (!id && !ref) {
+      try {
+        const body = await req.json();
+        id = body.id;
+        ref = body.ref;
+      } catch (_) {}
+    }
+
+    if (!id && !ref) {
+      return NextResponse.json({ error: "id or ref parameter is required" }, { status: 400 });
+    }
+
+    // Find the enquiry first
+    let enquiryRow: { id: string; reference_code: string } | undefined;
+    if (id) {
+      const rows = (await sql.query(
+        `SELECT id, reference_code FROM enquiry WHERE id = $1 LIMIT 1`,
+        [id]
+      )) as { id: string; reference_code: string }[];
+      enquiryRow = rows[0];
+    } else if (ref) {
+      const rows = (await sql.query(
+        `SELECT id, reference_code FROM enquiry WHERE reference_code = $1 LIMIT 1`,
+        [ref]
+      )) as { id: string; reference_code: string }[];
+      enquiryRow = rows[0];
+    }
+
+    if (!enquiryRow) {
+      return NextResponse.json({ error: "Enquiry not found" }, { status: 404 });
+    }
+
+    const targetId = enquiryRow.id;
+
+    // Delete dependent records safely
+    await sql.query(`DELETE FROM payment WHERE enquiry_id = $1`, [targetId]);
+    await sql.query(`DELETE FROM booking WHERE enquiry_id = $1`, [targetId]);
+    await sql.query(`DELETE FROM estimate_snapshot WHERE enquiry_id = $1`, [targetId]);
+
+    try {
+      await sql.query(`DELETE FROM conversation WHERE enquiry_id = $1`, [targetId]);
+    } catch (_) {}
+
+    // Delete enquiry itself
+    await sql.query(`DELETE FROM enquiry WHERE id = $1`, [targetId]);
+
+    return NextResponse.json({
+      success: true,
+      message: `Enquiry ${enquiryRow.reference_code} deleted successfully`,
+      deletedId: targetId,
+      referenceCode: enquiryRow.reference_code,
+    });
+  } catch (err: any) {
+    console.error("[kanban DELETE]", err);
+    return NextResponse.json({ error: err.message || "Failed to delete enquiry" }, { status: 500 });
+  }
+}
+

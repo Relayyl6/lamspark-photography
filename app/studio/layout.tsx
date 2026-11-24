@@ -83,6 +83,7 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
   const navItems = [
     { href: "/studio", label: "TODAY OVERVIEW", icon: Clock },
     { href: "/studio/pipeline", label: "PIPELINE BOARD", icon: BarChart3 },
+    { href: "/studio/calendar", label: "STUDIO CALENDAR", icon: Calendar },
     {
       href: "/studio/deposits",
       label: "DEPOSIT QUEUE",
@@ -98,7 +99,6 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
       icon: Inbox,
       badge: inboxCount > 0 ? inboxCount : undefined,
     },
-    { href: "/studio/calendar", label: "CONTENT CALENDAR", icon: Calendar },
     { href: "/studio/content", label: "SITE CONTENT CMS", icon: FileText },
     { href: "/studio/settings", label: "STUDIO SETTINGS", icon: Settings },
   ];
