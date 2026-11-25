@@ -6,11 +6,10 @@ import { ArrowUpRight, Menu, X, ChevronDown, Sparkles, BookOpen, Camera, Shield,
 
 export function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<"sessions" | "galleries" | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<"sessions" | null>(null);
 
   // Mobile accordion states
   const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
-  const [mobileGalleriesOpen, setMobileGalleriesOpen] = useState(false);
 
   const navRef = useRef<HTMLElement>(null);
 
@@ -44,11 +43,6 @@ export function Nav() {
     { href: "/weddings-and-events", label: "Weddings & Milestone Events", desc: "Ceremonies, dinners, and landmark celebrations" },
     { href: "/sessions/official-portrait", label: "Official Portraits & Headshots", desc: "Commanding, dignified portraits for leaders" },
     { href: "/sessions", label: "Browse All Sessions ↗", desc: "Explore the full session catalogue" },
-  ];
-
-  const galleryLinks = [
-    { href: "/portfolio", label: "Curated Portfolio", desc: "Archival Series 02 · Vintage camera matte board & fine art works" },
-    { href: "/love-notes", label: "Client Love Notes", desc: "Real memories & words from families across Nigeria" },
   ];
 
   return (
@@ -125,47 +119,13 @@ export function Nav() {
             )}
           </div>
 
-          {/* Dropdown 2: Galleries */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setOpenDropdown(openDropdown === "galleries" ? null : "galleries")}
-              className={`inline-flex items-center gap-1 font-body text-[13px] font-medium px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
-                openDropdown === "galleries" ? "text-deep bg-warm-white shadow-sm" : "text-brown/90 hover:text-deep hover:bg-warm-white/60"
-              }`}
-              aria-expanded={openDropdown === "galleries"}
-            >
-              <span>Galleries</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                  openDropdown === "galleries" ? "rotate-180 text-gold" : "text-muted"
-                }`}
-              />
-            </button>
-
-            {openDropdown === "galleries" && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-[#FAF8F5] rounded-xl border border-[#E5DDD2] shadow-2xl p-3 space-y-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="px-3 py-1.5 text-[10px] font-body uppercase tracking-[0.2em] text-gold font-bold border-b border-[#E5DDD2]">
-                  Visual Archives & Chronicles
-                </div>
-                {galleryLinks.map((g) => (
-                  <Link
-                    key={g.href}
-                    href={g.href}
-                    onClick={() => setOpenDropdown(null)}
-                    className="block p-2.5 rounded-lg hover:bg-[#F2ECE3] transition-colors group"
-                  >
-                    <span className="block font-display text-sm font-medium text-deep group-hover:text-gold transition-colors">
-                      {g.label}
-                    </span>
-                    <span className="block font-body text-[11px] text-muted line-clamp-1 mt-0.5">
-                      {g.desc}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Direct Link: Portfolio */}
+          <Link
+            href="/portfolio"
+            className="font-body text-[13px] font-medium text-brown/90 hover:text-deep hover:bg-warm-white/60 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+          >
+            Portfolio
+          </Link>
 
           {/* Direct Link: My Booking */}
           <Link
@@ -265,34 +225,15 @@ export function Nav() {
               )}
             </div>
 
-            {/* Accordion 2: Galleries */}
-            <div className="border-b border-line/60 pb-2.5 sm:pb-3">
-              <button
-                type="button"
-                onClick={() => setMobileGalleriesOpen(!mobileGalleriesOpen)}
-                className="w-full flex items-center justify-between py-1.5 text-left"
+            {/* Direct Link: Portfolio */}
+            <div className="border-b border-line/60 pb-3">
+              <Link
+                href="/portfolio"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 font-display text-lg text-deep font-medium hover:text-gold"
               >
-                <span className="font-display text-base sm:text-lg text-deep font-medium">Galleries</span>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold transition-transform duration-200 ${
-                    mobileGalleriesOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {mobileGalleriesOpen && (
-                <div className="pl-3 py-1.5 space-y-1.5 border-l-2 border-gold/40 mt-1">
-                  {galleryLinks.map((g) => (
-                    <Link
-                      key={g.href}
-                      href={g.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block py-1 text-[13px] sm:text-sm font-body text-brown hover:text-gold"
-                    >
-                      {g.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
+                Portfolio
+              </Link>
             </div>
 
             {/* Direct Link: My Booking */}
