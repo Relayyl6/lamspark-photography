@@ -71,8 +71,14 @@ function PortfolioCardImage({
       return;
     }
 
-    const onNativeLoad = () => setIsLoaded(true);
-    const onNativeError = () => setIsLoaded(true);
+    const onNativeLoad = () => {
+      if (img.naturalWidth > 0) {
+        setIsLoaded(true);
+      }
+    };
+    const onNativeError = () => {
+      setIsLoaded(true);
+    };
 
     img.addEventListener("load", onNativeLoad);
     img.addEventListener("error", onNativeError);
@@ -82,18 +88,20 @@ function PortfolioCardImage({
         setIsLoaded(true);
         clearInterval(interval);
       }
-    }, 150);
+    }, 100);
 
-    const safetyTimer = setTimeout(() => {
-      setIsLoaded(true);
+    const maxTimer = setTimeout(() => {
+      if (img.complete && img.naturalWidth > 0) {
+        setIsLoaded(true);
+      }
       clearInterval(interval);
-    }, 1500);
+    }, 8000);
 
     return () => {
       img.removeEventListener("load", onNativeLoad);
       img.removeEventListener("error", onNativeError);
       clearInterval(interval);
-      clearTimeout(safetyTimer);
+      clearTimeout(maxTimer);
     };
   }, [optimizedSrc]);
 
