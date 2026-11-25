@@ -295,11 +295,11 @@ export function LiveCalendarSection() {
               ))}
             </div>
 
-            {/* Dates Grid (Square & Compact Proportion) */}
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+            {/* Dates Grid (Square & Generous 2x Proportion) */}
+            <div className="grid grid-cols-7 gap-2 sm:gap-3">
               {calendarDays.map((cd, idx) => {
                 if (!cd.isCurrentMonth) {
-                  return <div key={idx} className="aspect-square max-w-[48px] sm:max-w-[54px] w-full mx-auto" />;
+                  return <div key={idx} className="w-full aspect-square" />;
                 }
 
                 const isSelected = selectedDayStr === cd.dateStr;
@@ -313,20 +313,20 @@ export function LiveCalendarSection() {
                       setSelectedDayStr(cd.dateStr);
                       setSelectedSlot(null);
                     }}
-                    className={`aspect-square max-w-[48px] sm:max-w-[54px] w-full mx-auto rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
+                    className={`w-full aspect-square rounded-2xl flex flex-col items-center justify-center relative text-sm sm:text-base md:text-lg font-semibold transition-all ${
                       isSelected
-                        ? "bg-[#1A1410] text-[#FDFBF8] shadow-md ring-2 ring-[#C9A96E]"
+                        ? "bg-[#1A1410] text-[#FDFBF8] shadow-lg ring-2 ring-[#C9A96E] scale-[1.03]"
                         : cd.isPast || cd.isBlocked
                         ? "text-[#6E6359]/30 cursor-not-allowed bg-transparent"
-                        : "bg-white hover:bg-warm-white text-[#1A1410] hover:text-[#C9A96E] border border-[#E5DECF]/70 hover:border-[#C9A96E] shadow-2xs"
+                        : "bg-white hover:bg-warm-white text-[#1A1410] hover:text-[#C9A96E] border border-[#E5DECF] hover:border-[#C9A96E] shadow-xs hover:scale-[1.02]"
                     }`}
                   >
-                    <span className="font-semibold leading-none">{cd.dayNum}</span>
+                    <span className="leading-none">{cd.dayNum}</span>
 
                     {/* Visual Availability Dot */}
                     {!cd.isPast && !cd.isBlocked && !isSelected && (
                       <span
-                        className={`w-1.5 h-1.5 rounded-full mt-1 ${
+                        className={`w-2 h-2 rounded-full mt-1.5 ${
                           cd.openCount > 0 ? "bg-emerald-500" : "bg-neutral-300"
                         }`}
                       />

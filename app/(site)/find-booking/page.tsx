@@ -17,7 +17,6 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { Nav } from "@/components/Nav";
-import { Footer } from "@/components/Footer";
 
 interface SavedBookingItem {
   referenceCode: string;
@@ -310,8 +309,6 @@ export default function FindBookingPage() {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

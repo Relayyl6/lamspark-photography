@@ -1802,11 +1802,11 @@ function BookingWizard() {
                       ))}
                     </div>
 
-                    {/* Calendar Day Grid (Square & Compact Proportion) */}
-                    <div className="grid grid-cols-7 gap-1.5">
+                    {/* Calendar Day Grid (Square & Generous 2x Proportion) */}
+                    <div className="grid grid-cols-7 gap-2 sm:gap-2.5">
                       {calendarDays.map((cd, idx) => {
                         if (!cd.isCurrentMonth) {
-                          return <div key={idx} className="aspect-square max-w-[48px] sm:max-w-[54px] w-full mx-auto" />;
+                          return <div key={idx} className="w-full aspect-square" />;
                         }
 
                         const isSelected = selectedDate === cd.dateStr;
@@ -1821,17 +1821,17 @@ function BookingWizard() {
                               setSelectedDate(cd.dateStr);
                               setTimeSlot("");
                             }}
-                            className={`aspect-square max-w-[48px] sm:max-w-[54px] w-full mx-auto rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
+                            className={`w-full aspect-square rounded-2xl flex flex-col items-center justify-center relative text-sm sm:text-base md:text-lg font-semibold transition-all ${
                               isSelected
-                                ? "bg-[#1A1410] text-[#FDFBF8] shadow-md ring-2 ring-[#C9A96E]"
+                                ? "bg-[#1A1410] text-[#FDFBF8] shadow-lg ring-2 ring-[#C9A96E] scale-[1.03]"
                                 : isUnavailable
                                 ? "text-[#6E6359]/30 cursor-not-allowed bg-transparent"
-                                : "hover:bg-[#F8F4EE] text-[#1A1410] hover:text-[#C9A96E] border border-transparent hover:border-[#E5DECF]"
+                                : "hover:bg-[#F8F4EE] text-[#1A1410] hover:text-[#C9A96E] border border-transparent hover:border-[#E5DECF] shadow-xs hover:scale-[1.02]"
                             }`}
                           >
-                            <span>{cd.dayNum}</span>
+                            <span className="leading-none">{cd.dayNum}</span>
                             {!isUnavailable && !isSelected && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-0.5" />
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5" />
                             )}
                           </button>
                         );

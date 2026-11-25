@@ -13,7 +13,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Nav } from "@/components/Nav";
-import { Footer } from "@/components/Footer";
 import { GalleryLightbox, GalleryImage } from "@/components/GalleryLightbox";
 
 interface NeonGalleryItem {
@@ -416,7 +415,6 @@ export default function PortfolioPage() {
           </div>
         </section>
       </main>
-      <Footer />
     </>
   );
 }
