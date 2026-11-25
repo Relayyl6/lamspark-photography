@@ -49,7 +49,6 @@ export function Nav() {
   const galleryLinks = [
     { href: "/portfolio", label: "Curated Portfolio", desc: "Archival Series 02 · Vintage camera matte board & fine art works" },
     { href: "/love-notes", label: "Client Love Notes", desc: "Real memories & words from families across Nigeria" },
-    { href: "/faq", label: "Session FAQ & Prep", desc: "Timing, booking steps, and studio suite details" },
   ];
 
   return (
