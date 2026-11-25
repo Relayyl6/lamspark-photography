@@ -110,19 +110,23 @@ export async function POST(req: NextRequest) {
     let finalContentType = file.type || "image/jpeg";
     let finalSafeFilename = safeFilename;
 
-    // Automatic Studio Image Optimization: Auto-rotate EXIF, cap at 4K (2560px), encode to high-fidelity WebP
+    // Automatic Studio Image Optimization: Auto-rotate EXIF, Retina 4K/5K max (2880px), encode to studio-grade crisp WebP
     if (partition === "public" && (file.type?.startsWith("image/") || /\.(jpe?g|png|webp|heic|tiff)$/i.test(file.name))) {
       try {
         const sharp = require("sharp");
         processedBuffer = await sharp(buffer)
           .rotate() // Automatically orient camera photos based on EXIF tag
           .resize({
-            width: 2560,
-            height: 2560,
+            width: 2880,
+            height: 2880,
             fit: "inside",
             withoutEnlargement: true,
           })
-          .webp({ quality: 86, effort: 4 })
+          .webp({
+            quality: 90, // Studio-grade near-lossless fidelity (preserves micro-contrast, fabric weaves, hair, and skin tones)
+            effort: 6, // Maximum precision compression
+            smartSubsample: true, // Prevents chroma bleeding on vibrant colors and dark tones
+          })
           .toBuffer();
 
         finalContentType = "image/webp";
