@@ -101,11 +101,40 @@ function CollectionCardImage({
     return src;
   }, [src]);
 
-  // Sync check: if cached, complete is true immediately on mount or src change
+  // Bulletproof hydration & load tracking (Direct DOM event + polling + safety timeout)
   useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+    const img = imgRef.current;
+    if (!img) return;
+
+    if (img.complete && img.naturalWidth > 0) {
       setIsLoaded(true);
+      return;
     }
+
+    const onNativeLoad = () => setIsLoaded(true);
+    const onNativeError = () => setIsLoaded(true);
+
+    img.addEventListener("load", onNativeLoad);
+    img.addEventListener("error", onNativeError);
+
+    const interval = setInterval(() => {
+      if (img.complete && img.naturalWidth > 0) {
+        setIsLoaded(true);
+        clearInterval(interval);
+      }
+    }, 150);
+
+    const safetyTimer = setTimeout(() => {
+      setIsLoaded(true);
+      clearInterval(interval);
+    }, 1500);
+
+    return () => {
+      img.removeEventListener("load", onNativeLoad);
+      img.removeEventListener("error", onNativeError);
+      clearInterval(interval);
+      clearTimeout(safetyTimer);
+    };
   }, [optimizedSrc]);
 
   return (
@@ -126,7 +155,13 @@ function CollectionCardImage({
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         onLoad={() => setIsLoaded(true)}
-        onError={() => setIsLoaded(true)}
+        onError={(e) => {
+          setIsLoaded(true);
+          const target = e.currentTarget;
+          if (target.src.endsWith(".webp")) {
+            target.src = target.src.replace(/\.webp$/, ".jpg");
+          }
+        }}
         className={`relative z-[1] w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 ease-out ${
           isLoaded ? "opacity-100" : "opacity-0"
         }`}
