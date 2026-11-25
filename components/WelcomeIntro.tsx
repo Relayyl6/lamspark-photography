@@ -46,9 +46,9 @@ export function WelcomeIntro() {
     }
   }, []);
 
-  // Background asset preloader: Warm up lightweight WebP images in background while intro plays
+  // Background asset preloader: Warm up lightweight WebP images in background ONLY AFTER intro video has started
   useEffect(() => {
-    if (stage === "video") {
+    if (videoStarted) {
       try {
         const criticalAssets = [
           "/images/client/weddings_1.webp",
@@ -66,7 +66,7 @@ export function WelcomeIntro() {
         });
       } catch (_) {}
     }
-  }, [stage]);
+  }, [videoStarted]);
 
   const handleVideoEnd = useCallback(() => {
     setStage("pulse_dot");
@@ -113,16 +113,21 @@ export function WelcomeIntro() {
     startFadeOut();
   }, [startFadeOut]);
 
-  // High-reliability video playback engine with fast fallback
+  // High-reliability video playback engine with robust fallback
   useEffect(() => {
     if (stage !== "video") return;
 
     const vid = videoRef.current;
     if (!vid) return;
 
+    // Strict attributes for mobile & InPrivate autoplay compliance
     vid.muted = true;
     vid.defaultMuted = true;
+    vid.volume = 0;
     vid.playsInline = true;
+    vid.setAttribute("muted", "");
+    vid.setAttribute("playsinline", "");
+    vid.setAttribute("webkit-playsinline", "");
 
     let started = false;
     const markStarted = () => {
@@ -134,44 +139,49 @@ export function WelcomeIntro() {
     };
 
     const tryPlay = () => {
+      if (!vid) return;
+      vid.muted = true;
       const p = vid.play();
       if (p !== undefined) {
         p.then(() => {
           markStarted();
         }).catch((err) => {
-          console.warn("[WelcomeIntro autoplay notice]", err?.message || err);
-          setAutoplayBlocked(true);
+          console.warn("[WelcomeIntro autoplay notice]", err?.name, err?.message || err);
+          if (err?.name === "NotAllowedError") {
+            setAutoplayBlocked(true);
+          }
         });
       }
     };
 
-    // Attempt instant play immediately
+    // Attach listeners
+    vid.addEventListener("playing", markStarted);
+    vid.addEventListener("canplay", tryPlay);
+    vid.addEventListener("loadeddata", tryPlay);
+
+    // Initial play trigger
     tryPlay();
 
-    vid.addEventListener("playing", markStarted);
-    vid.addEventListener("canplay", tryPlay, { once: true });
-    vid.addEventListener("loadeddata", tryPlay, { once: true });
-
-    // If autoplay is restricted by browser policy, reveal tap overlay quickly (900ms)
+    // If autoplay is restricted by browser policy (e.g. InPrivate), reveal tap overlay at 1.5s
     const promptTimer = setTimeout(() => {
       if (!started && (!vid.currentTime || vid.currentTime === 0 || vid.paused)) {
         setAutoplayBlocked(true);
       }
-    }, 900);
+    }, 1500);
 
-    // Hard fallback: If playback has not produced frames after 2.0s, smoothly advance
-    // so the visitor is NEVER stranded on a black screen
+    // Safety fallback: Give 12 seconds for remote video buffering over network
+    // Visitor is never permanently stuck if network completely fails
     const safetyTimer = setTimeout(() => {
       if (!started) {
-        console.warn("[WelcomeIntro] Video stalled, advancing to signature");
+        console.warn("[WelcomeIntro] Video buffer timeout after 12s, advancing");
         handleVideoEnd();
       }
-    }, 2000);
+    }, 12000);
 
-    // Global cap: maximum duration is 9.5s regardless
+    // Global cap: maximum duration is 18s regardless
     const maxTimer = setTimeout(() => {
       handleVideoEnd();
-    }, 9500);
+    }, 18000);
 
     return () => {
       clearTimeout(promptTimer);
@@ -227,6 +237,16 @@ export function WelcomeIntro() {
       id="welcome-intro-root"
       onClick={() => {
         if (stage === "video" && videoRef.current && !videoStarted) {
+          videoRef.current.muted = true;
+          videoRef.current.play().then(() => {
+            setVideoStarted(true);
+            setAutoplayBlocked(false);
+          }).catch(() => {});
+        }
+      }}
+      onTouchEnd={() => {
+        if (stage === "video" && videoRef.current && !videoStarted) {
+          videoRef.current.muted = true;
           videoRef.current.play().then(() => {
             setVideoStarted(true);
             setAutoplayBlocked(false);
@@ -271,21 +291,56 @@ export function WelcomeIntro() {
             onEnded={handleVideoEnd}
             onError={(e) => {
               console.warn("[WelcomeIntro video load notice]", e);
-              setStage("pulse_dot");
+              handleVideoEnd();
             }}
             className="w-full h-full object-cover"
           />
 
+          {/* Buffering/Loading State before video starts */}
+          {!videoStarted && !autoplayBlocked && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none bg-black/40">
+              <div className="w-12 h-12 rounded-full border-2 border-gold/20 border-t-gold animate-spin mb-4 shadow-[0_0_20px_rgba(201,169,110,0.3)]" />
+              <span className="font-body text-[11px] uppercase tracking-[0.28em] text-gold/80 font-medium">
+                Loading Atelier Experience...
+              </span>
+            </div>
+          )}
+
           {/* Autoplay blocked touch overlay */}
           {autoplayBlocked && !videoStarted && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm cursor-pointer p-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-gold/20 border border-gold/40 flex items-center justify-center text-gold mb-3 animate-pulse">
-                <svg className="w-8 h-8 fill-current translate-x-0.5" viewBox="0 0 24 24">
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                if (videoRef.current) {
+                  videoRef.current.muted = true;
+                  videoRef.current.play().then(() => {
+                    setVideoStarted(true);
+                    setAutoplayBlocked(false);
+                  }).catch(console.warn);
+                }
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+                if (videoRef.current) {
+                  videoRef.current.muted = true;
+                  videoRef.current.play().then(() => {
+                    setVideoStarted(true);
+                    setAutoplayBlocked(false);
+                  }).catch(console.warn);
+                }
+              }}
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer p-4 text-center animate-in fade-in duration-300"
+            >
+              <div className="w-20 h-20 rounded-full bg-gold/20 border-2 border-gold/50 flex items-center justify-center text-gold mb-4 hover:scale-110 active:scale-95 transition-transform shadow-[0_0_40px_rgba(201,169,110,0.5)]">
+                <svg className="w-10 h-10 fill-current translate-x-0.5" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </div>
-              <span className="font-body text-xs uppercase tracking-[0.24em] text-warm-white font-semibold">
+              <span className="font-body text-xs sm:text-sm uppercase tracking-[0.26em] text-warm-white font-semibold mb-1.5">
                 Tap Anywhere to Play Intro
+              </span>
+              <span className="font-body text-[10px] text-gold/80 tracking-widest uppercase">
+                LamSparks · Abuja Atelier
               </span>
             </div>
           )}
