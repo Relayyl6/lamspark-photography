@@ -93,11 +93,11 @@ export function Footer() {
         }
       `}</style>
 
-      {/* Top Section: Brand Info + 4 Link Columns */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pt-8 sm:pt-12 lg:pt-14 pb-6 sm:pb-8 lg:pb-10">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-8 lg:gap-10" data-stagger="true">
+      {/* Top Section: Brand Info + Edge Column (Legal) */}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pt-6 sm:pt-10 lg:pt-12 pb-4 sm:pb-6">
+        <div className="flex justify-between items-start gap-4 sm:gap-8" data-stagger="true">
           {/* Brand Left Column */}
-          <div className="reveal-up col-span-2 md:col-span-2 lg:col-span-2 space-y-3 sm:space-y-4">
+          <div className="reveal-up space-y-2.5 sm:space-y-4 max-w-[240px] sm:max-w-sm">
             <Link href="/" className="inline-block group">
               <span className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-deep group-hover:text-gold transition-colors">
                 LamSparks.
@@ -107,7 +107,7 @@ export function Footer() {
               </span>
             </Link>
 
-            <p className="font-body text-xs text-brown/85 leading-relaxed max-w-sm">
+            <p className="font-body text-xs text-brown/85 leading-relaxed">
               Unhurried portraiture & landmark celebrations in Abuja, Nigeria.
             </p>
 
@@ -152,94 +152,12 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Column 1: Sessions */}
-          <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
-            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-3 sm:mb-4">
-              Sessions
-            </h4>
-            <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
-              <li>
-                <Link href="/sessions/toddler" className="hover:text-gold transition-colors">
-                  Toddler & Children
-                </Link>
-              </li>
-              <li>
-                <Link href="/sessions/maternity" className="hover:text-gold transition-colors">
-                  Maternity & Motherhood
-                </Link>
-              </li>
-              <li>
-                <Link href="/sessions/motherhood-bundle" className="hover:text-gold transition-colors">
-                  Motherhood Bundle (-15%)
-                </Link>
-              </li>
-              <li>
-                <Link href="/weddings-and-events" className="hover:text-gold transition-colors">
-                  Weddings & Events
-                </Link>
-              </li>
-              <li>
-                <Link href="/sessions/official-portrait" className="hover:text-gold transition-colors">
-                  Portraits & Headshots
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 2: Studio */}
-          <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
-            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-3 sm:mb-4">
-              Studio
-            </h4>
-            <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
-              <li>
-                <Link href="/find-booking" className="hover:text-gold transition-colors">
-                  Find My Booking
-                </Link>
-              </li>
-              <li>
-                <Link href="/love-notes" className="hover:text-gold transition-colors">
-                  Client Love Notes
-                </Link>
-              </li>
-              <li>
-                <Link href="/portfolio" className="hover:text-gold transition-colors">
-                  Curated Portfolio
-                </Link>
-              </li>
-              <li>
-                <Link href="/studio" className="hover:text-gold transition-colors flex items-center gap-1.5 text-brown/90">
-                  <span>Studio OS</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Resources */}
-          <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
-            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-3 sm:mb-4">
-              Resources
-            </h4>
-            <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
-              <li>
-                <Link href="/book" className="hover:text-gold transition-colors">
-                  Request an Estimate
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="hover:text-gold transition-colors">
-                  Contact Concierge
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 4: Legal */}
-          <div className="reveal-up col-span-1 md:col-span-1 lg:col-span-1">
-            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-3 sm:mb-4">
+          {/* Edge Column: Legal */}
+          <div className="reveal-up shrink-0 text-right sm:text-left">
+            <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-2.5 sm:mb-4">
               Legal
             </h4>
-            <ul className="space-y-2 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
+            <ul className="space-y-1.5 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
               <li>
                 <Link href="/legal/privacy" className="hover:text-gold transition-colors">
                   Privacy Policy
