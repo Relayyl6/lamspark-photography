@@ -1089,8 +1089,14 @@ export function GalleryManager() {
       {/* MODAL 1: EVENT TYPES & CATEGORIES MANAGER (FULL CRUD OPS)                 */}
       {/* ========================================================================= */}
       {mounted && showEventTypeModal && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6">
-          <div className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-2xl w-full p-4 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] sm:max-h-[90vh] flex flex-col justify-between overflow-hidden">
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6"
+          onClick={() => setShowEventTypeModal(false)}
+        >
+          <div
+            className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-2xl w-full p-4 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] sm:max-h-[90vh] flex flex-col justify-between overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-line shrink-0">
               <div className="flex items-center gap-2.5">
@@ -1353,8 +1359,17 @@ export function GalleryManager() {
       {/* MODAL 2: CREATE / EDIT GALLERY (WITH DYNAMIC EVENT TYPE SELECTOR)         */}
       {/* ========================================================================= */}
       {mounted && showGalleryModal && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6">
-          <div className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-lg w-full p-4 sm:p-6 md:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6"
+          onClick={() => {
+            setShowGalleryModal(false);
+            setEditingGallery(null);
+          }}
+        >
+          <div
+            className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-lg w-full p-4 sm:p-6 md:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-display text-lg sm:text-xl text-deep font-semibold mb-3 sm:mb-4">
               {editingGallery ? `Edit Gallery: ${editingGallery.title}` : "+ Create New Event Gallery"}
             </h3>
@@ -1552,8 +1567,14 @@ export function GalleryManager() {
       {/* MODAL 3: EDIT PHOTO DETAILS                                              */}
       {/* ========================================================================= */}
       {mounted && editingAsset && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-warm-white rounded-2xl border border-line max-w-sm w-full p-4 sm:p-5 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          onClick={() => setEditingAsset(null)}
+        >
+          <div
+            className="bg-warm-white rounded-2xl border border-line max-w-sm w-full p-4 sm:p-5 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-display text-lg text-deep font-semibold mb-3">Edit Photo Details</h3>
             <div className="space-y-3">
               <div>
@@ -1594,8 +1615,14 @@ export function GalleryManager() {
       {/* MODAL 4: BULK UPLOAD PHOTOS STUDIO (BATCH / PARALLEL / URLS)              */}
       {/* ========================================================================= */}
       {mounted && showBulkUploadModal && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6">
-          <div className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-2xl w-full p-4 sm:p-6 md:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] sm:max-h-[92vh] flex flex-col justify-between overflow-hidden">
+        <div
+          className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 md:p-6"
+          onClick={() => setShowBulkUploadModal(false)}
+        >
+          <div
+            className="bg-warm-white rounded-2xl sm:rounded-3xl border border-line max-w-2xl w-full p-4 sm:p-6 md:p-7 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[94vh] sm:max-h-[92vh] flex flex-col justify-between overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-line shrink-0">
               <div className="flex items-center gap-2.5 sm:gap-3">

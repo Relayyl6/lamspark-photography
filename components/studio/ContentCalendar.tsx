@@ -310,8 +310,14 @@ export function ContentCalendar() {
 
       {/* Schedule Post Modal */}
       {mounted && showAddModal && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4">
-          <div className="bg-warm-white rounded-2xl border border-line max-w-lg w-full p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4 max-h-[94vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4"
+          onClick={() => setShowAddModal(false)}
+        >
+          <div
+            className="bg-warm-white rounded-2xl border border-line max-w-lg w-full p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4 max-h-[94vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b border-line pb-3">
               <h3 className="font-display text-lg sm:text-xl text-deep font-semibold">
                 Schedule Brand Editorial Post
