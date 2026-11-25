@@ -108,6 +108,33 @@ const CONTENT_SCHEMA: ContentField[] = [
   },
 ];
 
+const DEFAULT_TRUST_STATS = [
+  {
+    value: "10+",
+    label: "Years of Empathy",
+    desc: "Gentle pacing, calm studio lighting, and patient direction built around every family's comfort.",
+    iconName: "Clock",
+  },
+  {
+    value: "1,200+",
+    label: "Heirloom Keepsakes",
+    desc: "Archival fine-art frames, museum-grade prints, and timeless digital collections delivered with care.",
+    iconName: "Award",
+  },
+  {
+    value: "100%",
+    label: "Unhurried Pace",
+    desc: "Dedicated time buffers for nursing, outfit changes, toddlers, and quiet moments—never rushed.",
+    iconName: "Heart",
+  },
+  {
+    value: "4.98★",
+    label: "Client Reverence",
+    desc: "Trusted by discerning Abuja & diaspora families for melanin tonal fidelity and discretion.",
+    iconName: "Sparkles",
+  },
+];
+
 type SubTab = "general" | "wheel" | "testimonials" | "stories" | "faqs" | "stats" | "perspectives";
 
 function ImageUploadField({
@@ -208,7 +235,11 @@ export function SiteContentEditor() {
           if (Array.isArray(data.content.site_testimonials)) setTestimonials(data.content.site_testimonials);
           if (Array.isArray(data.content.site_stories)) setStories(data.content.site_stories);
           if (Array.isArray(data.content.site_faqs)) setFaqs(data.content.site_faqs);
-          if (Array.isArray(data.content.about_stats)) setStats(data.content.about_stats);
+          if (Array.isArray(data.content.about_stats) && data.content.about_stats.length > 0) {
+            setStats(data.content.about_stats);
+          } else {
+            setStats(DEFAULT_TRUST_STATS);
+          }
           if (Array.isArray(data.content.camera_perspectives)) setPerspectives(data.content.camera_perspectives);
         }
       } catch (err) {

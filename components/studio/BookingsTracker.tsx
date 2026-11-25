@@ -367,7 +367,7 @@ export function BookingsTracker() {
                       }`}
                     >
                       {b.status === "held"
-                        ? "Held · 2h Hold"
+                        ? "Held · 20h Hold"
                         : b.status === "expired"
                         ? "Hold Expired"
                         : b.status}

@@ -1,9 +1,9 @@
 /**
- * Shared 2-hour temporary hold lifecycle and West Africa Time (Africa/Lagos, UTC+1)
+ * Shared 20-hour temporary hold lifecycle and West Africa Time (Africa/Lagos, UTC+1)
  * scheduling utilities used across booking, availability, and studio admin APIs.
  */
 
-export const HOLD_DURATION_HOURS = 2;
+export const HOLD_DURATION_HOURS = 20;
 export const HOLD_DURATION_MS = HOLD_DURATION_HOURS * 60 * 60 * 1000;
 export const ABUJA_TIMEZONE = "Africa/Lagos";
 
@@ -96,7 +96,7 @@ export function extractDateAndSlotWAT(
 }
 
 /**
- * Releases any unpaid temporary holds that have exceeded the 2-hour reservation window.
+ * Releases any unpaid temporary holds that have exceeded the 20-hour reservation window.
  * A hold is protected from expiration if:
  *  - A deposit payment row exists with status 'reported', 'confirmed', or 'recorded'
  *  - Or the associated enquiry has advanced to 'deposit_reported', 'deposit_paid', 'preparation', 'confirmed', etc.
@@ -110,7 +110,7 @@ export async function expireStaleHeldBookings(sql: any): Promise<number> {
        FROM enquiry e
        WHERE b.enquiry_id = e.id
          AND b.status = 'held'
-         AND b.updated_at < NOW() - INTERVAL '2 hours'
+         AND b.updated_at < NOW() - INTERVAL '20 hours'
          AND COALESCE(e.stage, 'enquiry') NOT IN (
            'deposit_reported',
            'deposit_paid',

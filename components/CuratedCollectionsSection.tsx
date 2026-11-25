@@ -7,8 +7,6 @@ import type { SessionTypeMeta } from "@/lib/catalog/seed";
 
 export interface CollectionPhotoCard {
   id: string;
-  title: string;
-  subtitle: string;
   badge: string;
   categoryGroup: "studio" | "maternity" | "wedding" | "event" | "official";
   imageUrl: string;
@@ -55,12 +53,31 @@ function mapSessionSlugToGroup(
   if (s.includes("event") || s.includes("cultural") || s.includes("milestone") || s.includes("memorial")) {
     return "event";
   }
-  if (s.includes("official") || s.includes("individual") || s.includes("commercial") || s.includes("woodhall")) {
+  if (s.includes("official") || s.includes("individual") || s.includes("commercial") || s.includes("woodhall") || s.includes("corporate")) {
     return "official";
   }
   if (sessionCat === "events") return "event";
   if (sessionCat === "portraits") return "official";
   return "studio";
+}
+
+function getBadgeForGroup(group: "studio" | "maternity" | "wedding" | "event" | "official", explicitTitle?: string): string {
+  if (explicitTitle && explicitTitle.length <= 26) {
+    return explicitTitle;
+  }
+  switch (group) {
+    case "maternity":
+      return "Maternity & Motherhood";
+    case "wedding":
+      return "Weddings & Nuptials";
+    case "event":
+      return "Event Coverage";
+    case "official":
+      return "Official & Executive";
+    case "studio":
+    default:
+      return "Studio Session";
+  }
 }
 
 export function CuratedCollectionsSection({
@@ -70,92 +87,80 @@ export function CuratedCollectionsSection({
   const [activeCategory, setActiveCategory] = useState<
     "all" | "studio" | "maternity" | "wedding" | "event" | "official"
   >("all");
-  const [isPaused, setIsPaused] = useState(false);
   const trackContainerRef = useRef<HTMLDivElement>(null);
 
-  // Merge live sessions with curated gallery photographs cleanly without duplicates
+  // Build capped list: maximum 3 distinct photos per service group (no duplicates)
   const allCards = useMemo(() => {
     const seenImages = new Set<string>();
+    const countPerGroup: Record<string, number> = {
+      studio: 0,
+      maternity: 0,
+      wedding: 0,
+      event: 0,
+      official: 0,
+    };
     const cards: CollectionPhotoCard[] = [];
 
-    // 1. Prioritize signature sessions
+    // 1. First add signature live session types (up to 3 per group)
     for (const st of sessions) {
       if (!st.heroImage || st.slug === "not-sure") continue;
-      seenImages.add(st.heroImage);
+      if (seenImages.has(st.heroImage)) continue;
       const group = mapSessionSlugToGroup(st.slug, st.category);
+      if (countPerGroup[group] >= 3) continue;
+
+      seenImages.add(st.heroImage);
+      countPerGroup[group]++;
       cards.push({
         id: `session-${st.slug}`,
-        title: st.title,
-        subtitle: st.category === "studio" ? "Abuja Studio" : st.category === "events" ? "Celebration" : "Portraiture",
-        badge:
-          st.category === "studio"
-            ? "Studio Session"
-            : st.category === "events"
-            ? "Event Coverage"
-            : "Portrait Suite",
+        badge: getBadgeForGroup(group, st.title),
         categoryGroup: group,
         imageUrl: st.heroImage,
         href: `/sessions/${st.slug}`,
       });
     }
 
-    // 2. Mix in curated archive photos from Neon gallery tables for deep variety per category
+    // 2. Supplement with distinct gallery photos from Neon DB (capping each group at 3 max)
     for (const gp of galleryPhotos) {
       if (!gp.src || seenImages.has(gp.src)) continue;
-      seenImages.add(gp.src);
       const group = mapSessionSlugToGroup(gp.sessionType || gp.slug);
+      if (countPerGroup[group] >= 3) continue;
+
+      seenImages.add(gp.src);
+      countPerGroup[group]++;
       cards.push({
         id: `gal-${gp.id}`,
-        title: gp.caption || gp.category || "Atelier Highlight",
-        subtitle: gp.eventTypeName || gp.category || "Curated Archive",
-        badge: gp.category || "Studio Archive",
+        badge: getBadgeForGroup(group, gp.eventTypeName || gp.category),
         categoryGroup: group,
         imageUrl: gp.src,
-        href: `/portfolio?category=${encodeURIComponent(gp.slug)}`,
+        href: `/portfolio?category=${encodeURIComponent(gp.slug || "studio")}`,
       });
     }
 
     return cards;
   }, [sessions, galleryPhotos]);
 
-  const filteredCards = useMemo(() => {
+  // Filter cards by selected category tab
+  const displayCards = useMemo(() => {
     if (activeCategory === "all") return allCards;
     return allCards.filter((c) => {
       if (activeCategory === "studio") {
-        return c.categoryGroup === "studio" || c.categoryGroup === "maternity";
+        return c.categoryGroup === "studio";
       }
       return c.categoryGroup === activeCategory;
     });
   }, [allCards, activeCategory]);
 
-  // Ensure enough cards exist for a seamless, continuous edge-to-edge loop on ultra-wide screens
-  const marqueeLoopCards = useMemo(() => {
-    const base = filteredCards.length > 0 ? filteredCards : allCards;
-    if (base.length === 0) return [];
-    let padded = [...base];
-    while (padded.length < 8) {
-      padded = [...padded, ...base];
-    }
-    return [...padded, ...padded];
-  }, [filteredCards, allCards]);
-
-  // Dynamic duration proportional to item count so visual speed feels calm & steady
-  const durationSeconds = useMemo(() => {
-    const halfLen = Math.max(4, Math.floor(marqueeLoopCards.length / 2));
-    return Math.min(110, Math.max(28, halfLen * 4.5));
-  }, [marqueeLoopCards.length]);
-
   const handleManualScroll = (direction: "prev" | "next") => {
     const el = trackContainerRef.current;
     if (!el) return;
-    const distance = direction === "next" ? 340 : -340;
+    const distance = direction === "next" ? 360 : -360;
     el.scrollBy({ left: distance, behavior: "smooth" });
   };
 
   return (
     <section
       aria-label="Curated Collections Showcase"
-      className="w-full py-10 sm:py-16 space-y-6 sm:space-y-8 overflow-x-clip"
+      className="w-full py-8 sm:py-14 space-y-6 sm:space-y-8 overflow-x-clip"
     >
       {/* Unboxed Clean Header & Category Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
@@ -183,7 +188,7 @@ export function CuratedCollectionsSection({
                 type="button"
                 onClick={() => handleManualScroll("prev")}
                 aria-label="Scroll collections left"
-                className="w-8 h-8 rounded-full border border-line bg-warm-white hover:border-gold flex items-center justify-center text-deep hover:text-gold transition-colors"
+                className="w-8 h-8 rounded-full border border-line bg-warm-white hover:border-gold flex items-center justify-center text-deep hover:text-gold transition-colors shadow-2xs"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -191,7 +196,7 @@ export function CuratedCollectionsSection({
                 type="button"
                 onClick={() => handleManualScroll("next")}
                 aria-label="Scroll collections right"
-                className="w-8 h-8 rounded-full border border-line bg-warm-white hover:border-gold flex items-center justify-center text-deep hover:text-gold transition-colors"
+                className="w-8 h-8 rounded-full border border-line bg-warm-white hover:border-gold flex items-center justify-center text-deep hover:text-gold transition-colors shadow-2xs"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -199,7 +204,7 @@ export function CuratedCollectionsSection({
           </div>
         </div>
 
-        {/* Interactive Category Pills Atop the Pictures */}
+        {/* Interactive Category Selector Pills Atop the Pictures */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           {FILTER_TABS.map((tab) => {
             const isSelected = activeCategory === tab.id;
@@ -221,66 +226,43 @@ export function CuratedCollectionsSection({
         </div>
       </div>
 
-      {/* Edge-to-Edge Unboxed Infinite Horizontal Scroll Track */}
+      {/* Unboxed Horizontal Showcase Track: 3 Photos Per Service, No Duplicates, Minimal Content */}
       <div
         ref={trackContainerRef}
-        onMouseEnter={() => setIsPaused(true)}
-        onMouseLeave={() => setIsPaused(false)}
-        onTouchStart={() => setIsPaused(true)}
-        onTouchEnd={() => setIsPaused(false)}
-        className="collections-marquee-wrap relative w-full overflow-x-auto no-scrollbar py-2"
+        className="relative w-full overflow-x-auto no-scrollbar py-2 px-4 sm:px-6 lg:px-8 scroll-smooth"
       >
-        {/* Seamless 2-Half Infinite Strip */}
-        <div
-          key={activeCategory}
-          className="animate-collections-marquee flex gap-4 sm:gap-5 px-4 sm:px-6"
-          style={{
-            animationDuration: `${durationSeconds}s`,
-            animationPlayState: isPaused ? "paused" : "running",
-          }}
-        >
-          {marqueeLoopCards.map((card, idx) => (
+        <div className="flex gap-4 sm:gap-5 w-max">
+          {displayCards.map((card) => (
             <article
-              key={`${card.id}-${idx}`}
-              className="group relative w-[255px] sm:w-[290px] lg:w-[320px] shrink-0 overflow-hidden rounded-xl sm:rounded-2xl bg-deep shadow-[0_8px_28px_rgba(24,20,17,0.16)] hover:shadow-[0_16px_42px_rgba(24,20,17,0.28)] transition-all duration-500 cursor-pointer"
+              key={card.id}
+              className="group relative w-[260px] sm:w-[300px] lg:w-[325px] shrink-0 overflow-hidden rounded-2xl bg-deep shadow-[0_8px_24px_rgba(24,20,17,0.12)] hover:shadow-[0_16px_36px_rgba(24,20,17,0.22)] transition-all duration-500 cursor-pointer"
             >
-              <Link href={card.href} className="block">
-                <div className="relative aspect-[3/4] sm:aspect-[2/3] w-full overflow-hidden">
-                  <img
-                    src={card.imageUrl}
-                    alt={`${card.title} - LamSparks Photography Abuja`}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                    loading="lazy"
-                  />
+              <Link href={card.href} className="block relative aspect-[3/4] sm:aspect-[2/3] w-full overflow-hidden">
+                <img
+                  src={card.imageUrl}
+                  alt={`${card.badge} - LamSparks Photography Abuja`}
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+                  loading="lazy"
+                />
 
-                  {/* Bottom gradient for text legibility */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0E0C0A]/95 via-[#0E0C0A]/25 to-transparent" />
+                {/* Subtle gradient so top pill and bottom explore button pop */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/35 pointer-events-none" />
 
-                  {/* Category pill top-left */}
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                    <span className="font-body text-[9px] uppercase tracking-[0.2em] text-warm-white/95 font-semibold bg-black/30 backdrop-blur-sm border border-white/20 px-2.5 py-1 rounded-full truncate max-w-[85%]">
-                      {card.badge}
+                {/* Category Badge Atop the Picture */}
+                <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
+                  <span className="font-body text-[10px] uppercase tracking-[0.2em] text-warm-white font-semibold bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full truncate max-w-[90%]">
+                    {card.badge}
+                  </span>
+                </div>
+
+                {/* Only Explore Button at Bottom */}
+                <div className="absolute bottom-3.5 right-3.5">
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/55 group-hover:bg-gold backdrop-blur-md border border-white/25 group-hover:border-gold text-warm-white group-hover:text-deep transition-all duration-300 shadow-sm">
+                    <span className="font-body text-[10px] sm:text-[11px] uppercase tracking-wider font-bold">
+                      Explore
                     </span>
-                  </div>
-
-                  {/* Bottom Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-                    <span className="font-body text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-gold font-bold block mb-1 truncate">
-                      {card.subtitle}
-                    </span>
-                    <h3 className="font-display text-sm sm:text-base lg:text-lg text-warm-white font-medium leading-snug mb-3 group-hover:text-gold transition-colors duration-300 line-clamp-2">
-                      {card.title}
-                    </h3>
-
-                    <div className="flex items-center gap-2">
-                      <span className="font-body text-[10px] sm:text-xs uppercase tracking-wider text-warm-white/75 font-semibold group-hover:text-warm-white transition-colors">
-                        Explore
-                      </span>
-                      <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border border-white/30 group-hover:border-gold group-hover:bg-gold flex items-center justify-center transition-all duration-300 shrink-0">
-                        <ArrowUpRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-warm-white/80 group-hover:text-deep transition-colors" />
-                      </span>
-                    </div>
-                  </div>
+                    <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </span>
                 </div>
               </Link>
             </article>

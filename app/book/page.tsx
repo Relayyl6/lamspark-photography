@@ -31,7 +31,6 @@ import {
   FileCheck2,
 } from "lucide-react";
 import { Nav } from "@/components/Nav";
-import { Footer } from "@/components/Footer";
 import { SESSION_TYPES, PACKAGES } from "@/lib/catalog/seed";
 import { calculateEstimate } from "@/lib/estimate/engine";
 import { BookingAnswers, EstimateResult, SessionTypeSlug } from "@/lib/types";
@@ -150,6 +149,7 @@ function BookingWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [holdRemainingMs, setHoldRemainingMs] = useState<number | null>(null);
+  const [reholdError, setReholdError] = useState<string | null>(null);
 
   // Modals for self-serve management
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
@@ -443,7 +443,7 @@ function BookingWizard() {
     if (booked) {
       return {
         available: false,
-        badge: booked.status === "held" ? "Held (2h)" : "Booked",
+        badge: booked.status === "held" ? "Held (20h)" : "Booked",
       };
     }
     return { available: true, badge: "" };
@@ -613,10 +613,11 @@ function BookingWizard() {
     }
   }
 
-  // Handle Re-Reserving an Expired 2-Hour Hold
+  // Handle Re-Reserving an Expired 20-Hour Hold (with collision check against already booked slots)
   async function handleReholdBooking() {
     if (!activeBooking?.referenceCode) return;
 
+    setReholdError(null);
     setIsUpdatingBooking(true);
     try {
       const res = await fetch("/api/booking", {
@@ -629,17 +630,21 @@ function BookingWizard() {
       });
       const data = await res.json();
       if (data.success) {
+        setReholdError(null);
         const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}`);
         const refData = await refresh.json();
         if (refData.success && refData.booking) {
           setActiveBooking(refData.booking);
         }
       } else {
-        alert(data.error || "This slot was claimed after expiration. Please pick another time.");
+        const errMsg = data.error || "This time slot has already been booked or claimed by another client. Please select an available slot.";
+        setReholdError(errMsg);
         setIsRescheduleOpen(true);
       }
     } catch (err: any) {
-      alert("Re-reserve failed: " + err.message);
+      const errMsg = err.message || "Failed to re-reserve slot. Please select another open time.";
+      setReholdError(errMsg);
+      setIsRescheduleOpen(true);
     } finally {
       setIsUpdatingBooking(false);
     }
@@ -802,17 +807,22 @@ function BookingWizard() {
               </div>
             ) : activeBooking.status === "expired" || (activeBooking.status === "awaiting_deposit" && holdRemainingMs === 0) ? (
               <>
-                {/* Expired 2-Hour Hold Banner */}
+                {/* Expired 20-Hour Hold Banner */}
                 <div className="p-5 sm:p-6 rounded-3xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-rose-700 shrink-0 mt-0.5" />
                     <div>
                       <span className="text-[10px] uppercase font-bold tracking-widest text-rose-800 block">
-                        2-Hour Hold Expired · Slot Released
+                        20-Hour Hold Expired · Slot Released
                       </span>
                       <p className="text-xs sm:text-sm text-rose-900 font-medium mt-0.5">
-                        The 2-hour reservation window for {activeBooking.referenceCode} has elapsed without a deposit receipt, so the time slot returned to the public calendar.
+                        The 20-hour reservation window for {activeBooking.referenceCode} has elapsed without a deposit receipt, so the time slot returned to the public calendar.
                       </p>
+                      {reholdError && (
+                        <p className="text-xs text-rose-700 font-semibold mt-1.5 bg-rose-100/70 p-2 rounded-lg border border-rose-300">
+                          {reholdError}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="shrink-0 flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -820,9 +830,9 @@ function BookingWizard() {
                       type="button"
                       disabled={isUpdatingBooking}
                       onClick={handleReholdBooking}
-                      className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-[#1A1410] hover:bg-[#C9A96E] text-[#FDFBF8] hover:text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors"
+                      className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-[#1A1410] hover:bg-[#C9A96E] text-[#FDFBF8] hover:text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
                     >
-                      {isUpdatingBooking ? "Checking..." : "Re-Reserve Slot (2h)"}
+                      {isUpdatingBooking ? "Checking..." : "Re-Reserve Slot (20h)"}
                     </button>
                     <button
                       type="button"
@@ -869,16 +879,16 @@ function BookingWizard() {
                 </span>
               </div>
             ) : (
-              /* Active 2-Hour Temporary Hold Banner with Live Countdown */
+              /* Active 20-Hour Temporary Hold Banner with Live Countdown */
               <div className="p-5 sm:p-6 rounded-3xl bg-amber-50 border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-3">
                   <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-widest text-amber-800 block">
-                      Slot Held Temporarily (2 Hours)
+                      Slot Held Temporarily (20 Hours)
                     </span>
                     <p className="text-xs sm:text-sm text-amber-900 font-medium">
-                      Reserved temporarily for 2 hours. Complete your deposit transfer and upload your receipt to lock this session.
+                      Reserved temporarily for 20 hours. Complete your deposit transfer and upload your receipt to lock this session.
                     </p>
                   </div>
                 </div>
@@ -1792,11 +1802,11 @@ function BookingWizard() {
                       ))}
                     </div>
 
-                    {/* Calendar Day Grid (Compact Proportion) */}
+                    {/* Calendar Day Grid (Square & Compact Proportion) */}
                     <div className="grid grid-cols-7 gap-1.5">
                       {calendarDays.map((cd, idx) => {
                         if (!cd.isCurrentMonth) {
-                          return <div key={idx} className="h-11 sm:h-12 md:h-14" />;
+                          return <div key={idx} className="aspect-square max-w-[48px] sm:max-w-[54px] w-full mx-auto" />;
                         }
 
                         const isSelected = selectedDate === cd.dateStr;
@@ -1811,7 +1821,7 @@ function BookingWizard() {
                               setSelectedDate(cd.dateStr);
                               setTimeSlot("");
                             }}
-                            className={`h-11 sm:h-12 md:h-14 rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
+                            className={`aspect-square max-w-[48px] sm:max-w-[54px] w-full mx-auto rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
                               isSelected
                                 ? "bg-[#1A1410] text-[#FDFBF8] shadow-md ring-2 ring-[#C9A96E]"
                                 : isUnavailable
@@ -1870,7 +1880,7 @@ function BookingWizard() {
                       <p className="text-xs text-[#6E6359] mt-0.5">
                         {blockedDays.includes(selectedDate)
                           ? "Studio is closed on this selected date."
-                          : "Booked slots & active 2-hour holds are locked in real time."}
+                          : "Booked slots & active 20-hour holds are locked in real time."}
                       </p>
                     </div>
 
@@ -2198,8 +2208,6 @@ function BookingWizard() {
           </div>
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

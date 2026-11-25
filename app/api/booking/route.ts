@@ -63,7 +63,7 @@ async function checkSlotConflict(
        AND b.shoot_start <= ($1::date + INTERVAL '2 days')
        AND (
          b.status != 'held'
-         OR b.updated_at >= NOW() - INTERVAL '2 hours'
+         OR b.updated_at >= NOW() - INTERVAL '20 hours'
          OR p.status IN ('reported', 'confirmed', 'recorded')
          OR e.stage IN ('deposit_reported', 'deposit_paid', 'preparation', 'confirmed', 'shot', 'editing', 'client_review', 'delivered', 'closed')
        )`,
@@ -89,7 +89,7 @@ async function checkSlotConflict(
 // GET: Query booking by ref code OR get calendar availability
 export async function GET(req: NextRequest) {
   try {
-    // Ensure expired 2-hour unpaid holds are released automatically
+    // Ensure expired 20-hour unpaid holds are released automatically
     await expireStaleHeldBookings(sql);
 
     const { searchParams } = new URL(req.url);
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
            AND b.shoot_start <= ($2::timestamptz + INTERVAL '1 day')
            AND (
              b.status != 'held'
-             OR b.updated_at >= NOW() - INTERVAL '2 hours'
+             OR b.updated_at >= NOW() - INTERVAL '20 hours'
              OR p.status IN ('reported', 'confirmed', 'recorded')
              OR e.stage IN ('deposit_reported', 'deposit_paid', 'preparation', 'confirmed', 'shot', 'editing', 'client_review', 'delivered', 'closed')
            )`,
@@ -197,7 +197,7 @@ export async function GET(req: NextRequest) {
     const b = rows[0];
     const answers = typeof b.answers === "string" ? JSON.parse(b.answers) : b.answers || {};
 
-    // Canonical hold expiration timestamp (2 hours from last active hold anchor)
+    // Canonical hold expiration timestamp (20 hours from last active hold anchor)
     const holdAnchorTime = new Date(
       b.booking_updated_at || b.booking_created_at || b.enquiry_created_at
     ).getTime();
@@ -285,10 +285,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: create a new booking with atomic conflict & 2-hour hold enforcement
+// POST: create a new booking with atomic conflict & 20-hour hold enforcement
 export async function POST(req: NextRequest) {
   try {
-    // 0. Expire any stale 2-hour unpaid holds first so released slots can be booked
+    // 0. Expire any stale 20-hour unpaid holds first so released slots can be booked
     await expireStaleHeldBookings(sql);
 
     const body = await req.json();
@@ -345,7 +345,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Enforce slot availability & 2-hour hold collision check
+    // Enforce slot availability & 20-hour hold collision check
     if (effectiveDate && effectiveTimeSlot) {
       const conflictCheck = await checkSlotConflict(effectiveDate, effectiveTimeSlot);
       if (conflictCheck.conflict) {
@@ -687,14 +687,24 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "No slot reservation found to re-hold." }, { status: 400 });
       }
       const { date, timeSlot } = extractDateAndSlotWAT(row.shoot_start, answers);
-      if (date && timeSlot) {
-        const conflictCheck = await checkSlotConflict(date, timeSlot, enquiry_id);
-        if (conflictCheck.conflict) {
-          return NextResponse.json(
-            { error: conflictCheck.reason || "This slot is no longer available. Please choose another time." },
-            { status: 409 }
-          );
-        }
+      if (!date || !timeSlot) {
+        return NextResponse.json(
+          { error: "Cannot determine the scheduled date and time slot for this reservation. Please choose a new slot from the calendar." },
+          { status: 400 }
+        );
+      }
+
+      // Check slot conflict against studio locks and any active reservations/holds by other clients
+      const conflictCheck = await checkSlotConflict(date, timeSlot, enquiry_id);
+      if (conflictCheck.conflict) {
+        return NextResponse.json(
+          {
+            error:
+              conflictCheck.reason ||
+              `Sorry, ${timeSlot} on ${date} is already reserved by another client. Please select another open time slot.`,
+          },
+          { status: 409 }
+        );
       }
 
       await sql.query(
@@ -708,7 +718,7 @@ export async function PATCH(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: "Slot temporarily re-reserved for 2 hours.",
+        message: "Slot temporarily re-reserved for 20 hours.",
         holdExpiresAt: new Date(Date.now() + HOLD_DURATION_MS).toISOString(),
       });
     }
@@ -753,7 +763,7 @@ export async function PATCH(req: NextRequest) {
           return NextResponse.json(
             {
               error:
-                "Your 2-hour hold had expired and another client has since reserved this time slot. Please reschedule to an open time before submitting your deposit receipt.",
+                "Your 20-hour hold had expired and another client has since reserved this time slot. Please reschedule to an open time before submitting your deposit receipt.",
             },
             { status: 409 }
           );

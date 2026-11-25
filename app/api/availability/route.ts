@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month") || new Date().toISOString().slice(0, 7); // "YYYY-MM"
 
-    // 0. Automatically release any unpaid 2-hour temporary holds that have expired
+    // 0. Automatically release any unpaid 20-hour temporary holds that have expired
     await expireStaleHeldBookings(sql);
 
     // Construct start and end dates of target month (include ±1 day buffer around month boundary for WAT +01:00)
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
          AND b.shoot_start <= ($2::timestamptz + INTERVAL '1 day')
          AND (
            b.status != 'held'
-           OR b.updated_at >= NOW() - INTERVAL '2 hours'
+           OR b.updated_at >= NOW() - INTERVAL '20 hours'
            OR p.status IN ('reported', 'confirmed', 'recorded')
            OR e.stage IN ('deposit_reported', 'deposit_paid', 'preparation', 'confirmed', 'shot', 'editing', 'client_review', 'delivered', 'closed')
          )
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
         `SELECT id, shoot_start, shoot_end, status, created_at, updated_at
          FROM booking 
          WHERE status NOT IN ('cancelled', 'expired')
-           AND (status != 'held' OR updated_at >= NOW() - INTERVAL '2 hours')
+           AND (status != 'held' OR updated_at >= NOW() - INTERVAL '20 hours')
            AND shoot_start >= $1 
            AND shoot_start <= $2
          ORDER BY shoot_start ASC`,

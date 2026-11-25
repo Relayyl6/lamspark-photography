@@ -295,11 +295,11 @@ export function LiveCalendarSection() {
               ))}
             </div>
 
-            {/* Dates Grid (Compact & Responsive) */}
+            {/* Dates Grid (Square & Compact Proportion) */}
             <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
               {calendarDays.map((cd, idx) => {
                 if (!cd.isCurrentMonth) {
-                  return <div key={idx} className="h-11 sm:h-12 md:h-14" />;
+                  return <div key={idx} className="aspect-square max-w-[48px] sm:max-w-[54px] w-full mx-auto" />;
                 }
 
                 const isSelected = selectedDayStr === cd.dateStr;
@@ -313,7 +313,7 @@ export function LiveCalendarSection() {
                       setSelectedDayStr(cd.dateStr);
                       setSelectedSlot(null);
                     }}
-                    className={`h-11 sm:h-12 md:h-14 rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
+                    className={`aspect-square max-w-[48px] sm:max-w-[54px] w-full mx-auto rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-medium transition-all ${
                       isSelected
                         ? "bg-[#1A1410] text-[#FDFBF8] shadow-md ring-2 ring-[#C9A96E]"
                         : cd.isPast || cd.isBlocked
