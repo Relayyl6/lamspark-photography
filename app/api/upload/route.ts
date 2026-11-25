@@ -123,9 +123,9 @@ export async function POST(req: NextRequest) {
             withoutEnlargement: true,
           })
           .webp({
-            quality: 90, // Studio-grade near-lossless fidelity (preserves micro-contrast, fabric weaves, hair, and skin tones)
+            quality: 92, // Studio-grade near-lossless fidelity (preserves micro-contrast, fabric weaves, hair, and skin tones)
             effort: 6, // Maximum precision compression
-            smartSubsample: true, // Prevents chroma bleeding on vibrant colors and dark tones
+            smartSubsample: false, // Full photographic chroma fidelity without color blur
           })
           .toBuffer();
 
