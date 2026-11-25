@@ -1107,7 +1107,7 @@ function BookingWizard() {
                       {/* Bespoke Editorial Image Banner */}
                       <div className="relative h-40 sm:h-48 w-full rounded-2xl overflow-hidden border border-[#E5DECF] bg-[#F8F4EE]">
                         <img
-                          src={liveSessions[activeBooking.sessionType || sessionType]?.heroImage || "/images/client/weddings_3.jpg"}
+                          src={liveSessions[activeBooking.sessionType || sessionType]?.heroImage || "/images/client/weddings_3.webp"}
                           alt={liveSessions[activeBooking.sessionType || sessionType]?.title}
                           className="w-full h-full object-cover"
                         />
@@ -1494,7 +1494,7 @@ function BookingWizard() {
                       >
                         {/* Background Image */}
                         <img
-                          src={st.heroImage || "/images/client/weddings_1.jpg"}
+                          src={st.heroImage || "/images/client/weddings_1.webp"}
                           alt={st.title}
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
@@ -1565,7 +1565,7 @@ function BookingWizard() {
                   <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-4">
                     <div className="relative rounded-3xl overflow-hidden shadow-md border border-[#E5DECF] bg-[#F8F4EE] group aspect-[3/4] sm:aspect-[4/5] lg:aspect-[3/4]">
                       <img
-                        src={liveSessions[sessionType]?.heroImage || "/images/client/weddings_3.jpg"}
+                        src={liveSessions[sessionType]?.heroImage || "/images/client/weddings_3.webp"}
                         alt={liveSessions[sessionType]?.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       />
@@ -2127,7 +2127,7 @@ function BookingWizard() {
                     {/* Bespoke Service Image Banner in Summary Card */}
                     <div className="relative h-36 sm:h-44 w-full rounded-2xl overflow-hidden border border-[#E5DECF] bg-[#F8F4EE]">
                       <img
-                        src={liveSessions[sessionType]?.heroImage || "/images/client/weddings_3.jpg"}
+                        src={liveSessions[sessionType]?.heroImage || "/images/client/weddings_3.webp"}
                         alt={liveSessions[sessionType]?.title}
                         className="w-full h-full object-cover"
                       />

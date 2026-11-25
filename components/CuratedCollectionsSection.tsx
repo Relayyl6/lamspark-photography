@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import type { SessionTypeMeta } from "@/lib/catalog/seed";
@@ -78,6 +78,61 @@ function getBadgeForGroup(group: "studio" | "maternity" | "wedding" | "event" | 
     default:
       return "Studio Session";
   }
+}
+
+function CollectionCardImage({
+  src,
+  alt,
+  priority = false,
+}: {
+  src: string;
+  alt: string;
+  priority?: boolean;
+}) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  // Auto-upgrade client JPGs to WebP for 80% faster load
+  const optimizedSrc = useMemo(() => {
+    if (!src) return src;
+    if (src.startsWith("/images/client/") && /\.(jpe?g)$/i.test(src)) {
+      return src.replace(/\.(jpe?g)$/i, ".webp");
+    }
+    return src;
+  }, [src]);
+
+  // Sync check: if cached, complete is true immediately on mount or src change
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setIsLoaded(true);
+    }
+  }, [optimizedSrc]);
+
+  return (
+    <div className="relative w-full h-full overflow-hidden bg-[#EDE7DD]">
+      {/* Studio ivory shimmer placeholder while image loads (never harsh brown or black void) */}
+      <div
+        className={`absolute inset-0 bg-[#EDE7DD] transition-opacity duration-700 ease-out pointer-events-none z-0 ${
+          isLoaded ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <div className="w-full h-full bg-gradient-to-tr from-[#E5DEC9]/50 via-[#EDE7DD] to-[#FAF7F2] animate-pulse" />
+      </div>
+
+      <img
+        ref={imgRef}
+        src={optimizedSrc}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setIsLoaded(true)}
+        className={`relative z-[1] w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 ease-out ${
+          isLoaded ? "opacity-100" : "opacity-0"
+        }`}
+      />
+    </div>
+  );
 }
 
 export function CuratedCollectionsSection({
@@ -233,31 +288,30 @@ export function CuratedCollectionsSection({
         className="relative w-full overflow-x-auto no-scrollbar py-2 px-4 sm:px-6 lg:px-8 scroll-smooth"
       >
         <div className="flex gap-4 sm:gap-5 w-max">
-          {displayCards.map((card) => (
+          {displayCards.map((card, idx) => (
             <article
               key={card.id}
-              className="group relative w-[260px] sm:w-[300px] lg:w-[325px] shrink-0 overflow-hidden rounded-2xl bg-deep shadow-[0_8px_24px_rgba(24,20,17,0.12)] hover:shadow-[0_16px_36px_rgba(24,20,17,0.22)] transition-all duration-500 cursor-pointer"
+              className="group relative w-[260px] sm:w-[300px] lg:w-[325px] shrink-0 overflow-hidden rounded-2xl bg-[#EDE7DD] shadow-[0_8px_24px_rgba(24,20,17,0.12)] hover:shadow-[0_16px_36px_rgba(24,20,17,0.22)] transition-all duration-500 cursor-pointer"
             >
               <Link href={card.href} className="block relative aspect-[3/4] sm:aspect-[2/3] w-full overflow-hidden">
-                <img
+                <CollectionCardImage
                   src={card.imageUrl}
                   alt={`${card.badge} - LamSparks Photography Abuja`}
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                  loading="lazy"
+                  priority={idx < 3}
                 />
 
                 {/* Subtle gradient so top pill and bottom explore button pop */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/35 pointer-events-none" />
+                <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/60 via-transparent to-black/35 pointer-events-none" />
 
                 {/* Category Badge Atop the Picture */}
-                <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
+                <div className="absolute top-3.5 left-3.5 right-3.5 z-[3] flex items-center justify-between pointer-events-none">
                   <span className="font-body text-[10px] uppercase tracking-[0.2em] text-warm-white font-semibold bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full truncate max-w-[90%]">
                     {card.badge}
                   </span>
                 </div>
 
                 {/* Only Explore Button at Bottom */}
-                <div className="absolute bottom-3.5 right-3.5">
+                <div className="absolute bottom-3.5 right-3.5 z-[3]">
                   <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/55 group-hover:bg-gold backdrop-blur-md border border-white/25 group-hover:border-gold text-warm-white group-hover:text-deep transition-all duration-300 shadow-sm">
                     <span className="font-body text-[10px] sm:text-[11px] uppercase tracking-wider font-bold">
                       Explore

@@ -41,7 +41,7 @@ const STORIES: StoryCard[] = [
     location: "Guzape Atelier · Abuja",
     client: "Halima & Farouk",
     date: "Autumn 2026",
-    image: "/images/client/weddings_3.jpg",
+    image: "/images/client/weddings_3.webp",
     story:
       "Captured in the quiet golden hour at our Guzape studio suite. We allowed thirty minutes of silence before taking the first exposure, giving Halima the space to breathe and connect with her unborn daughter.",
     craftNotes: {
@@ -58,7 +58,7 @@ const STORIES: StoryCard[] = [
     location: "Maitama Studio · Abuja",
     client: "The Al-Hassan Family",
     date: "Late Summer 2026",
-    image: "/images/client/events_4.jpg",
+    image: "/images/client/events_4.webp",
     story:
       "We never ask children to perform or say cheese. Instead, we let three-year-old Zayd explore the studio props until his genuine wonder unfolded naturally. Real joy is captured, never rehearsed.",
     craftNotes: {
@@ -75,7 +75,7 @@ const STORIES: StoryCard[] = [
     location: "Private Residence · Asokoro",
     client: "Dr. Zainab & Children",
     date: "Summer 2026",
-    image: "/images/client/corporate_3.jpg",
+    image: "/images/client/corporate_3.webp",
     story:
       "A three-generation portrait held at their private family compound. The heirloom album was crafted specifically so her grandchildren will see their matriarch in the timeless dignity she embodies.",
     craftNotes: {
@@ -92,7 +92,7 @@ const STORIES: StoryCard[] = [
     location: "Central Studio · Abuja",
     client: "Senator K. Danjuma",
     date: "Spring 2026",
-    image: "/images/client/corporate_1.jpg",
+    image: "/images/client/corporate_1.webp",
     story:
       "Stripped of corporate stiff posture. An honest, contemplative study of leadership in Abuja. We used a simple hand-painted linen backdrop and unhurried natural window light.",
     craftNotes: {

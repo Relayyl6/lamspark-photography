@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -38,6 +38,60 @@ interface NeonGallery {
   displayOrder: number;
   coverAssetId: string | null;
   items: NeonGalleryItem[];
+}
+
+function PortfolioCardImage({
+  src,
+  alt,
+  isMobileActive,
+  priority = false,
+}: {
+  src: string;
+  alt: string;
+  isMobileActive: boolean;
+  priority?: boolean;
+}) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const optimizedSrc = useMemo(() => {
+    if (!src) return src;
+    if (src.startsWith("/images/client/") && /\.(jpe?g)$/i.test(src)) {
+      return src.replace(/\.(jpe?g)$/i, ".webp");
+    }
+    return src;
+  }, [src]);
+
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setIsLoaded(true);
+    }
+  }, [optimizedSrc]);
+
+  return (
+    <div className="relative w-full h-full overflow-hidden bg-[#EDE7DD]">
+      <div
+        className={`absolute inset-0 bg-[#EDE7DD] transition-opacity duration-700 ease-out pointer-events-none z-0 ${
+          isLoaded ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <div className="w-full h-full bg-gradient-to-tr from-[#E5DEC9]/50 via-[#EDE7DD] to-[#FAF7F2] animate-pulse" />
+      </div>
+
+      <img
+        ref={imgRef}
+        src={optimizedSrc}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setIsLoaded(true)}
+        className={`relative z-[1] w-full h-full object-cover transition-all duration-700 ease-out ${
+          isMobileActive ? "scale-105" : "group-hover:scale-105"
+        } ${isLoaded ? "opacity-100" : "opacity-0"}`}
+      />
+    </div>
+  );
 }
 
 export default function PortfolioPage() {
@@ -272,19 +326,17 @@ export default function PortfolioPage() {
                     }}
                     aria-label={`Open full-screen view for ${img.title} (${img.category})`}
                   >
-                    {/* Photo */}
-                    <img
+                    {/* Photo with smooth ivory dissolve */}
+                    <PortfolioCardImage
                       src={img.src}
                       alt={img.alt}
-                      className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
-                        isMobileActive ? "scale-105" : "group-hover:scale-105"
-                      }`}
-                      loading="lazy"
+                      isMobileActive={isMobileActive}
+                      priority={idx < 4}
                     />
 
                     {/* Glassmorphic Overlay: Active on 1st tap (mobile) or hover (desktop) */}
                     <div
-                      className={`absolute inset-0 bg-gradient-to-t from-deep/95 via-deep/45 to-transparent backdrop-blur-[2px] transition-all duration-300 flex flex-col justify-between p-3 sm:p-5 text-warm-white ${
+                      className={`absolute inset-0 z-[2] bg-gradient-to-t from-deep/95 via-deep/45 to-transparent backdrop-blur-[2px] transition-all duration-300 flex flex-col justify-between p-3 sm:p-5 text-warm-white ${
                         isMobileActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                       }`}
                     >

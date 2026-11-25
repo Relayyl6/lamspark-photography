@@ -31,8 +31,8 @@ export default async function SessionsIndexPage() {
 
         {/* Sessions Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" data-stagger="true">
-          {sessions.map((session) => (
-            <SessionCard key={session.slug} session={session} />
+          {sessions.map((session, idx) => (
+            <SessionCard key={session.slug} session={session} priority={idx < 3} />
           ))}
         </div>
 

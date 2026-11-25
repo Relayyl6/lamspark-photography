@@ -312,13 +312,13 @@ export function EditorialTestimonialSection({
                     }`}
                   >
                     <img
-                      src={t.avatarUrl || "/images/client/events_2.jpg"}
+                      src={t.avatarUrl || "/images/client/events_2.webp"}
                       alt={t.clientName}
                       onError={(e) => {
                         const img = e.currentTarget as HTMLImageElement;
                         if (!img.dataset.fallbackApplied) {
                           img.dataset.fallbackApplied = "true";
-                          img.src = "/images/client/events_2.jpg";
+                          img.src = "/images/client/events_2.webp";
                         }
                       }}
                       className="w-full h-full object-cover"

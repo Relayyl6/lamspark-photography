@@ -45,8 +45,10 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
         <div className="relative w-full bg-deep text-warm-white py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
           <div className="absolute inset-0 opacity-25">
             <img
-              src={session.heroImage}
+              src={session.heroImage?.replace(/\.jpg$/, ".webp") || session.heroImage}
               alt={session.title}
+              loading="eager"
+              decoding="async"
               className="w-full h-full object-cover object-center filter blur-sm"
             />
           </div>
