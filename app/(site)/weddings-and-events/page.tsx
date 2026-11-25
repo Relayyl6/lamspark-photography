@@ -22,11 +22,13 @@ export default function WeddingsAndEventsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-          <div className="reveal-up aspect-[4/3] rounded-photo overflow-hidden border border-line shadow-editorial">
+          <div className="reveal-up aspect-[4/3] rounded-photo overflow-hidden border border-line shadow-editorial bg-[#EDE7DD]">
             <img
-              src="/images/client/weddings/weddings_1.jpg"
+              src="/images/client/weddings_1.webp"
               alt="Bespoke luxury Nigerian wedding photography Abuja - LamSparks"
               className="w-full h-full object-cover"
+              loading="eager"
+              decoding="async"
             />
           </div>
           <div className="reveal-up delay-100 space-y-6">
