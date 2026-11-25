@@ -75,9 +75,22 @@ export function LiveCalendarSection() {
 
   const monthParam = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}`;
 
-  // Fetch live availability for current month
+  // Fetch live availability for current month with instant session cache
   useEffect(() => {
-    setIsLoading(true);
+    // 1. Instant cache check (0ms response)
+    try {
+      const cached = sessionStorage.getItem(`lamsparks_avail_${monthParam}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && Array.isArray(parsed.bookedSlots)) {
+          setBookedSlots(parsed.bookedSlots);
+          setLockedSlots(parsed.lockedSlots || []);
+          setBlockedDays(parsed.blockedDays || []);
+          setIsLoading(false);
+        }
+      }
+    } catch {}
+
     fetch(`/api/availability?month=${monthParam}`)
       .then((res) => res.json())
       .then((data) => {
@@ -85,6 +98,9 @@ export function LiveCalendarSection() {
           setBookedSlots(data.bookedSlots || []);
           setLockedSlots(data.lockedSlots || []);
           setBlockedDays(data.blockedDays || []);
+          try {
+            sessionStorage.setItem(`lamsparks_avail_${monthParam}`, JSON.stringify(data));
+          } catch {}
         }
       })
       .catch((err) => console.error("Failed to load availability:", err))
@@ -226,7 +242,7 @@ export function LiveCalendarSection() {
   ).length;
 
   return (
-    <section className="w-full py-12 sm:py-20 px-4 sm:px-8 lg:px-12 xl:px-16 space-y-8">
+    <section id="calendar" className="w-full py-12 sm:py-20 px-4 sm:px-8 lg:px-12 xl:px-16 space-y-8 scroll-mt-20">
       {/* Bold Headline & Category Filters (No bounding box, full width) */}
       <div className="space-y-4">
         <h2 className="font-headline uppercase tracking-tight text-[#1A1410] font-black text-3xl sm:text-5xl lg:text-6xl leading-[0.95]">
@@ -326,8 +342,12 @@ export function LiveCalendarSection() {
                     {/* Visual Availability Dot */}
                     {!cd.isPast && !cd.isBlocked && !isSelected && (
                       <span
-                        className={`w-2 h-2 rounded-full mt-1.5 ${
-                          cd.openCount > 0 ? "bg-emerald-500" : "bg-neutral-300"
+                        className={`w-2 h-2 rounded-full mt-1.5 transition-colors duration-300 ${
+                          isLoading && bookedSlots.length === 0
+                            ? "bg-amber-400/60 animate-pulse"
+                            : cd.openCount > 0
+                            ? "bg-emerald-500"
+                            : "bg-neutral-300"
                         }`}
                       />
                     )}

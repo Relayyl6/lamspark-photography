@@ -1469,7 +1469,7 @@ function BookingWizard() {
 
             {/* STEP 1: SESSION DISCOVERY ("WHAT ARE WE SHOOTING?") */}
             {step === 1 && (
-              <div className="space-y-8 animate-fade-up">
+              <div className="space-y-8 step-transition">
                 <div className="text-center max-w-2xl mx-auto space-y-2">
                   <h1 className="font-headline uppercase tracking-tight text-[#1A1410] font-black text-4xl sm:text-6xl md:text-7xl leading-[0.95]">
                     WHAT ARE WE <span className="text-[#C9A96E]">SHOOTING?</span>
@@ -1532,7 +1532,7 @@ function BookingWizard() {
 
             {/* STEP 2: PACKAGE PICKER (Inspired by Reference Video 00:21 - 00:24) */}
             {step === 2 && (
-              <div className="space-y-6 sm:space-y-8 animate-fade-up">
+              <div className="space-y-6 sm:space-y-8 step-transition">
                 {/* Top Breadcrumb Navigation */}
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359]">
                   <button
@@ -1737,7 +1737,7 @@ function BookingWizard() {
 
             {/* STEP 3: LIVE CALENDAR & TIME (Inspired by Reference Video 00:27 - 00:30) */}
             {step === 3 && (
-              <div className="space-y-8 animate-fade-up">
+              <div className="space-y-8 step-transition">
                 {/* Breadcrumb Navigation */}
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359] mb-3">
                   <button
@@ -1963,7 +1963,7 @@ function BookingWizard() {
 
             {/* STEP 4: YOUR DETAILS (Decluttered, Frictionless & Under 30s) */}
             {step === 4 && (
-              <div className="space-y-8 animate-fade-up">
+              <div className="space-y-8 step-transition">
                 {/* Breadcrumb Navigation */}
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359] mb-3">
                   <button

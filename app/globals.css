@@ -31,10 +31,56 @@
     overflow-x: clip;
   }
 
+  section {
+    scroll-margin-top: 5.5rem;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
     font-feature-settings: "kern" 1, "liga" 1;
   }
+}
+
+/* ========================================================================= */
+/* SLICK NON-HOOKING ACCORDION & GPU TRANSITIONS (ATELIER SHUTTER SUITE)   */
+/* ========================================================================= */
+:root {
+  --ease-shutter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.vertical-lr-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-orientation: mixed;
+}
+
+.gpu-layer {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  contain: paint layout;
+}
+
+.shutter-panel {
+  will-change: flex-grow, flex-basis;
+  contain: paint layout;
+  transition: flex 480ms var(--ease-shutter);
+}
+
+@keyframes stepFade {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.step-transition {
+  animation: stepFade 220ms var(--ease-shutter) both;
+  will-change: opacity, transform;
 }
 
 /* Reduced motion support */

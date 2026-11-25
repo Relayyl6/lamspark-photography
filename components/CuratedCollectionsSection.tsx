@@ -80,6 +80,63 @@ function getBadgeForGroup(group: "studio" | "maternity" | "wedding" | "event" | 
   }
 }
 
+function CollectionCardItem({ card, index }: { card: CollectionPhotoCard; index: number }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  return (
+    <article
+      key={card.id}
+      className="group relative w-[260px] sm:w-[300px] lg:w-[325px] shrink-0 overflow-hidden rounded-2xl bg-deep shadow-[0_8px_24px_rgba(24,20,17,0.12)] hover:shadow-[0_16px_36px_rgba(24,20,17,0.22)] transition-all duration-500 cursor-pointer animate-in fade-in fill-mode-both"
+      style={{
+        animationDelay: `${Math.min(index * 60, 360)}ms`,
+        animationDuration: "400ms",
+      }}
+    >
+      <Link href={card.href} className="block relative aspect-[3/4] sm:aspect-[2/3] w-full overflow-hidden bg-[#EDE7DD]">
+        {/* Skeleton placeholder with category badge (shown while image decodes) */}
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-[#EDE7DD] animate-pulse flex items-center justify-center pointer-events-none">
+            <span className="font-body text-[10px] uppercase tracking-[0.2em] text-[#8A7A6E] font-medium">
+              {card.badge}
+            </span>
+          </div>
+        )}
+
+        <img
+          src={card.imageUrl}
+          alt={`${card.badge} - LamSparks Photography Abuja`}
+          onLoad={() => setImageLoaded(true)}
+          className={`w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 ease-out ${
+            imageLoaded ? "opacity-100" : "opacity-0"
+          }`}
+          loading="lazy"
+          decoding="async"
+        />
+
+        {/* Subtle gradient so top pill and bottom explore button pop */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/35 pointer-events-none" />
+
+        {/* Category Badge Atop the Picture */}
+        <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
+          <span className="font-body text-[10px] uppercase tracking-[0.2em] text-warm-white font-semibold bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full truncate max-w-[90%]">
+            {card.badge}
+          </span>
+        </div>
+
+        {/* Only Explore Button at Bottom */}
+        <div className="absolute bottom-3.5 right-3.5">
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/55 group-hover:bg-gold backdrop-blur-md border border-white/25 group-hover:border-gold text-warm-white group-hover:text-deep transition-all duration-300 shadow-sm">
+            <span className="font-body text-[10px] sm:text-[11px] uppercase tracking-wider font-bold">
+              Explore
+            </span>
+            <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </span>
+        </div>
+      </Link>
+    </article>
+  );
+}
+
 export function CuratedCollectionsSection({
   sessions,
   galleryPhotos = [],
@@ -159,8 +216,9 @@ export function CuratedCollectionsSection({
 
   return (
     <section
+      id="collections"
       aria-label="Curated Collections Showcase"
-      className="w-full py-8 sm:py-14 space-y-6 sm:space-y-8 overflow-x-clip"
+      className="w-full py-8 sm:py-14 space-y-6 sm:space-y-8 overflow-x-clip scroll-mt-20"
     >
       {/* Unboxed Clean Header & Category Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
@@ -232,40 +290,8 @@ export function CuratedCollectionsSection({
         className="relative w-full overflow-x-auto no-scrollbar py-2 px-4 sm:px-6 lg:px-8 scroll-smooth"
       >
         <div className="flex gap-4 sm:gap-5 w-max">
-          {displayCards.map((card) => (
-            <article
-              key={card.id}
-              className="group relative w-[260px] sm:w-[300px] lg:w-[325px] shrink-0 overflow-hidden rounded-2xl bg-deep shadow-[0_8px_24px_rgba(24,20,17,0.12)] hover:shadow-[0_16px_36px_rgba(24,20,17,0.22)] transition-all duration-500 cursor-pointer"
-            >
-              <Link href={card.href} className="block relative aspect-[3/4] sm:aspect-[2/3] w-full overflow-hidden">
-                <img
-                  src={card.imageUrl}
-                  alt={`${card.badge} - LamSparks Photography Abuja`}
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                  loading="lazy"
-                />
-
-                {/* Subtle gradient so top pill and bottom explore button pop */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/35 pointer-events-none" />
-
-                {/* Category Badge Atop the Picture */}
-                <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-none">
-                  <span className="font-body text-[10px] uppercase tracking-[0.2em] text-warm-white font-semibold bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full truncate max-w-[90%]">
-                    {card.badge}
-                  </span>
-                </div>
-
-                {/* Only Explore Button at Bottom */}
-                <div className="absolute bottom-3.5 right-3.5">
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/55 group-hover:bg-gold backdrop-blur-md border border-white/25 group-hover:border-gold text-warm-white group-hover:text-deep transition-all duration-300 shadow-sm">
-                    <span className="font-body text-[10px] sm:text-[11px] uppercase tracking-wider font-bold">
-                      Explore
-                    </span>
-                    <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </span>
-                </div>
-              </Link>
-            </article>
+          {displayCards.map((card, idx) => (
+            <CollectionCardItem key={card.id} card={card} index={idx} />
           ))}
         </div>
       </div>
