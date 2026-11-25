@@ -95,9 +95,9 @@ export function Footer() {
 
       {/* Top Section: Brand Info + Edge Column (Legal) */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pt-6 sm:pt-10 lg:pt-12 pb-4 sm:pb-6">
-        <div className="flex justify-between items-start gap-4 sm:gap-8" data-stagger="true">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-8" data-stagger="true">
           {/* Brand Left Column */}
-          <div className="reveal-up space-y-2.5 sm:space-y-4 max-w-[240px] sm:max-w-sm">
+          <div className="reveal-up space-y-2.5 sm:space-y-4 max-w-sm">
             <Link href="/" className="inline-block group">
               <span className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-deep group-hover:text-gold transition-colors">
                 LamSparks.
@@ -152,29 +152,29 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Edge Column: Legal */}
-          <div className="reveal-up shrink-0 text-right sm:text-left">
+          {/* Edge Column: Legal (2-Column Grid) */}
+          <div className="reveal-up shrink-0 text-left">
             <h4 className="font-body text-xs uppercase tracking-[0.18em] text-deep font-bold mb-2.5 sm:mb-4">
               Legal
             </h4>
-            <ul className="space-y-1.5 sm:space-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
+            <ul className="grid grid-cols-2 gap-x-6 sm:gap-x-10 gap-y-2 sm:gap-y-2.5 font-body text-xs sm:text-[13px] text-brown/90">
               <li>
-                <Link href="/legal/privacy" className="hover:text-gold transition-colors">
+                <Link href="/legal/privacy" className="hover:text-gold transition-colors whitespace-nowrap">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/legal/terms" className="hover:text-gold transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link href="/legal/shoot-guidelines" className="hover:text-gold transition-colors">
+                <Link href="/legal/shoot-guidelines" className="hover:text-gold transition-colors whitespace-nowrap">
                   Shoot Guidelines
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-gold transition-colors">
+                <Link href="/legal/terms" className="hover:text-gold transition-colors whitespace-nowrap">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-gold transition-colors whitespace-nowrap">
                   Maitama Studio Suite
                 </Link>
               </li>
