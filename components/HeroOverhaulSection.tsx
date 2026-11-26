@@ -224,12 +224,12 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
   const isMobile = viewportWidth < 768;
 
   // Responsive 3D Geometry
-  const angleStep = isMobile ? 22 : 15;
+  const angleStep = isMobile ? 24 : 15;
   const cardHeight = isMobile
-    ? Math.round(Math.min(Math.max(wheelH * 0.62, 190), 245))
+    ? Math.round(Math.min(Math.max(wheelH * 0.80, 235), 335))
     : Math.round(Math.min(Math.max(wheelH * 0.72, 150), 360));
-  const cardWidth = Math.round(cardHeight * 0.705);
-  const spacing = cardWidth * (isMobile ? 1.04 : 1.08);
+  const cardWidth = Math.round(cardHeight * (isMobile ? 0.74 : 0.705));
+  const spacing = cardWidth * (isMobile ? 1.06 : 1.08);
   const cylinderRadius = spacing / Math.sin((angleStep * Math.PI) / 180);
   const totalRange = Math.max(1, count * angleStep);
 
@@ -358,7 +358,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
     }
   };
 
-  // Auto-advance to the next card every 2.5 seconds
+  // Auto-advance to the next card every 5 seconds
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetAutoPlay = useCallback(() => {
@@ -367,7 +367,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
       if (!draggingRef.current && count > 0) {
         targetRef.current += angleStep;
       }
-    }, 2500);
+    }, 5000);
   }, [angleStep, count]);
 
   useEffect(() => {
@@ -410,6 +410,17 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
     >
       {/* Background Ambience: Subtle warm ivory canvas */}
       <div className="absolute inset-0 bg-[#FAF7F2] pointer-events-none -z-10" />
+
+      {/* Mobile-Only Subtle Blurred LAMSPARKS Hue in Nav Slot (Subtly Covered When Nav Appears) */}
+      <div
+        aria-hidden="true"
+        className="sm:hidden absolute top-2.5 inset-x-2.5 h-13 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
+      >
+        <div className="absolute inset-x-10 h-8 rounded-full bg-gradient-to-r from-[#C9A96E]/20 via-[#D93829]/12 to-[#C9A96E]/20 blur-xl" />
+        <span className="font-display text-[22px] font-bold uppercase tracking-[0.38em] text-[#8A7559]/35 blur-[4.5px] whitespace-nowrap">
+          LAMSPARKS
+        </span>
+      </div>
 
       <div className="relative w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 text-center shrink-0">
         {/* --- 1. EYEBROW KICKER WITH FLANKING ACCENT LINES (CENTERED) --- */}
@@ -660,12 +671,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
           )}
         </div>
 
-        {/* Interactive Hint Indicator */}
-        <div className="mt-1 sm:mt-1.5 text-[8.5px] sm:text-[10px] uppercase tracking-[0.18em] text-[#6E6359]/60 font-medium">
-          Swipe to explore
-        </div>
-
-        <div className="mt-1.5 sm:mt-3 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+        <div className="mt-2 sm:mt-3.5 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
           <Link
             href="/portfolio"
             className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-[#111111] hover:bg-[#D93829] text-white px-4 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] transition-colors"
