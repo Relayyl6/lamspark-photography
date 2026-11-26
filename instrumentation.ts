@@ -1,5 +1,6 @@
 export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
+  // Keep-alive self-ping applies to persistent containers (Render), not serverless Vercel workers
+  if (process.env.NEXT_RUNTIME === "nodejs" && !process.env.VERCEL) {
     console.log("[Instrumentation] Server booting on Render. Starting keep-alive heartbeat...");
     const targetUrl =
       process.env.RENDER_EXTERNAL_URL ||

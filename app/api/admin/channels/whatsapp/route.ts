@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
 import {
-  getWhatsAppStatus,
+  getWhatsAppStatusAsync,
   initWhatsApp,
   disconnectWhatsApp,
 } from "@/lib/integrations/whatsapp/baileys";
@@ -13,7 +13,7 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const status = getWhatsAppStatus();
+  const status = await getWhatsAppStatusAsync();
   return NextResponse.json({ success: true, status });
 }
 

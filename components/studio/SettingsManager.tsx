@@ -625,7 +625,7 @@ export function SettingsManager() {
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2">
               <span className="text-[11px] text-muted text-center sm:text-left">
-                Cookies are encrypted and saved locally in <code>./data/ig_session.json</code>.
+                Session cookies are persisted securely in Neon PostgreSQL cloud storage.
               </span>
               <button
                 type="submit"

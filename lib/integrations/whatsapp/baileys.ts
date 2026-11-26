@@ -48,7 +48,8 @@ if (!g.__lamsparks_baileys) {
 let keepAliveTimer: NodeJS.Timeout | null = null;
 
 function startKeepAlive() {
-  if (keepAliveTimer) return;
+  // Vercel serverless instances freeze between requests; self-ping timers only apply to persistent containers (Render)
+  if (process.env.VERCEL || keepAliveTimer) return;
   const targetUrl =
     process.env.RENDER_EXTERNAL_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -67,6 +68,45 @@ function startKeepAlive() {
 
 export function getWhatsAppStatus(): BaileysStatus {
   return g.__lamsparks_baileys!.status;
+}
+
+/**
+ * Checks Neon Postgres auth creds when running on cold serverless instances (e.g. Vercel)
+ * so linked WhatsApp devices stay recognized and automatically resume if needed.
+ */
+export async function getWhatsAppStatusAsync(): Promise<BaileysStatus> {
+  const stateRef = g.__lamsparks_baileys!;
+  if (stateRef.status.state !== "disconnected" || stateRef.isInitializing) {
+    return stateRef.status;
+  }
+
+  try {
+    const sql = neon(process.env.DATABASE_URL!);
+    const rows = await sql.query(
+      `SELECT data, updated_at FROM whatsapp_auth_session WHERE id = 'creds' LIMIT 1`
+    ).catch(() => []);
+
+    const creds = rows[0]?.data;
+    if (creds?.registered && creds?.me?.id) {
+      const userJid = String(creds.me.id);
+      const cleanUserPhone = userJid.split(":")[0] || userJid.split("@")[0];
+      // Trigger non-blocking socket resume on background container
+      initWhatsApp().catch(() => {});
+      return {
+        state: "connected",
+        qrCodeDataUrl: null,
+        pairingCode: null,
+        user: {
+          id: userJid,
+          name: creds.me.name || "LamSparks Studio Line",
+          phone: `+${cleanUserPhone}`,
+        },
+        lastConnectedAt: rows[0]?.updated_at ? new Date(rows[0].updated_at).toISOString() : undefined,
+      };
+    }
+  } catch {}
+
+  return stateRef.status;
 }
 
 export async function initWhatsApp(options: { phoneNumber?: string; forceRefresh?: boolean } = {}): Promise<BaileysStatus> {
@@ -329,6 +369,20 @@ export async function initWhatsApp(options: { phoneNumber?: string; forceRefresh
 
 export async function sendWhatsAppMessage(recipientPhone: string, text: string): Promise<boolean> {
   const stateRef = g.__lamsparks_baileys!;
+
+  // If cold on Vercel / restarted instance, try waking socket briefly from Neon Postgres creds
+  if (!stateRef.sock || stateRef.status.state !== "connected") {
+    try {
+      const { state } = await usePostgresAuthState();
+      if (state.creds?.registered) {
+        await initWhatsApp();
+        for (let i = 0; i < 15; i++) {
+          if (stateRef.sock && stateRef.status.state === "connected") break;
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      }
+    } catch {}
+  }
 
   if (!stateRef.sock || stateRef.status.state !== "connected") {
     throw new Error("WhatsApp Web is not currently connected. Please link your device via QR or Pairing Code.");

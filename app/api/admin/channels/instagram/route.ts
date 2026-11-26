@@ -14,7 +14,7 @@ export async function GET() {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const status = getInstagramStatus();
+  const status = await getInstagramStatus();
   return NextResponse.json({ success: true, status });
 }
 
