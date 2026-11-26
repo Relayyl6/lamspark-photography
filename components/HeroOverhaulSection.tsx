@@ -416,8 +416,8 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
         aria-hidden="true"
         className="sm:hidden absolute top-2.5 inset-x-2.5 h-13 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
       >
-        <div className="absolute inset-x-10 h-8 rounded-full bg-gradient-to-r from-[#C9A96E]/20 via-[#D93829]/12 to-[#C9A96E]/20 blur-xl" />
-        <span className="font-display text-[22px] font-bold uppercase tracking-[0.38em] text-[#8A7559]/35 blur-[4.5px] whitespace-nowrap">
+        <div className="absolute inset-x-12 h-7 rounded-full bg-gradient-to-r from-[#C9A96E]/15 via-[#D93829]/8 to-[#C9A96E]/15 blur-lg" />
+        <span className="font-display text-[22px] font-semibold uppercase tracking-[0.3em] text-[#6E583D]/45 blur-[1.4px] whitespace-nowrap">
           LAMSPARKS
         </span>
       </div>
@@ -687,15 +687,6 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
             <span className="hidden sm:inline">BOOK</span>
             <ArrowUpRight className="w-4 h-4 sm:w-3.5 sm:h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </Link>
-        </div>
-
-        {/* Mobile Atelier Trust Micro-Ticker */}
-        <div className="flex sm:hidden items-center justify-center gap-2 mt-2 text-[8px] uppercase tracking-[0.16em] text-[#6E6359]/70 font-medium px-2 text-center">
-          <span>✦ Maitama Private Studio</span>
-          <span>·</span>
-          <span>✦ 20h Slot Lock</span>
-          <span>·</span>
-          <span>✦ Fine-Art Retouching</span>
         </div>
       </div>
     </section>
