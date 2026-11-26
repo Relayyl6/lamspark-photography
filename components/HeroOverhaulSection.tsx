@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Camera } from "lucide-react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { Nikon3DCamera } from "./Nikon3DCamera";
 
 interface WheelCard {
@@ -78,7 +79,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
   const [navH, setNavH] = useState(72);
   const [rotationAngle, setRotationAngle] = useState(0); // rendering only
   const [cards, setCards] = useState<WheelCard[]>(initialCards || []);
-  const [activeMobileIndex, setActiveMobileIndex] = useState(0);
+  const [[activeMobileIndex, mobileDirection], setMobileState] = useState<[number, number]>([0, 0]);
   const [loading, setLoading] = useState(!initialCards || initialCards.length === 0);
   const [heroCopy, setHeroCopy] = useState(initialCopy || {
     kicker: "I CAPTURE · YOU REMEMBER",
@@ -239,20 +240,64 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
     targetRef.current = target + k * totalRange;
   }, [angleStep, totalRange]);
 
-  // Mobile swipe gestures
+  // Mobile animation variants for crisp "fade in/out atop and under"
+  const mobileVariants: Variants = {
+    enter: (dir: number) => ({
+      opacity: 0,
+      scale: 1.04,
+      y: dir >= 0 ? 18 : -18,
+      zIndex: 2, // ATOP
+    }),
+    center: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      zIndex: 2,
+      transition: {
+        opacity: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
+        scale: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+        y: { type: "spring" as const, stiffness: 340, damping: 32 },
+      },
+    },
+    exit: (dir: number) => ({
+      opacity: 0,
+      scale: 0.94,
+      y: dir >= 0 ? -14 : 14,
+      zIndex: 1, // UNDER
+      transition: {
+        opacity: { duration: 0.22, ease: [0.4, 0, 1, 1] },
+        scale: { duration: 0.26, ease: [0.4, 0, 1, 1] },
+        y: { duration: 0.22, ease: [0.4, 0, 1, 1] },
+      },
+    }),
+  };
+
+  // Mobile swipe gestures & pagination
+  const paginateMobile = useCallback(
+    (newIndex: number) => {
+      if (newIndex === activeMobileIndex || cards.length === 0) return;
+      const dir = newIndex > activeMobileIndex ? 1 : -1;
+      setMobileState([newIndex, dir]);
+    },
+    [activeMobileIndex, cards.length]
+  );
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    if (cards.length === 0) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 35) {
       if (dx < 0) {
-        setActiveMobileIndex((prev) => (prev + 1) % cards.length);
+        const nextIndex = (activeMobileIndex + 1) % cards.length;
+        setMobileState([nextIndex, 1]);
       } else {
-        setActiveMobileIndex((prev) => (prev - 1 + cards.length) % cards.length);
+        const prevIndex = (activeMobileIndex - 1 + cards.length) % cards.length;
+        setMobileState([prevIndex, -1]);
       }
     }
   };
@@ -290,47 +335,78 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
             onTouchEnd={handleTouchEnd}
             className="flex-1 h-full relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#1C1814]"
           >
-            {/* Active Photograph with Smooth Dissolve */}
-            {currentMobileCard?.image && (
-              <img
-                key={currentMobileCard.image}
-                src={currentMobileCard.image}
-                alt={currentMobileCard.label || "LamSparks Session"}
-                className="w-full h-full object-cover object-center animate-fade-in duration-300"
-                loading="eager"
-              />
-            )}
+            {/* Animated Photo Transition: enters ATOP (zIndex: 2), exits UNDER (zIndex: 1) */}
+            <AnimatePresence custom={mobileDirection} initial={false}>
+              <motion.div
+                key={currentMobileCard?.image || activeMobileIndex}
+                custom={mobileDirection}
+                variants={mobileVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="absolute inset-0 w-full h-full overflow-hidden"
+              >
+                {currentMobileCard?.image && (
+                  <img
+                    src={currentMobileCard.image}
+                    alt={currentMobileCard.label || "LamSparks Session"}
+                    className="w-full h-full object-cover object-center"
+                    loading="eager"
+                  />
+                )}
 
-            {/* Cinematic Gradient at the Bottom for Text Clarity */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent pointer-events-none" />
+                {/* Cinematic Gradient at the Bottom for Text Clarity */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent pointer-events-none" />
+              </motion.div>
+            </AnimatePresence>
 
-            {/* Category Tag at Top Left */}
-            <div className="absolute top-3 left-3 z-10 pointer-events-none">
-              <span className="px-2.5 py-1 rounded-full text-[9px] font-sans font-bold uppercase tracking-[0.2em] bg-black/60 backdrop-blur-md text-[#E0B253] border border-white/15 shadow-sm">
-                {currentMobileCard?.category}
-              </span>
+            {/* Category Tag at Top Left with smooth crossfade */}
+            <div className="absolute top-3 left-3 z-20 pointer-events-none">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={currentMobileCard?.category}
+                  initial={{ opacity: 0, scale: 0.88 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.88 }}
+                  transition={{ duration: 0.2 }}
+                  className="px-2.5 py-1 rounded-full text-[9px] font-sans font-bold uppercase tracking-[0.2em] bg-black/60 backdrop-blur-md text-[#E0B253] border border-white/15 shadow-sm block"
+                >
+                  {currentMobileCard?.category}
+                </motion.span>
+              </AnimatePresence>
             </div>
 
             {/* Live Indicator at Top Right */}
-            <div className="absolute top-3 right-3 z-10 pointer-events-none">
+            <div className="absolute top-3 right-3 z-20 pointer-events-none">
               <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8.5px] font-sans uppercase tracking-wider bg-black/50 backdrop-blur-md text-white/80 border border-white/10">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Available</span>
               </span>
             </div>
 
-            {/* Bottom Content: Title, Price, Slot Info */}
-            <div className="absolute bottom-3.5 left-3.5 right-3.5 z-10 pointer-events-none space-y-1">
-              <h2 className="font-serif text-2xl text-white font-normal leading-tight drop-shadow-md">
-                {currentInfo.title}
-              </h2>
-              <p className="font-sans text-xs text-[#E0B253] font-semibold drop-shadow-sm">
-                {currentInfo.price}
-              </p>
-              <p className="font-sans text-[10.5px] text-white/75 drop-shadow-sm flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" />
-                <span className="truncate">{currentInfo.slot}</span>
-              </p>
+            {/* Bottom Content: Title, Price, Slot Info with Crisp Motion */}
+            <div className="absolute bottom-3.5 left-3.5 right-3.5 z-20 pointer-events-none overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentMobileCard?.id || activeMobileIndex}
+                  initial={{ opacity: 0, y: 12, filter: "blur(2px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, y: -8, filter: "blur(2px)" }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  className="space-y-1"
+                >
+                  <h2 className="font-serif text-2xl text-white font-normal leading-tight drop-shadow-md">
+                    {currentInfo.title}
+                  </h2>
+                  <p className="font-sans text-xs text-[#E0B253] font-semibold drop-shadow-sm">
+                    {currentInfo.price}
+                  </p>
+                  <p className="font-sans text-[10.5px] text-white/75 drop-shadow-sm flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" />
+                    <span className="truncate">{currentInfo.slot}</span>
+                  </p>
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
 
@@ -342,11 +418,11 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
                 <button
                   key={card.id}
                   type="button"
-                  onClick={() => setActiveMobileIndex(idx)}
+                  onClick={() => paginateMobile(idx)}
                   aria-label={`Select ${card.category}`}
                   className={`flex-1 w-full rounded-xl transition-all duration-300 relative overflow-hidden flex items-center justify-center border ${
                     isActive
-                      ? "bg-[#C9A96E] border-[#E5C483] shadow-md scale-[1.04] ring-2 ring-[#C9A96E]/50"
+                      ? "border-[#E5C483] shadow-md scale-[1.04]"
                       : "bg-[#221C18]/90 hover:bg-[#2A231E] border-white/10 opacity-60 hover:opacity-90"
                   }`}
                 >
@@ -355,7 +431,18 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
                     alt={card.label}
                     className="absolute inset-0 w-full h-full object-cover opacity-35 pointer-events-none"
                   />
-                  <div className={`absolute inset-0 transition-colors ${isActive ? "bg-[#C9A96E]/40" : "bg-black/45"}`} />
+                  <div
+                    className={`absolute inset-0 transition-colors ${
+                      isActive ? "bg-[#C9A96E]/30" : "bg-black/45"
+                    }`}
+                  />
+                  {isActive && (
+                    <motion.div
+                      layoutId="active-mobile-rail-pill"
+                      transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                      className="absolute inset-0 bg-[#C9A96E] border-2 border-[#E5C483] ring-2 ring-[#C9A96E]/50 rounded-xl"
+                    />
+                  )}
                   <span
                     className={`relative z-10 text-[9px] font-mono font-bold tracking-tighter ${
                       isActive ? "text-white drop-shadow-sm font-extrabold" : "text-white/60"
