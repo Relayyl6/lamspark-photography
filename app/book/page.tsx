@@ -704,6 +704,22 @@ function BookingWizard() {
     }
   }
 
+  // Open Reschedule Modal with calendar sync
+  const openRescheduleModal = () => {
+    const rawDate = activeBooking?.shootStart
+      ? activeBooking.shootStart.split("T")[0]
+      : (activeBooking?.answers as any)?.selectedDate || selectedDate;
+    if (rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+      setSelectedDate(rawDate);
+      const [y, m] = rawDate.split("-").map(Number);
+      setCurrentCalendarDate(new Date(y, m - 1, 1));
+    }
+    if (activeBooking?.shootTimeSlot || (activeBooking?.answers as any)?.timeSlot) {
+      setTimeSlot(activeBooking.shootTimeSlot || (activeBooking.answers as any).timeSlot);
+    }
+    setIsRescheduleOpen(true);
+  };
+
   // Handle Reschedule
   async function handleReschedule() {
     if (!activeBooking?.referenceCode || !selectedDate || !timeSlot) {
@@ -1046,101 +1062,53 @@ function BookingWizard() {
 
                 return (
                   <div className="space-y-6">
-                    {/* 1. Live Studio Pipeline Tracker Card (Connects directly to Kanban Board) */}
-                    <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-xs space-y-6">
-                      {/* Header Row: Reference, Title, Badges */}
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#E5DECF]/80">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#F8F4EE] border border-[#E5DECF] text-[#1A1410]">
-                              REF: {activeBooking.referenceCode}
-                            </span>
-                            <span className="text-xs text-[#6E6359] font-medium">
-                              · {liveSessions[activeBooking.sessionType || sessionType]?.title || "Studio Session"}
-                            </span>
-                          </div>
-                          <h1 className="font-serif text-2xl sm:text-3xl text-[#1A1410] font-normal leading-tight">
-                            {currentConfig.title},{" "}
-                            <span className="text-[#C9A96E] italic font-serif">
-                              {activeBooking.client?.name || clientName || "there"}
-                            </span>
-                          </h1>
-                          <p className="text-xs text-[#6E6359] mt-1">
-                            Scheduled for {activeBooking.shootDateFormatted || selectedDate} at {activeBooking.shootTimeSlot || timeSlot} · LamSparks Private Studio, Abuja
-                          </p>
+                    {/* Sleek, Non-Bloated Booking Header */}
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-[#E5DECF]">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#F8F4EE] border border-[#E5DECF] text-[#1A1410]">
+                            REF: {activeBooking.referenceCode}
+                          </span>
+                          <span className="text-xs text-[#6E6359] font-medium">
+                            · {liveSessions[activeBooking.sessionType || sessionType]?.title || "Studio Session"}
+                          </span>
                         </div>
-
-                        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0">
-                          {/* Live Kanban Stage Pill */}
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-2xs ${currentConfig.badgeColor}`}
-                          >
-                            Stage: {currentConfig.badgeLabel}
+                        <h1 className="font-serif text-2xl sm:text-3xl text-[#1A1410] font-normal leading-tight">
+                          {currentConfig.title},{" "}
+                          <span className="text-[#C9A96E] italic font-serif">
+                            {activeBooking.client?.name || clientName || "there"}
                           </span>
+                        </h1>
+                        <p className="text-xs text-[#6E6359] mt-1">
+                          Scheduled for {activeBooking.shootDateFormatted || selectedDate} at {activeBooking.shootTimeSlot || timeSlot} · LamSparks Private Studio, Abuja
+                        </p>
+                      </div>
 
-                          {/* Turn Indicator */}
-                          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#1A1410] text-[#E8D5B0] shadow-2xs">
-                            {activeBooking.waitingOn === "us" ? "Studio Turn" : "Client Turn"}
-                          </span>
+                      {/* Compact, Mobile-Responsive Badge Cluster */}
+                      <div className="flex flex-wrap items-center gap-2 self-start md:self-end shrink-0">
+                        {/* Compact Stage Indicator with step count */}
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider border shadow-2xs ${currentConfig.badgeColor}`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+                          <span>{currentConfig.badgeLabel}</span>
+                          <span className="opacity-60 font-normal">({currentStepIdx + 1}/5)</span>
+                        </span>
 
-                          {/* Hold Countdown */}
-                          {holdRemainingMs !== null && holdRemainingMs > 0 && activeBooking.status === "awaiting_deposit" && (
-                            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-900 border border-amber-300">
-                              <Clock className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+                        {/* Turn Indicator */}
+                        <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#1A1410] text-[#E8D5B0] shadow-2xs">
+                          {activeBooking.waitingOn === "us" ? "Studio Turn" : "Client Turn"}
+                        </span>
+
+                        {/* Hold Countdown */}
+                        {holdRemainingMs !== null && holdRemainingMs > 0 && activeBooking.status === "awaiting_deposit" && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-900 border border-amber-300 shadow-2xs">
+                            <Clock className="w-3.5 h-3.5 inline -mt-0.5" />
+                            <span>
                               {pad(Math.floor(holdRemainingMs / 3600000))}h : {pad(Math.floor((holdRemainingMs % 3600000) / 60000))}m left
                             </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Visual 5-Stage Stepper Bar */}
-                      <div className="py-2">
-                        <div className="grid grid-cols-5 gap-2 relative">
-                          {/* Background track line */}
-                          <div className="absolute top-4 left-[10%] right-[10%] h-0.5 bg-[#E5DECF] -z-0" />
-                          <div
-                            className="absolute top-4 left-[10%] h-0.5 bg-[#C9A96E] transition-all duration-700 -z-0"
-                            style={{ width: `${(Math.min(currentStepIdx, 4) / 4) * 80}%` }}
-                          />
-
-                          {CLIENT_PIPELINE_STEPS.map((st, i) => {
-                            const isDone = i < currentStepIdx;
-                            const isCurrent = i === currentStepIdx;
-                            return (
-                              <div key={st.step} className="flex flex-col items-center text-center relative z-[1]">
-                                <div
-                                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
-                                    isDone
-                                      ? "bg-[#C9A96E] text-[#111111] shadow-2xs"
-                                      : isCurrent
-                                      ? "bg-[#1A1410] text-[#FDFBF8] ring-4 ring-[#C9A96E]/30 shadow-sm"
-                                      : "bg-[#F8F4EE] border border-[#E5DECF] text-[#6E6359]"
-                                  }`}
-                                >
-                                  {isDone ? <Check className="w-4 h-4 stroke-[2.5]" /> : i + 1}
-                                </div>
-                                <span
-                                  className={`text-xs mt-2 font-medium block truncate max-w-full ${
-                                    isCurrent ? "text-[#1A1410] font-bold" : isDone ? "text-[#C9A96E]" : "text-[#6E6359]/70"
-                                  }`}
-                                >
-                                  {st.label}
-                                </span>
-                                <span className="text-[10px] text-[#6E6359]/80 hidden sm:block mt-0.5">
-                                  {st.sub}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Explanatory Banner */}
-                      <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] text-xs text-[#1A1410] flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <Sparkles className="w-4 h-4 text-[#C9A96E] shrink-0" />
-                          <span className="leading-relaxed">{currentConfig.description}</span>
-                        </div>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -1376,7 +1344,7 @@ function BookingWizard() {
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 type="button"
-                                onClick={() => setIsRescheduleOpen(true)}
+                                onClick={openRescheduleModal}
                                 className="p-2.5 rounded-xl border border-[#E5DECF] hover:border-[#1A1410] bg-[#F8F4EE] text-xs font-semibold text-[#1A1410] transition-colors text-center"
                               >
                                 Move Time
@@ -2311,54 +2279,159 @@ function BookingWizard() {
               </div>
 
               {/* Scrollable Modal Body */}
-              <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
-                {/* Date Input */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                    Select New Date
-                  </label>
-                  <input
-                    type="date"
-                    min={new Date().toISOString().split("T")[0]}
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                  />
-                </div>
+              <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
+                {/* Custom In-App Atelier Month Calendar */}
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] space-y-3">
+                  {/* Month Navigation */}
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#C9A96E] font-bold block">
+                        Atelier Availability
+                      </span>
+                      <h4 className="font-serif text-lg sm:text-xl text-[#1A1410] font-medium leading-tight">
+                        {monthName}
+                      </h4>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={prevMonth}
+                        className="w-8 h-8 rounded-full border border-[#E5DECF] bg-white hover:border-[#1A1410] flex items-center justify-center text-[#1A1410] transition-colors shadow-2xs"
+                        aria-label="Previous month"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={nextMonth}
+                        className="w-8 h-8 rounded-full border border-[#E5DECF] bg-white hover:border-[#1A1410] flex items-center justify-center text-[#1A1410] transition-colors shadow-2xs"
+                        aria-label="Next month"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
 
-                {/* Time Slots */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                    Select New Time Slot
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {TIME_SLOTS.map((slot) => {
-                      const { available, badge } = getSlotStatus(selectedDate, slot.id);
-                      const isSelected = timeSlot === slot.id;
+                  {/* Day-of-Week Headers */}
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+                      <span key={day} className="text-[10px] uppercase tracking-wider font-bold text-[#6E6359] py-0.5">
+                        {day}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Days Grid */}
+                  <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                    {calendarDays.map((cd, idx) => {
+                      if (!cd.isCurrentMonth) {
+                        return <div key={idx} className="w-full aspect-square" />;
+                      }
+
+                      const isSelected = selectedDate === cd.dateStr;
+                      const isUnavailable = cd.isPast || cd.isBlocked || cd.openCount === 0;
+
                       return (
                         <button
-                          key={slot.id}
+                          key={cd.dateStr}
                           type="button"
-                          disabled={!available}
-                          onClick={() => setTimeSlot(slot.id)}
-                          className={`p-2.5 rounded-xl text-xs font-semibold transition-all border flex flex-col items-center justify-center ${
+                          disabled={isUnavailable}
+                          onClick={() => {
+                            setSelectedDate(cd.dateStr);
+                            setTimeSlot("");
+                          }}
+                          className={`w-full aspect-square rounded-xl flex flex-col items-center justify-center relative text-xs sm:text-sm font-semibold transition-all ${
                             isSelected
-                              ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
-                              : !available
-                              ? "bg-[#F8F4EE]/50 text-[#6E6359]/40 border-transparent cursor-not-allowed line-through"
-                              : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
+                              ? "bg-[#1A1410] text-[#FDFBF8] shadow-md ring-2 ring-[#C9A96E] scale-[1.03]"
+                              : isUnavailable
+                              ? "text-[#6E6359]/30 cursor-not-allowed bg-transparent"
+                              : "hover:bg-white text-[#1A1410] hover:text-[#C9A96E] border border-transparent hover:border-[#E5DECF] shadow-2xs hover:scale-[1.02]"
                           }`}
                         >
-                          <span>{slot.label}</span>
-                          {!available && (
-                            <span className="text-[9px] font-mono uppercase no-underline mt-0.5 text-rose-700/70">
-                              {badge}
-                            </span>
+                          <span className="leading-none">{cd.dayNum}</span>
+                          {!isUnavailable && !isSelected && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1" />
                           )}
                         </button>
                       );
                     })}
                   </div>
+
+                  {/* Legend & Availability sync indicator */}
+                  <div className="pt-2 border-t border-[#E5DECF]/60 flex items-center justify-between text-[11px] text-[#6E6359]">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                        <span>Open</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#1A1410] inline-block" />
+                        <span>Selected</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#E5DECF] inline-block" />
+                        <span>Booked</span>
+                      </span>
+                    </div>
+                    {isLoadingAvailability && (
+                      <span className="text-[10px] font-mono text-[#C9A96E] flex items-center gap-1">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> Syncing...
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Time Slots Selection */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                      Select New Time Slot
+                    </label>
+                    {selectedDate && (
+                      <span className="text-xs text-[#C9A96E] font-medium">
+                        {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    )}
+                  </div>
+
+                  {!selectedDate ? (
+                    <div className="p-4 rounded-xl border border-dashed border-[#E5DECF] text-center text-xs text-[#6E6359]">
+                      Select a date on the calendar above to view available time slots.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {TIME_SLOTS.map((slot) => {
+                        const { available, badge } = getSlotStatus(selectedDate, slot.id);
+                        const isSelected = timeSlot === slot.id;
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            disabled={!available}
+                            onClick={() => setTimeSlot(slot.id)}
+                            className={`p-2.5 rounded-xl text-xs font-semibold transition-all border flex flex-col items-center justify-center ${
+                              isSelected
+                                ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410] shadow-sm"
+                                : !available
+                                ? "bg-[#F8F4EE]/50 text-[#6E6359]/40 border-transparent cursor-not-allowed line-through"
+                                : "bg-white text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E] hover:text-[#1A1410]"
+                            }`}
+                          >
+                            <span>{slot.label}</span>
+                            {!available && (
+                              <span className="text-[9px] font-mono uppercase no-underline mt-0.5 text-rose-700/70">
+                                {badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
