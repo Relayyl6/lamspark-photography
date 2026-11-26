@@ -32,6 +32,14 @@ function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
 
+function normalizeSlot(s: string): string {
+  return (s || "").trim().toUpperCase().replace(/^0/, "");
+}
+
+function normalizeDate(d: string): string {
+  return (d || "").trim().slice(0, 10);
+}
+
 export function StudioCalendarManager() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() => {
@@ -69,7 +77,10 @@ export function StudioCalendarManager() {
   const loadCalendarData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/availability?month=${monthParam}`);
+      const res = await fetch(`/api/availability?month=${monthParam}&_t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       const data = await res.json();
       if (data.success) {
         setBookedSlots(data.bookedSlots || []);
@@ -87,9 +98,29 @@ export function StudioCalendarManager() {
     loadCalendarData();
   }, [monthParam]);
 
-  // Execute Slot Lock / Unlock Action
+  // Execute Slot Lock / Unlock Action with optimistic updates
   const handleSlotAction = async (action: "lock_slot" | "unlock_slot", timeSlot: string, reason?: string) => {
     setIsActionPending(true);
+
+    const normTargetDate = normalizeDate(selectedDateStr);
+    const normTargetSlot = normalizeSlot(timeSlot);
+
+    // Optimistic UI update
+    if (action === "unlock_slot") {
+      setLockedSlots((prev) =>
+        prev.filter(
+          (l) => !(normalizeDate(l.date) === normTargetDate && normalizeSlot(l.timeSlot) === normTargetSlot)
+        )
+      );
+    } else if (action === "lock_slot") {
+      setLockedSlots((prev) => [
+        ...prev.filter(
+          (l) => !(normalizeDate(l.date) === normTargetDate && normalizeSlot(l.timeSlot) === normTargetSlot)
+        ),
+        { date: normTargetDate, timeSlot, reason: reason || "Studio Reserved" },
+      ]);
+    }
+
     try {
       const res = await fetch("/api/admin/calendar-locks", {
         method: "POST",
@@ -103,6 +134,9 @@ export function StudioCalendarManager() {
       });
       const data = await res.json();
       if (data.success) {
+        if (Array.isArray(data.lockedSlots)) {
+          setLockedSlots(data.lockedSlots);
+        }
         setStatusMessage(action === "lock_slot" ? `Slot ${timeSlot} locked successfully` : `Slot ${timeSlot} unlocked`);
         setTimeout(() => setStatusMessage(null), 3000);
         setActiveLockingSlot(null);
@@ -110,17 +144,27 @@ export function StudioCalendarManager() {
         await loadCalendarData();
       } else {
         alert(data.error || "Action failed");
+        await loadCalendarData();
       }
     } catch (err: any) {
       alert("Error: " + err.message);
+      await loadCalendarData();
     } finally {
       setIsActionPending(false);
     }
   };
 
-  // Execute Block / Unblock Day Action
+  // Execute Block / Unblock Day Action with optimistic updates
   const handleDayAction = async (action: "block_day" | "unblock_day") => {
     setIsActionPending(true);
+    const normTargetDate = normalizeDate(selectedDateStr);
+
+    if (action === "block_day") {
+      setBlockedDays((prev) => [...prev.filter((d) => normalizeDate(d) !== normTargetDate), normTargetDate]);
+    } else {
+      setBlockedDays((prev) => prev.filter((d) => normalizeDate(d) !== normTargetDate));
+    }
+
     try {
       const res = await fetch("/api/admin/calendar-locks", {
         method: "POST",
@@ -133,6 +177,9 @@ export function StudioCalendarManager() {
       });
       const data = await res.json();
       if (data.success) {
+        if (Array.isArray(data.blockedDays)) {
+          setBlockedDays(data.blockedDays.map((d: any) => (typeof d === "string" ? d : d.date)));
+        }
         setStatusMessage(action === "block_day" ? `Day ${selectedDateStr} closed to bookings` : `Day ${selectedDateStr} reopened`);
         setTimeout(() => setStatusMessage(null), 3000);
         setIsBlockDayOpen(false);
@@ -140,9 +187,11 @@ export function StudioCalendarManager() {
         await loadCalendarData();
       } else {
         alert(data.error || "Action failed");
+        await loadCalendarData();
       }
     } catch (err: any) {
       alert("Error: " + err.message);
+      await loadCalendarData();
     } finally {
       setIsActionPending(false);
     }
@@ -232,9 +281,11 @@ export function StudioCalendarManager() {
 
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${pad(month + 1)}-${pad(d)}`;
-      const isBlocked = blockedDays.includes(dateStr);
-      const dayBookings = bookedSlots.filter((b) => b.date === dateStr);
-      const dayLocks = lockedSlots.filter((l) => l.date === dateStr);
+      const isBlocked = blockedDays.some(
+        (b) => normalizeDate(typeof b === "string" ? b : (b as any).date) === normalizeDate(dateStr)
+      );
+      const dayBookings = bookedSlots.filter((b) => normalizeDate(b.date) === normalizeDate(dateStr));
+      const dayLocks = lockedSlots.filter((l) => normalizeDate(l.date) === normalizeDate(dateStr));
 
       days.push({
         dateStr,
@@ -249,7 +300,9 @@ export function StudioCalendarManager() {
     return days;
   }, [currentDate, bookedSlots, lockedSlots, blockedDays]);
 
-  const isCurrentDayBlocked = blockedDays.includes(selectedDateStr);
+  const isCurrentDayBlocked = blockedDays.some(
+    (b) => normalizeDate(typeof b === "string" ? b : (b as any).date) === normalizeDate(selectedDateStr)
+  );
 
   return (
     <div className="space-y-6">
@@ -453,8 +506,16 @@ export function StudioCalendarManager() {
             </span>
 
             {TIME_SLOTS.map((slot) => {
-              const booked = bookedSlots.find((b) => b.date === selectedDateStr && b.timeSlot === slot);
-              const locked = lockedSlots.find((l) => l.date === selectedDateStr && l.timeSlot === slot);
+              const booked = bookedSlots.find(
+                (b) =>
+                  normalizeDate(b.date) === normalizeDate(selectedDateStr) &&
+                  normalizeSlot(b.timeSlot) === normalizeSlot(slot)
+              );
+              const locked = lockedSlots.find(
+                (l) =>
+                  normalizeDate(l.date) === normalizeDate(selectedDateStr) &&
+                  normalizeSlot(l.timeSlot) === normalizeSlot(slot)
+              );
               const isLocking = activeLockingSlot === slot;
 
               return (
@@ -481,10 +542,11 @@ export function StudioCalendarManager() {
                           type="button"
                           disabled={isActionPending}
                           onClick={() => handleSlotAction("unlock_slot", slot)}
-                          className="p-1 rounded-md hover:bg-warm-white text-muted hover:text-emerald-700"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-warm-white hover:bg-emerald-50 text-muted hover:text-emerald-700 border border-line hover:border-emerald-300 text-xs font-semibold transition-all shadow-2xs active:scale-95 disabled:opacity-50 cursor-pointer"
                           title="Unlock Slot"
                         >
-                          <Unlock className="w-3.5 h-3.5" />
+                          <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Unlock</span>
                         </button>
                       </div>
                     ) : (

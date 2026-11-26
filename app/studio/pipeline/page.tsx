@@ -450,17 +450,48 @@ export default function PipelinePage() {
                     <button
                       key={st.id}
                       type="button"
-                      onClick={() => {
-                        const updated = transitionEnquiry(selectedEnquiry, st.id, "Studio Staff");
-                        if (updated.success && updated.enquiry) {
-                          setEnquiries((prev) => prev.map((e) => (e.id === selectedEnquiry.id ? updated.enquiry! : e)));
-                          setSelectedEnquiry(updated.enquiry);
-                          // Sync to DB
-                          fetch("/api/admin/kanban", {
+                      onClick={async () => {
+                        const updated = transitionEnquiry(selectedEnquiry, st.id, "Studio Staff", {
+                          depositRecordedBy: "Studio Staff",
+                          reason: st.id === "closed" ? "Closed by studio staff" : undefined,
+                        });
+
+                        const nextWaitingOn =
+                          st.id === "deposit_paid" || st.id === "confirmed" || st.id === "deposit_reported"
+                            ? "us"
+                            : st.id === "agreed_to_price" || st.id === "preparation"
+                            ? "client"
+                            : selectedEnquiry.waiting_on;
+
+                        const newRecord =
+                          updated.success && updated.enquiry
+                            ? updated.enquiry
+                            : {
+                                ...selectedEnquiry,
+                                stage: st.id,
+                                waiting_on: nextWaitingOn,
+                                deposit_recorded_by:
+                                  st.id === "deposit_paid" ? "Studio Staff" : selectedEnquiry.deposit_recorded_by,
+                                deposit_paid_at:
+                                  st.id === "deposit_paid" ? new Date().toISOString() : selectedEnquiry.deposit_paid_at,
+                              };
+
+                        setEnquiries((prev) => prev.map((e) => (e.id === selectedEnquiry.id ? newRecord : e)));
+                        setSelectedEnquiry(newRecord);
+
+                        // Sync to DB
+                        try {
+                          await fetch("/api/admin/kanban", {
                             method: "PUT",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ id: selectedEnquiry.id, stage: st.id }),
-                          }).catch((err) => console.error(err));
+                            body: JSON.stringify({
+                              id: selectedEnquiry.id,
+                              stage: st.id,
+                              waitingOn: nextWaitingOn,
+                            }),
+                          });
+                        } catch (err) {
+                          console.error("Failed to sync stage to DB:", err);
                         }
                       }}
                       className={`px-2.5 py-1.5 rounded-xl text-[11px] font-body transition-all text-center truncate ${

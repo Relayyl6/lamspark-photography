@@ -5,6 +5,14 @@ export const dynamic = "force-dynamic";
 
 const sql = neon(process.env.DATABASE_URL!);
 
+function normalizeSlot(s: string) {
+  return (s || "").trim().toUpperCase().replace(/^0/, "");
+}
+
+function normalizeDate(d: string) {
+  return (d || "").trim().slice(0, 10);
+}
+
 export async function GET() {
   try {
     const rows = await sql.query(
@@ -21,7 +29,14 @@ export async function GET() {
       data = typeof val === "string" ? JSON.parse(val) : val;
     }
 
-    return NextResponse.json({ success: true, ...data });
+    return NextResponse.json(
+      { success: true, ...data },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
@@ -57,44 +72,47 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(currentLocks.lockedSlots)) currentLocks.lockedSlots = [];
     if (!Array.isArray(currentLocks.blockedDays)) currentLocks.blockedDays = [];
 
+    const normDate = date ? normalizeDate(date) : "";
+    const normSlot = timeSlot ? normalizeSlot(timeSlot) : "";
+
     if (action === "lock_slot") {
-      if (!date || !timeSlot) {
+      if (!normDate || !normSlot) {
         return NextResponse.json({ success: false, error: "Date and timeSlot are required" }, { status: 400 });
       }
-      // Remove any existing lock for same date & slot
+      // Remove any existing lock for same normalized date & slot
       currentLocks.lockedSlots = currentLocks.lockedSlots.filter(
-        (s) => !(s.date === date && s.timeSlot === timeSlot)
+        (s) => !(normalizeDate(s.date) === normDate && normalizeSlot(s.timeSlot) === normSlot)
       );
       currentLocks.lockedSlots.push({
-        date,
-        timeSlot,
+        date: normDate,
+        timeSlot: timeSlot.trim(),
         reason: reason || "Studio Reserved",
         lockedAt: new Date().toISOString(),
       });
     } else if (action === "unlock_slot") {
-      if (!date || !timeSlot) {
+      if (!normDate || !normSlot) {
         return NextResponse.json({ success: false, error: "Date and timeSlot are required" }, { status: 400 });
       }
       currentLocks.lockedSlots = currentLocks.lockedSlots.filter(
-        (s) => !(s.date === date && s.timeSlot === timeSlot)
+        (s) => !(normalizeDate(s.date) === normDate && normalizeSlot(s.timeSlot) === normSlot)
       );
     } else if (action === "block_day") {
-      if (!date) {
+      if (!normDate) {
         return NextResponse.json({ success: false, error: "Date is required" }, { status: 400 });
       }
       currentLocks.blockedDays = currentLocks.blockedDays.filter(
-        (d) => (typeof d === "string" ? d !== date : d.date !== date)
+        (d) => normalizeDate(typeof d === "string" ? d : d.date) !== normDate
       );
       currentLocks.blockedDays.push({
-        date,
+        date: normDate,
         reason: reason || "Studio Closed",
       });
     } else if (action === "unblock_day") {
-      if (!date) {
+      if (!normDate) {
         return NextResponse.json({ success: false, error: "Date is required" }, { status: 400 });
       }
       currentLocks.blockedDays = currentLocks.blockedDays.filter(
-        (d) => (typeof d === "string" ? d !== date : d.date !== date)
+        (d) => normalizeDate(typeof d === "string" ? d : d.date) !== normDate
       );
     } else {
       return NextResponse.json({ success: false, error: `Unknown action: ${action}` }, { status: 400 });
@@ -110,11 +128,18 @@ export async function POST(req: NextRequest) {
       [jsonStr]
     );
 
-    return NextResponse.json({
-      success: true,
-      message: `Successfully executed ${action}`,
-      ...currentLocks,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: `Successfully executed ${action}`,
+        ...currentLocks,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("[Calendar Locks Error]", err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

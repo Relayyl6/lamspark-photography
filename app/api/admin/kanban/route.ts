@@ -157,6 +157,26 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Enquiry not found" }, { status: 404 });
     }
 
+    if (stage === "deposit_paid" || stage === "confirmed") {
+      await sql.query(
+        `UPDATE payment
+         SET status = 'recorded',
+             recorded_by = COALESCE(recorded_by, 'Studio Staff'),
+             recorded_at = COALESCE(recorded_at, NOW()),
+             updated_at = NOW()
+         WHERE enquiry_id = $1 AND kind = 'deposit'`,
+        [id]
+      ).catch(() => {});
+
+      await sql.query(
+        `UPDATE booking
+         SET status = 'confirmed',
+             updated_at = NOW()
+         WHERE enquiry_id = $1 AND status = 'held'`,
+        [id]
+      ).catch(() => {});
+    }
+
     return NextResponse.json({ enquiry: result[0] });
   } catch (err: any) {
     console.error("[kanban PUT]", err);

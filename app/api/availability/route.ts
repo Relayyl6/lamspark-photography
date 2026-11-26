@@ -116,15 +116,22 @@ export async function GET(req: NextRequest) {
       })
       .filter((slot: any) => slot.date.startsWith(month));
 
-    return NextResponse.json({
-      success: true,
-      month,
-      bookedSlots: formattedBooked,
-      lockedSlots: calendarLocks.lockedSlots || [],
-      blockedDays: (calendarLocks.blockedDays || []).map((b) =>
-        typeof b === "string" ? b : b.date
-      ),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        month,
+        bookedSlots: formattedBooked,
+        lockedSlots: calendarLocks.lockedSlots || [],
+        blockedDays: (calendarLocks.blockedDays || []).map((b) =>
+          typeof b === "string" ? b : b.date
+        ),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (err: any) {
     console.error("[Availability API Error]", err);
     return NextResponse.json(

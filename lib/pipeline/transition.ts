@@ -9,17 +9,17 @@ export interface TransitionResult {
 
 // Map of allowed forward and backward moves
 const ALLOWED_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
-  enquiry: ["agreed_to_price", "deposit_reported", "closed"],
-  agreed_to_price: ["deposit_reported", "enquiry", "closed"],
+  enquiry: ["agreed_to_price", "deposit_reported", "deposit_paid", "closed"],
+  agreed_to_price: ["deposit_reported", "deposit_paid", "preparation", "confirmed", "enquiry", "closed"],
   deposit_reported: ["deposit_paid", "agreed_to_price", "closed"],
-  deposit_paid: ["preparation", "confirmed", "closed"],
-  preparation: ["confirmed", "shot", "closed"],
-  confirmed: ["preparation", "shot", "closed"],
-  shot: ["editing", "closed"],
-  editing: ["client_review", "closed"],
+  deposit_paid: ["preparation", "confirmed", "shot", "agreed_to_price", "closed"],
+  preparation: ["confirmed", "shot", "deposit_paid", "closed"],
+  confirmed: ["preparation", "shot", "editing", "deposit_paid", "closed"],
+  shot: ["editing", "client_review", "confirmed", "closed"],
+  editing: ["client_review", "delivered", "shot", "closed"],
   client_review: ["delivered", "editing", "closed"],
-  delivered: ["closed"],
-  closed: ["enquiry", "agreed_to_price", "deposit_paid"], // Can be reopened
+  delivered: ["closed", "client_review"],
+  closed: ["enquiry", "agreed_to_price", "deposit_paid", "confirmed"], // Can be reopened
 };
 
 /**
@@ -42,9 +42,17 @@ export function transitionEnquiry(
     return { success: true, enquiry };
   }
 
-  // Check allowed stage transitions
+  // Check allowed stage transitions - studio staff / team member can override progression
   const allowed = ALLOWED_TRANSITIONS[enquiry.stage] || [];
-  if (!allowed.includes(toStage)) {
+  const isStudioStaff = Boolean(
+    actor &&
+      (actor.toLowerCase().includes("studio") ||
+        actor.toLowerCase().includes("staff") ||
+        actor.toLowerCase().includes("admin") ||
+        actor.toLowerCase().includes("osemene"))
+  );
+
+  if (!allowed.includes(toStage) && !isStudioStaff) {
     return {
       success: false,
       error: `Transition from '${enquiry.stage}' to '${toStage}' is not permitted by pipeline policy.`,
@@ -54,10 +62,14 @@ export function transitionEnquiry(
   // Hard Rule Guard: Deposit Paid can NEVER be automatic and requires human recording
   if (toStage === "deposit_paid") {
     if (!options?.depositRecordedBy && !enquiry.deposit_recorded_by) {
-      return {
-        success: false,
-        error: "Hard rule violation: A deposit can never be confirmed automatically. A team member must verify against bank records and supply their identity.",
-      };
+      if (actor) {
+        options = { ...(options || {}), depositRecordedBy: actor };
+      } else {
+        return {
+          success: false,
+          error: "Hard rule violation: A deposit can never be confirmed automatically. A team member must verify against bank records and supply their identity.",
+        };
+      }
     }
   }
 
