@@ -141,6 +141,17 @@ export function StudioCalendarManager() {
         setTimeout(() => setStatusMessage(null), 3000);
         setActiveLockingSlot(null);
         setLockReason("");
+
+        try {
+          Object.keys(sessionStorage).forEach((k) => {
+            if (k.startsWith("lamsparks_avail_")) sessionStorage.removeItem(k);
+          });
+        } catch {}
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("lamsparks_availability_changed"));
+        }
+
         await loadCalendarData();
       } else {
         alert(data.error || "Action failed");

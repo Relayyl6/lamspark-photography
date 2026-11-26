@@ -56,6 +56,14 @@ function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
 
+function normalizeSlot(s: string): string {
+  return (s || "").trim().toUpperCase().replace(/^0/, "");
+}
+
+function normalizeDate(d: string): string {
+  return (d || "").trim().slice(0, 10);
+}
+
 export function LiveCalendarSection() {
   const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
   const [currentDate, setCurrentDate] = useState(() => new Date());
@@ -75,37 +83,47 @@ export function LiveCalendarSection() {
 
   const monthParam = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}`;
 
-  // Fetch live availability for current month with instant session cache
-  useEffect(() => {
-    // 1. Instant cache check (0ms response)
-    try {
-      const cached = sessionStorage.getItem(`lamsparks_avail_${monthParam}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed && Array.isArray(parsed.bookedSlots)) {
-          setBookedSlots(parsed.bookedSlots);
-          setLockedSlots(parsed.lockedSlots || []);
-          setBlockedDays(parsed.blockedDays || []);
-          setIsLoading(false);
-        }
-      }
-    } catch {}
-
-    fetch(`/api/availability?month=${monthParam}`)
+  // Fetch live availability directly from the server with cache-busting
+  const fetchAvailability = React.useCallback(() => {
+    setIsLoading(true);
+    fetch(`/api/availability?month=${monthParam}&_t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setBookedSlots(data.bookedSlots || []);
           setLockedSlots(data.lockedSlots || []);
           setBlockedDays(data.blockedDays || []);
-          try {
-            sessionStorage.setItem(`lamsparks_avail_${monthParam}`, JSON.stringify(data));
-          } catch {}
         }
       })
       .catch((err) => console.error("Failed to load availability:", err))
       .finally(() => setIsLoading(false));
   }, [monthParam]);
+
+  useEffect(() => {
+    // Purge any stale legacy sessionStorage cache
+    try {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("lamsparks_avail_")) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch {}
+
+    fetchAvailability();
+
+    // Listen for real-time booking changes (reschedule, cancellation, hold)
+    const handleAvailabilityChanged = () => {
+      fetchAvailability();
+    };
+
+    window.addEventListener("lamsparks_availability_changed", handleAvailabilityChanged);
+    return () => {
+      window.removeEventListener("lamsparks_availability_changed", handleAvailabilityChanged);
+    };
+  }, [fetchAvailability]);
 
   // Calendar Month Navigation
   const prevMonth = () => {
@@ -203,22 +221,30 @@ export function LiveCalendarSection() {
   const slotStatuses = useMemo(() => {
     if (!selectedDayStr) return [];
 
+    const normTargetDate = normalizeDate(selectedDayStr);
+
     return STANDARD_TIME_SLOTS.map((slot) => {
+      const normSlot = normalizeSlot(slot);
+
       // Check if slot is booked by a client
       const booked = bookedSlots.find(
-        (b) => b.date === selectedDayStr && b.timeSlot === slot
+        (b) =>
+          normalizeDate(b.date) === normTargetDate &&
+          normalizeSlot(b.timeSlot) === normSlot
       );
       if (booked) {
         return {
           slot,
           status: booked.status === "held" ? "held" : "booked",
-          label: booked.status === "held" ? "Held (2h)" : "Already Booked",
+          label: booked.status === "held" ? "Held (20h)" : "Already Booked",
         };
       }
 
       // Check if slot is locked by studio
       const locked = lockedSlots.find(
-        (l) => l.date === selectedDayStr && l.timeSlot === slot
+        (l) =>
+          normalizeDate(l.date) === normTargetDate &&
+          normalizeSlot(l.timeSlot) === normSlot
       );
       if (locked) {
         return { slot, status: "locked", label: locked.reason || "Studio Reserved" };
@@ -421,7 +447,7 @@ export function LiveCalendarSection() {
                         {item.status === "booked"
                           ? "Booked"
                           : item.status === "held"
-                          ? "Held (2h)"
+                          ? "Held (20h)"
                           : item.status === "locked"
                           ? "Locked"
                           : item.status === "blocked"

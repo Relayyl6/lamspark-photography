@@ -149,6 +149,14 @@ function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
 
+function normalizeSlot(s: string): string {
+  return (s || "").trim().toUpperCase().replace(/^0/, "");
+}
+
+function normalizeDate(d: string): string {
+  return (d || "").trim().slice(0, 10);
+}
+
 function formatDate(d: Date): string {
   return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
 }
@@ -393,7 +401,10 @@ function BookingWizard() {
 
   useEffect(() => {
     setIsLoadingAvailability(true);
-    fetch(`/api/availability?month=${activeAvailMonth}`)
+    fetch(`/api/availability?month=${activeAvailMonth}&_t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -582,10 +593,19 @@ function BookingWizard() {
   // Helper to check availability status of a specific slot on selectedDate
   const getSlotStatus = (dateStr: string, slotLabel: string) => {
     if (!dateStr) return { available: true, badge: "" };
-    if (blockedDays.includes(dateStr)) return { available: false, badge: "Closed" };
-    const locked = lockedSlots.find((l) => l.date === dateStr && l.timeSlot === slotLabel);
+    const normDate = normalizeDate(dateStr);
+    const normSlot = normalizeSlot(slotLabel);
+
+    if (blockedDays.some((d) => normalizeDate(typeof d === "string" ? d : (d as any).date) === normDate)) {
+      return { available: false, badge: "Closed" };
+    }
+    const locked = lockedSlots.find(
+      (l) => normalizeDate(l.date) === normDate && normalizeSlot(l.timeSlot) === normSlot
+    );
     if (locked) return { available: false, badge: "Reserved" };
-    const booked = bookedSlots.find((b) => b.date === dateStr && b.timeSlot === slotLabel);
+    const booked = bookedSlots.find(
+      (b) => normalizeDate(b.date) === normDate && normalizeSlot(b.timeSlot) === normSlot
+    );
     if (booked) {
       return {
         available: false,
@@ -682,6 +702,16 @@ function BookingWizard() {
           localStorage.setItem("lamsparks_saved_bookings", JSON.stringify([newRecord, ...filtered].slice(0, 5)));
         } catch {}
 
+        try {
+          Object.keys(sessionStorage).forEach((k) => {
+            if (k.startsWith("lamsparks_avail_")) sessionStorage.removeItem(k);
+          });
+        } catch {}
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("lamsparks_availability_changed"));
+        }
+
         // Update URL to make it a revisitable page
         router.replace(`/book?ref=${data.referenceCode}`, { scroll: false });
         setStep(5);
@@ -742,11 +772,39 @@ function BookingWizard() {
       const data = await res.json();
       if (data.success) {
         setIsRescheduleOpen(false);
-        const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}`);
+        const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}&_t=${Date.now()}`, {
+          cache: "no-store",
+        });
         const refData = await refresh.json();
         if (refData.success) {
           setActiveBooking(refData.booking);
         }
+
+        // Immediately update availability and notify listeners
+        fetch(`/api/availability?month=${activeAvailMonth}&_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" },
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success) {
+              setBookedSlots(d.bookedSlots || []);
+              setLockedSlots(d.lockedSlots || []);
+              setBlockedDays(d.blockedDays || []);
+            }
+          })
+          .catch(() => {});
+
+        try {
+          Object.keys(sessionStorage).forEach((k) => {
+            if (k.startsWith("lamsparks_avail_")) sessionStorage.removeItem(k);
+          });
+        } catch {}
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("lamsparks_availability_changed"));
+        }
+
         showNotice(
           "Session Rescheduled",
           "Your session has been successfully moved to your selected date and time. Our studio calendar has been updated accordingly.",
@@ -786,11 +844,39 @@ function BookingWizard() {
       const data = await res.json();
       if (data.success) {
         setIsCancelModalOpen(false);
-        const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}`);
+        const refresh = await fetch(`/api/booking?ref=${encodeURIComponent(activeBooking.referenceCode)}&_t=${Date.now()}`, {
+          cache: "no-store",
+        });
         const refData = await refresh.json();
         if (refData.success) {
           setActiveBooking(refData.booking);
         }
+
+        // Immediately update availability and notify listeners
+        fetch(`/api/availability?month=${activeAvailMonth}&_t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" },
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success) {
+              setBookedSlots(d.bookedSlots || []);
+              setLockedSlots(d.lockedSlots || []);
+              setBlockedDays(d.blockedDays || []);
+            }
+          })
+          .catch(() => {});
+
+        try {
+          Object.keys(sessionStorage).forEach((k) => {
+            if (k.startsWith("lamsparks_avail_")) sessionStorage.removeItem(k);
+          });
+        } catch {}
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("lamsparks_availability_changed"));
+        }
+
         showNotice(
           "Booking Cancelled",
           "Your reservation has been cancelled and the slot has been returned to the atelier schedule.",

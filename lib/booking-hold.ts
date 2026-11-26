@@ -75,7 +75,7 @@ export function extractDateAndSlotWAT(
   const y = dateParts.find((p) => p.type === "year")?.value || "2026";
   const m = dateParts.find((p) => p.type === "month")?.value || "01";
   const d = dateParts.find((p) => p.type === "day")?.value || "01";
-  const dateStr = (answers?.selectedDate as string) || `${y}-${m}-${d}`;
+  const dateStr = `${y}-${m}-${d}`;
 
   // Format 12-hour time in Africa/Lagos (e.g. "09:30 AM", "01:30 PM")
   const timeParts = new Intl.DateTimeFormat("en-US", {
@@ -91,7 +91,7 @@ export function extractDateAndSlotWAT(
 
   return {
     date: dateStr,
-    timeSlot: (answers?.timeSlot as string) || formattedTime,
+    timeSlot: formattedTime || (answers?.timeSlot as string) || "",
   };
 }
 
