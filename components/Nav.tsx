@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 export function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<"sessions" | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Mobile accordion states
@@ -28,6 +28,9 @@ export function Nav() {
   }, [mobileMenuOpen, openDropdown]);
 
   useEffect(() => {
+    // Keep nav visible at initial page load, then exit shortly after
+    showNav();
+
     const handleTouchOrPointer = () => {
       showNav();
     };
@@ -85,7 +88,7 @@ export function Nav() {
 
   return (
     <motion.header
-      initial={{ y: -90, opacity: 0 }}
+      initial={{ y: 0, opacity: 1 }}
       animate={{
         y: isVisible || mobileMenuOpen ? 0 : -90,
         opacity: isVisible || mobileMenuOpen ? 1 : 0,
