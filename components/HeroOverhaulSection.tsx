@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Camera, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Camera } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Nikon3DCamera } from "./Nikon3DCamera";
 
@@ -24,78 +24,50 @@ interface HeroOverhaulSectionProps {
   } | null;
 }
 
-interface SessionMeta {
-  category: string;
-  title: string;
-  tagline: string;
-  price: string;
-  inclusions: string;
-  slot: string;
-  slug: string;
-}
-
-const SESSION_METAS: Record<string, SessionMeta> = {
+const MOBILE_SESSION_META: Record<
+  string,
+  { title: string; price: string; slot: string; slug: string }
+> = {
   weddings: {
-    category: "WEDDINGS",
-    title: "Sacred Unions & Ceremonies",
-    tagline: "Soulful, unhurried coverage capturing sacred vows & legacy moments",
+    title: "Weddings & Ceremonies",
     price: "Bespoke Consultation",
-    inclusions: "Full-day coverage · Archival wedding album · Same-week preview",
-    slot: "2026/2027 Booking Open · Abuja & Worldwide",
+    slot: "2026/2027 Dates · Abuja & Nationwide",
     slug: "wedding",
   },
   traditional: {
-    category: "TRADITIONAL",
     title: "Cultural Heritage & Nuptials",
-    tagline: "Honouring vibrant Aso-Oke, royal regalia & generational customs",
     price: "From ₦250,000",
-    inclusions: "Haute couture lighting · Multi-outfit coverage · Private Maitama studio",
-    slot: "Limited monthly slots · Maitama Atelier",
+    slot: "Aso-Oke & Haute Couture · Maitama Studio",
     slug: "wedding",
   },
   events: {
-    category: "EVENTS",
-    title: "Milestone Galas & Summits",
-    tagline: "Discreet, sophisticated documentation of private galas & celebrations",
+    title: "Milestone Events & Galas",
     price: "From ₦120,000",
-    inclusions: "Discreet master photographer · High-res deliverables · Online guest gallery",
-    slot: "Weekend dates available · Abuja & Beyond",
+    slot: "Weekend dates available · Discreet coverage",
     slug: "event",
   },
   executive: {
-    category: "EXECUTIVE",
     title: "Executive & Official Portraits",
-    tagline: "Commanding visual presence for diplomats, industry leaders & visionaries",
     price: "From ₦85,000",
-    inclusions: "Wardrobe prep · 3 curated looks · Handcrafted editorial retouches",
     slot: "Mon, Wed & Fri · Private Maitama Studio",
     slug: "official-portrait",
   },
   lifestyle: {
-    category: "LIFESTYLE",
     title: "Toddler & Children Sessions",
-    tagline: "Patient, gentle portraiture capturing authentic joy and unscripted smiles",
     price: "From ₦95,000",
-    inclusions: "Unhurried pace · Playful sensory environment · Family cuddle shots included",
-    slot: "Morning natural-light slots · Studio sanctuary",
+    slot: "Unhurried morning slots · Ages 1 to 10",
     slug: "toddler",
   },
   legacy: {
-    category: "LEGACY",
     title: "Family & Multi-Gen Portraits",
-    tagline: "Timeless heirloom portraits celebrating family bonds across generations",
     price: "From ₦160,000",
-    inclusions: "Generations together · Maitama studio suite · High-res museum print package",
-    slot: "Private weekend studio buyout",
+    slot: "Generations together · Maitama Studio Suite",
     slug: "family",
   },
   atelier: {
-    category: "ATELIER",
     title: "Maternity & Motherhood",
-    tagline: "Soft, intimate studio sanctuary honoring the profound journey of motherhood",
     price: "From ₦140,000",
-    inclusions: "Luxury gown styling · Gentle pose guidance · Private dressing lounge",
-    slot: "Gentle afternoon lighting · Maitama Studio",
+    slot: "Gentle afternoon lighting · Calm sanctuary",
     slug: "maternity",
   },
 };
@@ -254,8 +226,8 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
   // Responsive 3D Geometry
   const angleStep = isMobile ? 22 : 15;
   const cardHeight = isMobile
-    ? Math.round(Math.min(Math.max(wheelH * 0.64, 185), 245))
-    : Math.round(Math.min(Math.max(wheelH * 0.70, 220), 360));
+    ? Math.round(Math.min(Math.max(wheelH * 0.62, 190), 245))
+    : Math.round(Math.min(Math.max(wheelH * 0.72, 150), 360));
   const cardWidth = Math.round(cardHeight * 0.705);
   const spacing = cardWidth * (isMobile ? 1.04 : 1.08);
   const cylinderRadius = spacing / Math.sin((angleStep * Math.PI) / 180);
@@ -431,21 +403,10 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
   const rawIndex = Math.round(normalizedAngle / angleStep);
   const activeIndex = (((3 + rawIndex) % count) + count) % count;
 
-  const activeCard = cards[activeIndex] || cards[0] || DEFAULT_HERO_CARDS[0];
-  const activeMeta: SessionMeta = (activeCard && SESSION_METAS[activeCard.id]) || {
-    category: activeCard?.category || "BESPOKE",
-    title: activeCard?.label || "Bespoke Portrait Session",
-    tagline: activeCard?.subtitle || "Unhurried, soulful storytelling in Abuja",
-    price: "Bespoke Consultation",
-    inclusions: "Maitama Studio & On-Location · Archival Master Edits",
-    slot: "Private Maitama Studio",
-    slug: "not-sure",
-  };
-
   return (
     <section
       style={{ height: `calc(100dvh - ${navH}px)` }}
-      className="relative w-full min-h-0 sm:min-h-[520px] flex flex-col justify-between overflow-hidden pt-2 sm:pt-6 pb-[max(0.6rem,env(safe-area-inset-bottom))] sm:pb-5 select-none bg-[#FAF7F2] border-b border-[#E8E2D8]"
+      className="relative w-full min-h-0 sm:min-h-[520px] flex flex-col overflow-hidden pt-2 sm:pt-8 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-5 select-none bg-[#FAF7F2] border-b border-[#E8E2D8]"
     >
       {/* Background Ambience: Subtle warm ivory canvas */}
       <div className="absolute inset-0 bg-[#FAF7F2] pointer-events-none -z-10" />
@@ -624,13 +585,51 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
         </div>
       </div>
 
-      {/* --- 6. UNIFIED EDITORIAL ATELIER CONSOLE & TRUST DECK (Desktop & Mobile) --- */}
-      <div className="relative w-full max-w-5xl mx-auto px-3 sm:px-6 mt-1 sm:mt-2 shrink-0 z-30 animate-fade-up delay-300">
-        {/* Category Trajectory & Interactive Scrubber */}
-        <div className="flex items-center justify-center gap-1 sm:gap-2.5 md:gap-4 text-[7.5px] sm:text-[10px] md:text-[11px] font-sans uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#6E6359] flex-wrap md:flex-nowrap mb-1.5 sm:mb-2 px-1">
+      {/* Mobile-Only Active Spotlight (Fills Whitespace Below Image Carousel) */}
+      <div className="block sm:hidden w-full max-w-sm mx-auto px-3.5 my-1 shrink-0 z-30">
+        <AnimatePresence mode="wait">
+          {cards[activeIndex] && (
+            <motion.div
+              key={cards[activeIndex].id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-white/85 backdrop-blur-md rounded-2xl border border-[#E8E2D8] p-2.5 shadow-sm flex items-center justify-between gap-2.5"
+            >
+              <div className="min-w-0 flex-1 text-left">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-[#D93829] font-bold truncate">
+                    {cards[activeIndex].category}
+                  </span>
+                  <span className="text-[9px] text-[#6E6359]/60">·</span>
+                  <span className="text-[9.5px] text-[#C9A96E] font-semibold truncate">
+                    {MOBILE_SESSION_META[cards[activeIndex].id]?.price || "Bespoke Atelier"}
+                  </span>
+                </div>
+                <h3 className="font-serif text-xs text-[#111111] font-semibold truncate leading-tight">
+                  {MOBILE_SESSION_META[cards[activeIndex].id]?.title || cards[activeIndex].label}
+                </h3>
+              </div>
+              <Link
+                href={`/book?session=${MOBILE_SESSION_META[cards[activeIndex].id]?.slug || "not-sure"}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#111111] hover:bg-[#D93829] text-white text-[9.5px] font-bold uppercase tracking-wider shrink-0 transition-colors shadow-sm"
+              >
+                <span>Book</span>
+                <ArrowUpRight className="w-2.5 h-2.5 stroke-[2.5]" />
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* --- 6. CURVED / ARCHED CATEGORY TRAJECTORY WITH RED DOTS --- */}
+      <div className="relative max-w-5xl w-full mx-auto mt-1.5 sm:mt-3 text-center shrink-0 animate-fade-up delay-400">
+        <div className="flex items-center justify-center gap-1 sm:gap-3 md:gap-5 text-[7.5px] sm:text-[11px] font-sans uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#6E6359] flex-wrap md:flex-nowrap px-2">
           {loading || cards.length === 0 ? (
             [1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="h-3 w-14 bg-line/60 rounded-full animate-pulse" />
+              <div key={i} className="h-3 w-16 bg-line/60 rounded-full animate-pulse" />
             ))
           ) : (
             cards.map((card, idx) => {
@@ -640,9 +639,9 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
                 <React.Fragment key={card.id}>
                   <button
                     onClick={() => selectCardIndex(idx)}
-                    className={`transition-all duration-300 font-bold focus:outline-none cursor-pointer whitespace-nowrap px-1.5 py-0.5 rounded-full ${
+                    className={`transition-all duration-300 font-bold focus:outline-none cursor-pointer whitespace-nowrap ${
                       isSelected
-                        ? "text-[#D93829] bg-[#D93829]/10 scale-105 drop-shadow-sm"
+                        ? "text-[#D93829] scale-105 drop-shadow-sm"
                         : "text-[#6E6359] hover:text-[#D93829]"
                     }`}
                   >
@@ -651,7 +650,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
                   {idx < cards.length - 1 && (
                     <span
                       className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-all duration-300 shrink-0 ${
-                        isSelected ? "bg-[#D93829] scale-125" : "bg-[#D93829]/60"
+                        isSelected ? "bg-[#D93829] scale-125" : "bg-[#D93829]/70"
                       }`}
                     />
                   )}
@@ -661,112 +660,30 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
           )}
         </div>
 
-        {/* Live Active Session Spotlight Console (Desktop & Mobile) */}
-        <AnimatePresence mode="wait">
-          {activeCard && (
-            <motion.div
-              key={activeCard.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white/90 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-[#E8E2D8] p-2.5 sm:p-4 shadow-[0_8px_30px_rgba(24,20,17,0.06)] flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-5"
-            >
-              {/* Left Column: Active Session Identity & Inclusions */}
-              <div className="min-w-0 flex-1 text-center sm:text-left w-full sm:w-auto">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.2em] sm:tracking-[0.22em] text-[#D93829] font-bold truncate">
-                    {activeMeta.category}
-                  </span>
-                  <span className="text-[9px] sm:text-[10px] text-[#6E6359]/60">·</span>
-                  <span className="text-[9.5px] sm:text-[11px] text-[#C9A96E] font-semibold truncate">
-                    {activeMeta.price}
-                  </span>
-                  <span className="hidden md:inline text-[9px] text-[#6E6359]/60">·</span>
-                  <span className="hidden md:inline text-[10px] text-[#6E6359] font-medium truncate">
-                    {activeMeta.slot}
-                  </span>
-                </div>
-                <h3 className="font-serif text-xs sm:text-base lg:text-lg text-[#111111] font-bold truncate leading-tight">
-                  {activeMeta.title}
-                </h3>
-                <p className="hidden sm:block text-[10px] lg:text-[11px] text-[#6E6359] font-sans mt-0.5 line-clamp-1">
-                  {activeMeta.tagline} · {activeMeta.inclusions}
-                </p>
-              </div>
+        {/* Interactive Hint Indicator */}
+        <div className="mt-1 sm:mt-1.5 text-[8.5px] sm:text-[10px] uppercase tracking-[0.18em] text-[#6E6359]/60 font-medium">
+          Swipe to explore
+        </div>
 
-              {/* Right Column: Direct Responsive Action Hub */}
-              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-center shrink-0">
-                <Link
-                  href={`/sessions/${activeMeta.slug}`}
-                  className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-full border border-[#D9D1C5] hover:border-[#111111] text-[#111111] text-[9.5px] sm:text-[11px] font-bold uppercase tracking-[0.14em] sm:tracking-[0.16em] transition-all bg-transparent hover:bg-white"
-                >
-                  <span>Guide & Rates</span>
-                  <ArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                </Link>
-                <Link
-                  href={`/book?session=${activeMeta.slug}`}
-                  className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3.5 sm:px-5 py-1.5 sm:py-2.5 rounded-full bg-[#111111] hover:bg-[#D93829] text-white text-[9.5px] sm:text-[11px] font-bold uppercase tracking-[0.16em] sm:tracking-[0.18em] transition-all shadow-sm hover:shadow-md group"
-                >
-                  <span>Book This Session</span>
-                  <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </Link>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Desktop 4-Pillar Atelier Trust Strip */}
-        <div className="hidden sm:grid grid-cols-4 gap-2 md:gap-4 mt-2 sm:mt-3 pt-2 sm:pt-2.5 border-t border-[#E8E2D8]/60 text-left">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#C9A96E] shrink-0" />
-            <div className="min-w-0">
-              <div className="text-[9.5px] lg:text-[10px] font-bold uppercase tracking-wider text-[#111111] truncate">
-                Private Maitama Studio
-              </div>
-              <div className="text-[8.5px] lg:text-[9px] text-[#6E6359] truncate">
-                Natural light & strobe facility
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#C9A96E] shrink-0" />
-            <div className="min-w-0">
-              <div className="text-[9.5px] lg:text-[10px] font-bold uppercase tracking-wider text-[#111111] truncate">
-                1-on-1 Wardrobe Prep
-              </div>
-              <div className="text-[8.5px] lg:text-[9px] text-[#6E6359] truncate">
-                Personal styling consultation
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#C9A96E] shrink-0" />
-            <div className="min-w-0">
-              <div className="text-[9.5px] lg:text-[10px] font-bold uppercase tracking-wider text-[#111111] truncate">
-                Fine-Art Retouching
-              </div>
-              <div className="text-[8.5px] lg:text-[9px] text-[#6E6359] truncate">
-                Hand-graded master edits
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[#C9A96E] shrink-0" />
-            <div className="min-w-0">
-              <div className="text-[9.5px] lg:text-[10px] font-bold uppercase tracking-wider text-[#111111] truncate">
-                20-Min Slot Lock
-              </div>
-              <div className="text-[8.5px] lg:text-[9px] text-[#6E6359] truncate">
-                Instant calendar confirmation
-              </div>
-            </div>
-          </div>
+        <div className="mt-1.5 sm:mt-3 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+          <Link
+            href="/portfolio"
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-[#111111] hover:bg-[#D93829] text-white px-4 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] transition-colors"
+          >
+            View Portfolio
+            <ArrowRight className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+          </Link>
+          <Link
+            href="/book"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] px-5 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] transition-all shadow-sm hover:shadow-md group"
+          >
+            <span>BOOK</span>
+            <ArrowUpRight className="w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </Link>
         </div>
 
         {/* Mobile Atelier Trust Micro-Ticker */}
-        <div className="flex sm:hidden items-center justify-center gap-1.5 mt-1.5 text-[8px] uppercase tracking-[0.14em] text-[#6E6359]/80 font-medium px-1 text-center">
+        <div className="flex sm:hidden items-center justify-center gap-2 mt-2 text-[8px] uppercase tracking-[0.16em] text-[#6E6359]/70 font-medium px-2 text-center">
           <span>✦ Maitama Private Studio</span>
           <span>·</span>
           <span>✦ 20h Slot Lock</span>
