@@ -4,26 +4,63 @@ import { WelcomeIntro } from "@/components/WelcomeIntro";
 import { ScrollRevealObserver } from "@/components/ScrollRevealObserver";
 
 export const metadata: Metadata = {
-  title: "LamSparks Photography | Bespoke Portrait & Event Studio | Abuja, Nigeria",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://lamspark-photography.onrender.com"
+  ),
+  title: {
+    default: "LamSparks Photography | Bespoke Portrait & Event Studio | Abuja, Nigeria",
+    template: "%s | LamSparks Photography Abuja",
+  },
   description:
     "Unhurried, personal photography in Abuja. Capturing Moments. Preserving Memories. Sparkling Lives. Toddler, maternity, family, weddings and milestone events by Osemene.",
   keywords: [
     "LamSparks Photography",
     "Abuja photographer",
+    "Maitama photography studio",
     "maternity photography Abuja",
     "toddler photoshoot Abuja",
     "luxury portraits Nigeria",
     "wedding photographer Abuja",
     "Osemene photography",
+    "executive headshots Abuja",
   ],
   authors: [{ name: "Osemene / LamSparks Photography" }],
+  creator: "LamSparks Photography",
+  publisher: "LamSparks Photography Atelier",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: ["/icon.svg"],
+  },
   openGraph: {
-    title: "LamSparks Photography | Abuja, Nigeria",
-    description: "Capturing Moments. Preserving Memories. Sparkling Lives.",
-    url: "https://lamsparks.com",
+    title: "LamSparks Photography | Bespoke Portrait & Event Studio | Abuja",
+    description:
+      "Unhurried, personal photography in Abuja. Capturing Moments. Preserving Memories. Sparkling Lives. Toddler, maternity, family, weddings and milestone events by Osemene.",
+    url: "https://lamspark-photography.onrender.com",
     siteName: "LamSparks Photography",
+    images: [
+      {
+        url: "/images/client/weddings_1.webp",
+        width: 1200,
+        height: 630,
+        alt: "LamSparks Photography Atelier · Abuja, Nigeria",
+      },
+    ],
     locale: "en_NG",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LamSparks Photography | Bespoke Portrait & Event Studio | Abuja",
+    description:
+      "Unhurried, personal photography in Abuja. Capturing Moments. Preserving Memories. Sparkling Lives.",
+    images: ["/images/client/weddings_1.webp"],
+    creator: "@lamsparks",
   },
 };
 

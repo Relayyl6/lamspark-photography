@@ -62,7 +62,12 @@ function mapSessionSlugToGroup(
 }
 
 function getBadgeForGroup(group: "studio" | "maternity" | "wedding" | "event" | "official", explicitTitle?: string): string {
-  if (explicitTitle && explicitTitle.length <= 26) {
+  if (
+    explicitTitle &&
+    explicitTitle.length <= 26 &&
+    !explicitTitle.toLowerCase().includes("archive") &&
+    !explicitTitle.toLowerCase().includes("files to send")
+  ) {
     return explicitTitle;
   }
   switch (group) {
@@ -76,7 +81,7 @@ function getBadgeForGroup(group: "studio" | "maternity" | "wedding" | "event" | 
       return "Official & Executive";
     case "studio":
     default:
-      return "Studio Session";
+      return "Studio & Family";
   }
 }
 

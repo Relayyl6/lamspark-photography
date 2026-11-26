@@ -198,8 +198,8 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
 
   return (
     <section
-      style={{ height: `calc(100svh - ${navH}px)` }}
-      className="relative w-full min-h-[520px] flex flex-col overflow-hidden pt-2 sm:pt-8 pb-2 sm:pb-5 select-none bg-[#FAF7F2] border-b border-[#E8E2D8]"
+      style={{ height: `calc(100dvh - ${navH}px)` }}
+      className="relative w-full min-h-[520px] flex flex-col overflow-hidden pt-2 sm:pt-8 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-5 select-none bg-[#FAF7F2] border-b border-[#E8E2D8]"
     >
       {/* Background Ambience: Subtle warm ivory canvas */}
       <div className="absolute inset-0 bg-[#FAF7F2] pointer-events-none -z-10" />

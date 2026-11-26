@@ -23,7 +23,7 @@ export const SESSION_TYPES: Record<SessionTypeSlug, SessionTypeMeta> = {
     tagline: "Unhurried, joyful studio sessions for ages 1 to 10 in Abuja.",
     description: "Designed around your child's pace, personality, and natural wonder. We play, we pause, and we capture genuine sparkle without stiff posing.",
     fromPrice: 95000,
-    heroImage: "/images/client/events_3.webp",
+    heroImage: "/images/client/curated_master/curated_master_6.webp",
     defaultDepositPercent: 70,
     standardDeliveryDays: "7 to 14 working days",
     expressDeliveryDays: "3 to 5 business days",

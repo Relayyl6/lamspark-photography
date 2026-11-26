@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpRight, ArrowRight, Check, Clock, Calendar, ShieldCheck, Heart, Sparkles } from "lucide-react";
@@ -14,6 +15,47 @@ export const revalidate = 0;
 interface SessionPageProps {
   params: {
     type: string;
+  };
+}
+
+export async function generateMetadata({ params }: SessionPageProps): Promise<Metadata> {
+  const liveSessions = await getLiveSessionTypes();
+  const session =
+    liveSessions[params.type as SessionTypeSlug] ||
+    SESSION_TYPES[params.type as SessionTypeSlug];
+
+  if (!session) {
+    return {
+      title: "Session Details | LamSparks Photography Abuja",
+    };
+  }
+
+  const title = `${session.title} | Bespoke Photography Session`;
+  const description = `${session.tagline} ${session.description}`.slice(0, 160);
+  const imageUrl = session.heroImage?.replace(/\.jpg$/, ".webp") || session.heroImage || "/images/client/weddings_1.webp";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${session.title} · LamSparks Photography Abuja`,
+      description,
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${session.title} - LamSparks Atelier Abuja`,
+        },
+      ],
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${session.title} · LamSparks Photography Abuja`,
+      description,
+      images: [imageUrl],
+    },
   };
 }
 

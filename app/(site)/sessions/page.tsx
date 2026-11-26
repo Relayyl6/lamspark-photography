@@ -1,12 +1,39 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowUpRight, CheckCircle2 } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { SessionCard } from "@/components/SessionCard";
 import { getLiveSessionTypes } from "@/lib/catalog/live";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Bespoke Photography Sessions & Collections",
+  description:
+    "Explore our core session offerings at LamSparks Photography in Maitama, Abuja. From unhurried toddler and maternity sessions to executive portraits and luxury weddings.",
+  openGraph: {
+    title: "Bespoke Photography Sessions & Collections | LamSparks Abuja",
+    description:
+      "Explore core session offerings from LamSparks Photography in Maitama, Abuja. Inclusions, timelines, and transparent starting rates.",
+    images: [
+      {
+        url: "/images/client/weddings_1.webp",
+        width: 1200,
+        height: 630,
+        alt: "LamSparks Photography Collections Abuja",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bespoke Photography Collections | LamSparks Abuja",
+    description: "Unhurried toddler, maternity, family, wedding, and executive portrait sessions.",
+    images: ["/images/client/weddings_1.webp"],
+  },
+};
 
 export default async function SessionsIndexPage() {
   const sessionTypes = await getLiveSessionTypes();
@@ -15,29 +42,26 @@ export default async function SessionsIndexPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Editorial Header */}
-        <div className="max-w-3xl mb-16 reveal-down">
-          <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-3">
+      <main className="flex-1 pt-6 sm:pt-10 pb-16 sm:pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Editorial Header - Tightened Spacing */}
+        <div className="max-w-3xl mb-6 sm:mb-8 reveal-down">
+          <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-2">
             Collections & Inclusions
           </span>
-          <h1 className="font-display text-4xl sm:text-6xl text-deep font-normal leading-tight">
+          <h1 className="font-display text-3xl sm:text-5xl text-deep font-normal leading-tight">
             Thoughtfully Designed Session Collections
           </h1>
-          <p className="font-body text-base text-brown/85 mt-4 leading-relaxed">
-            Every session at LamSparks is planned with ample time, deliberate styling, and unhurried guidance in our Abuja studio or on location. Explore our core session categories below to see inclusions, timelines, and starting investments.
-          </p>
         </div>
 
         {/* Sessions Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" data-stagger="true">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8" data-stagger="true">
           {sessions.map((session, idx) => (
             <SessionCard key={session.slug} session={session} priority={idx < 3} />
           ))}
         </div>
 
         {/* Two-Step Pricing Notice */}
-        <div className="reveal-up mt-20 p-8 sm:p-10 rounded-photo bg-warm-white border border-line shadow-editorial max-w-4xl mx-auto">
+        <div className="reveal-up mt-14 sm:mt-16 p-8 sm:p-10 rounded-photo bg-warm-white border border-line shadow-editorial max-w-4xl mx-auto">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div>
               <span className="font-body text-xs uppercase tracking-[0.2em] text-gold font-semibold block mb-1">
