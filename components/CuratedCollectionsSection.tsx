@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { SessionTypeMeta } from "@/lib/catalog/seed";
 
 export interface CollectionPhotoCard {
@@ -340,42 +341,51 @@ export function CuratedCollectionsSection({
         ref={trackContainerRef}
         className="relative w-full overflow-x-auto no-scrollbar py-2 px-4 sm:px-6 lg:px-8 scroll-smooth"
       >
-        <div className="flex gap-4 sm:gap-5 w-max">
-          {displayCards.map((card, idx) => (
-            <article
-              key={card.id}
-              className="group relative w-[260px] sm:w-[300px] lg:w-[325px] shrink-0 overflow-hidden rounded-2xl bg-[#EDE7DD] shadow-[0_8px_24px_rgba(24,20,17,0.12)] hover:shadow-[0_16px_36px_rgba(24,20,17,0.22)] transition-all duration-500 cursor-pointer"
-            >
-              <Link href={card.href} className="block relative aspect-[3/4] sm:aspect-[2/3] w-full overflow-hidden">
-                <CollectionCardImage
-                  src={card.imageUrl}
-                  alt={`${card.badge} - LamSparks Photography Abuja`}
-                  priority={idx < 3}
-                />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCategory}
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="flex gap-4 sm:gap-5 w-max"
+          >
+            {displayCards.map((card, idx) => (
+              <article
+                key={card.id}
+                className="group relative w-[260px] sm:w-[300px] lg:w-[325px] shrink-0 overflow-hidden rounded-2xl bg-[#EDE7DD] shadow-[0_8px_24px_rgba(24,20,17,0.12)] hover:shadow-[0_16px_36px_rgba(24,20,17,0.22)] transition-all duration-500 cursor-pointer"
+              >
+                <Link href={card.href} className="block relative aspect-[3/4] sm:aspect-[2/3] w-full overflow-hidden">
+                  <CollectionCardImage
+                    src={card.imageUrl}
+                    alt={`${card.badge} - LamSparks Photography Abuja`}
+                    priority={idx < 3}
+                  />
 
-                {/* Subtle soft gradient so top pill and bottom explore button pop without muddying image shadows */}
-                <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/35 via-transparent to-black/15 pointer-events-none" />
+                  {/* Subtle soft gradient so top pill and bottom explore button pop without muddying image shadows */}
+                  <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/35 via-transparent to-black/15 pointer-events-none" />
 
-                {/* Category Badge Atop the Picture */}
-                <div className="absolute top-3.5 left-3.5 right-3.5 z-[3] flex items-center justify-between pointer-events-none">
-                  <span className="font-body text-[10px] uppercase tracking-[0.2em] text-warm-white font-semibold bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full truncate max-w-[90%]">
-                    {card.badge}
-                  </span>
-                </div>
-
-                {/* Only Explore Button at Bottom */}
-                <div className="absolute bottom-3.5 right-3.5 z-[3]">
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/55 group-hover:bg-gold backdrop-blur-md border border-white/25 group-hover:border-gold text-warm-white group-hover:text-deep transition-all duration-300 shadow-sm">
-                    <span className="font-body text-[10px] sm:text-[11px] uppercase tracking-wider font-bold">
-                      Explore
+                  {/* Category Badge Atop the Picture */}
+                  <div className="absolute top-3.5 left-3.5 right-3.5 z-[3] flex items-center justify-between pointer-events-none">
+                    <span className="font-body text-[10px] uppercase tracking-[0.2em] text-warm-white font-semibold bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full truncate max-w-[90%]">
+                      {card.badge}
                     </span>
-                    <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  </span>
-                </div>
-              </Link>
-            </article>
-          ))}
-        </div>
+                  </div>
+
+                  {/* Only Explore Button at Bottom */}
+                  <div className="absolute bottom-3.5 right-3.5 z-[3]">
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/55 group-hover:bg-gold backdrop-blur-md border border-white/25 group-hover:border-gold text-warm-white group-hover:text-deep transition-all duration-300 shadow-sm">
+                      <span className="font-body text-[10px] sm:text-[11px] uppercase tracking-wider font-bold">
+                        Explore
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </span>
+                  </div>
+                </Link>
+              </article>
+            ))}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </section>
   );

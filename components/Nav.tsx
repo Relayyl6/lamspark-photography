@@ -1,17 +1,55 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Menu, X, ChevronDown, Sparkles, BookOpen, Camera, Shield, User } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<"sessions" | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Mobile accordion states
   const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
 
   const navRef = useRef<HTMLElement>(null);
+
+  const showNav = useCallback(() => {
+    setIsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => {
+      setIsVisible((prev) => {
+        if (mobileMenuOpen || openDropdown !== null) return true;
+        return false;
+      });
+    }, 3200);
+  }, [mobileMenuOpen, openDropdown]);
+
+  useEffect(() => {
+    const handleTouchOrPointer = () => {
+      showNav();
+    };
+
+    window.addEventListener("pointerdown", handleTouchOrPointer, { passive: true });
+    window.addEventListener("touchstart", handleTouchOrPointer, { passive: true });
+    window.addEventListener("scroll", handleTouchOrPointer, { passive: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", handleTouchOrPointer);
+      window.removeEventListener("touchstart", handleTouchOrPointer);
+      window.removeEventListener("scroll", handleTouchOrPointer);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [showNav]);
+
+  useEffect(() => {
+    if (mobileMenuOpen || openDropdown !== null) {
+      setIsVisible(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    }
+  }, [mobileMenuOpen, openDropdown]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -46,10 +84,29 @@ export function Nav() {
   ];
 
   return (
-    <header className={`sticky top-0 z-50 border-b border-line transition-all animate-fade-down ${
-      mobileMenuOpen ? "bg-[#FAF8F5]" : "bg-cream/85 backdrop-blur-md"
-    }`}>
-      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-14 sm:h-16 lg:h-18 flex items-center justify-between gap-2.5 sm:gap-4">
+    <motion.header
+      initial={{ y: -90, opacity: 0 }}
+      animate={{
+        y: isVisible || mobileMenuOpen ? 0 : -90,
+        opacity: isVisible || mobileMenuOpen ? 1 : 0,
+      }}
+      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      onMouseEnter={() => {
+        setIsVisible(true);
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      }}
+      onMouseLeave={() => {
+        if (!mobileMenuOpen && !openDropdown) {
+          hideTimerRef.current = setTimeout(() => setIsVisible(false), 2400);
+        }
+      }}
+      className={`fixed top-2.5 sm:top-4 inset-x-2.5 sm:inset-x-6 max-w-7xl mx-auto z-50 rounded-2xl sm:rounded-full border shadow-[0_12px_36px_rgba(20,16,13,0.08)] transition-colors duration-300 ${
+        mobileMenuOpen
+          ? "bg-[#FAF8F5] border-[#E5DDD2]"
+          : "bg-[#FAF8F5]/80 backdrop-blur-xl border-white/70"
+      }`}
+    >
+      <div className="px-3.5 sm:px-6 lg:px-8 h-13 sm:h-16 flex items-center justify-between gap-2.5 sm:gap-4">
         {/* 1. Left Brand Wordmark */}
         <Link href="/" className="group flex flex-col justify-center shrink-0">
           <span className="font-display text-xl sm:text-2xl lg:text-3xl tracking-tight text-deep font-semibold transition-colors group-hover:text-gold leading-none">
@@ -183,7 +240,7 @@ export function Nav() {
 
       {/* 5. Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed left-0 right-0 top-14 sm:top-16 lg:top-18 bottom-0 w-full h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)] z-50 bg-[#FAF8F5] border-t border-line overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 pb-24 flex flex-col justify-between shadow-2xl animate-in fade-in duration-200">
+        <div className="lg:hidden fixed left-2.5 right-2.5 top-[68px] sm:top-[85px] bottom-3 rounded-2xl z-50 bg-[#FAF8F5] border border-line overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 pb-24 flex flex-col justify-between shadow-2xl animate-in fade-in duration-200">
           <div className="space-y-3 sm:space-y-4">
             {/* Accordion 1: Sessions */}
             <div className="border-b border-line/60 pb-2.5 sm:pb-3">
@@ -276,6 +333,6 @@ export function Nav() {
           </div>
         </div>
       )}
-    </header>
+    </motion.header>
   );
 }

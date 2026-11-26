@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -1529,9 +1530,17 @@ function BookingWizard() {
               </div>
             </div>
 
-            {/* STEP 1: SESSION DISCOVERY ("WHAT ARE WE SHOOTING?") */}
-            {step === 1 && (
-              <div className="space-y-8 step-transition">
+            <AnimatePresence mode="wait">
+              {/* STEP 1: SESSION DISCOVERY ("WHAT ARE WE SHOOTING?") */}
+              {step === 1 && (
+                <motion.div
+                  key="step-1"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                  className="space-y-8 step-transition"
+                >
                 <div className="text-center max-w-2xl mx-auto space-y-2">
                   <h1 className="font-headline uppercase tracking-tight text-[#1A1410] font-black text-4xl sm:text-6xl md:text-7xl leading-[0.95]">
                     WHAT ARE WE <span className="text-[#C9A96E]">SHOOTING?</span>
@@ -1589,12 +1598,19 @@ function BookingWizard() {
                     );
                   })}
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* STEP 2: PACKAGE PICKER (Inspired by Reference Video 00:21 - 00:24) */}
             {step === 2 && (
-              <div className="space-y-6 sm:space-y-8 step-transition">
+              <motion.div
+                key="step-2"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-6 sm:space-y-8 step-transition"
+              >
                 {/* Top Breadcrumb Navigation */}
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359]">
                   <button
@@ -1857,12 +1873,19 @@ function BookingWizard() {
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* STEP 3: LIVE CALENDAR & TIME (Inspired by Reference Video 00:27 - 00:30) */}
             {step === 3 && (
-              <div className="space-y-8 step-transition">
+              <motion.div
+                key="step-3"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-8 step-transition"
+              >
                 {/* Breadcrumb Navigation */}
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359] mb-3">
                   <button
@@ -2083,12 +2106,19 @@ function BookingWizard() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* STEP 4: YOUR DETAILS (Decluttered, Frictionless & Under 30s) */}
             {step === 4 && (
-              <div className="space-y-8 step-transition">
+              <motion.div
+                key="step-4"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-8 step-transition"
+              >
                 {/* Breadcrumb Navigation */}
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#6E6359] mb-3">
                   <button
@@ -2328,9 +2358,10 @@ function BookingWizard() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
+        </div>
         )}
       </main>
 

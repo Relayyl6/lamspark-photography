@@ -248,15 +248,6 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
                   ))}
                 </div>
               </section>
-
-              {/* FAQ Redirect */}
-              <div className="border-t border-line pt-10 sm:pt-14 text-center">
-                <p className="font-body text-sm text-muted mb-4">Have more questions about this session?</p>
-                <Link href="/faq" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-deep text-warm-white font-body text-xs uppercase tracking-wider font-semibold hover:bg-gold hover:text-deep transition-all duration-300">
-                  <span>Visit our FAQ</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
             </div>
 
             {/* Right Col: Sticky Booking Card & Two-Step Pricing Info */}

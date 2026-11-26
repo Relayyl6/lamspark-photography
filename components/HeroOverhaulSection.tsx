@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Camera } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Nikon3DCamera } from "./Nikon3DCamera";
 
 interface WheelCard {
@@ -22,6 +23,54 @@ interface HeroOverhaulSectionProps {
     subtitle: string;
   } | null;
 }
+
+const MOBILE_SESSION_META: Record<
+  string,
+  { title: string; price: string; slot: string; slug: string }
+> = {
+  weddings: {
+    title: "Weddings & Ceremonies",
+    price: "Bespoke Consultation",
+    slot: "2026/2027 Dates · Abuja & Nationwide",
+    slug: "wedding",
+  },
+  traditional: {
+    title: "Cultural Heritage & Nuptials",
+    price: "From ₦250,000",
+    slot: "Aso-Oke & Haute Couture · Maitama Studio",
+    slug: "wedding",
+  },
+  events: {
+    title: "Milestone Events & Galas",
+    price: "From ₦120,000",
+    slot: "Weekend dates available · Discreet coverage",
+    slug: "event",
+  },
+  executive: {
+    title: "Executive & Official Portraits",
+    price: "From ₦85,000",
+    slot: "Mon, Wed & Fri · Private Maitama Studio",
+    slug: "official-portrait",
+  },
+  lifestyle: {
+    title: "Toddler & Children Sessions",
+    price: "From ₦95,000",
+    slot: "Unhurried morning slots · Ages 1 to 10",
+    slug: "toddler",
+  },
+  legacy: {
+    title: "Family & Multi-Gen Portraits",
+    price: "From ₦160,000",
+    slot: "Generations together · Maitama Studio Suite",
+    slug: "family",
+  },
+  atelier: {
+    title: "Maternity & Motherhood",
+    price: "From ₦140,000",
+    slot: "Gentle afternoon lighting · Calm sanctuary",
+    slug: "maternity",
+  },
+};
 
 export function HeroOverhaulSection({ initialCards = null, initialCopy = null }: HeroOverhaulSectionProps) {
   const [viewportWidth, setViewportWidth] = useState(1440);
@@ -421,6 +470,45 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
         </div>
       </div>
 
+      {/* Mobile-Only Active Spotlight (Fills Whitespace Below Image Carousel) */}
+      <div className="block sm:hidden w-full max-w-sm mx-auto px-3.5 my-1 shrink-0 z-30">
+        <AnimatePresence mode="wait">
+          {cards[activeIndex] && (
+            <motion.div
+              key={cards[activeIndex].id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-white/85 backdrop-blur-md rounded-2xl border border-[#E8E2D8] p-2.5 shadow-sm flex items-center justify-between gap-2.5"
+            >
+              <div className="min-w-0 flex-1 text-left">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-[#D93829] font-bold truncate">
+                    {cards[activeIndex].category}
+                  </span>
+                  <span className="text-[9px] text-[#6E6359]/60">·</span>
+                  <span className="text-[9.5px] text-[#C9A96E] font-semibold truncate">
+                    {MOBILE_SESSION_META[cards[activeIndex].id]?.price || "Bespoke Atelier"}
+                  </span>
+                </div>
+                <h3 className="font-serif text-xs text-[#111111] font-semibold truncate leading-tight">
+                  {MOBILE_SESSION_META[cards[activeIndex].id]?.title || cards[activeIndex].label}
+                </h3>
+              </div>
+              <Link
+                href={`/book?session=${MOBILE_SESSION_META[cards[activeIndex].id]?.slug || "not-sure"}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#111111] hover:bg-[#D93829] text-white text-[9.5px] font-bold uppercase tracking-wider shrink-0 transition-colors shadow-sm"
+              >
+                <span>Book</span>
+                <ArrowUpRight className="w-2.5 h-2.5 stroke-[2.5]" />
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* --- 6. CURVED / ARCHED CATEGORY TRAJECTORY WITH RED DOTS --- */}
       <div className="relative max-w-5xl w-full mx-auto mt-1.5 sm:mt-3 text-center shrink-0 animate-fade-up delay-400">
         <div className="flex items-center justify-center gap-1 sm:gap-3 md:gap-5 text-[7.5px] sm:text-[11px] font-sans uppercase tracking-[0.16em] sm:tracking-[0.2em] text-[#6E6359] flex-wrap md:flex-nowrap px-2">
@@ -477,6 +565,15 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
             <span>BOOK</span>
             <ArrowUpRight className="w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </Link>
+        </div>
+
+        {/* Mobile Atelier Trust Micro-Ticker */}
+        <div className="flex sm:hidden items-center justify-center gap-2 mt-2 text-[8px] uppercase tracking-[0.16em] text-[#6E6359]/70 font-medium px-2 text-center">
+          <span>✦ Maitama Private Studio</span>
+          <span>·</span>
+          <span>✦ 20h Slot Lock</span>
+          <span>·</span>
+          <span>✦ Fine-Art Retouching</span>
         </div>
       </div>
     </section>

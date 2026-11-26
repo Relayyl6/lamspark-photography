@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ArrowRight, Award, Clock, Heart, Shield, Sparkles, Star } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { EditorialTestimonial } from "@/lib/testimonials-data";
 
 export interface TrustStatItem {
@@ -119,20 +120,12 @@ export function EditorialTestimonialSection({
 
   const goToNext = useCallback(() => {
     if (testimonials.length <= 1) return;
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
-      setIsTransitioning(false);
-    }, 240);
+    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
   }, [testimonials.length]);
 
   const goToIndex = (idx: number) => {
     if (idx === currentIndex || testimonials.length === 0) return;
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setCurrentIndex(idx);
-      setIsTransitioning(false);
-    }, 240);
+    setCurrentIndex(idx);
   };
 
   // Auto-advance timer (pauses on user interaction)
@@ -234,47 +227,59 @@ export function EditorialTestimonialSection({
               </span>
             </div>
 
-            {/* Client Bracket Tag & Studio Role */}
-            <div className="mt-6 sm:mt-8">
-              <h4 className="font-body text-xs sm:text-sm font-semibold tracking-wider text-deep">
-                [{current.clientName}]
-              </h4>
-              <p className="font-body text-[11px] sm:text-xs text-muted mt-1 leading-snug">
-                {current.roleOrLocation}
-              </p>
-            </div>
+            {/* Client Bracket Tag & Studio Role with Framer Motion */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current.id || currentIndex}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                className="mt-6 sm:mt-8"
+              >
+                <h4 className="font-body text-xs sm:text-sm font-semibold tracking-wider text-deep">
+                  [{current.clientName}]
+                </h4>
+                <p className="font-body text-[11px] sm:text-xs text-muted mt-1 leading-snug">
+                  {current.roleOrLocation}
+                </p>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Integrated Single Studio Trust Box (cycles with active testimonial, sourced from settings.about_stats) */}
-          {activeStat && (
-            <div
-              className={`mt-6 sm:mt-8 transition-all duration-300 transform ${
-                isTransitioning
-                  ? "opacity-0 translate-y-2"
-                  : "opacity-100 translate-y-0"
-              }`}
-            >
-              <div className="bg-[#FAF7F2]/95 border border-[#E5DECF] rounded-2xl p-4 sm:p-5 shadow-[0_6px_24px_rgba(26,20,16,0.04)] backdrop-blur-sm">
-                <div className="flex items-start justify-between gap-2.5 mb-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gold/15 border border-gold/25 flex items-center justify-center text-gold shrink-0">
-                    {renderStatIcon(activeStat.iconName)}
+          <AnimatePresence mode="wait">
+            {activeStat && (
+              <motion.div
+                key={activeStat.label || (currentIndex % stats.length)}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                className="mt-6 sm:mt-8"
+              >
+                <div className="bg-[#FAF7F2]/95 border border-[#E5DECF] rounded-2xl p-4 sm:p-5 shadow-[0_6px_24px_rgba(26,20,16,0.04)] backdrop-blur-sm">
+                  <div className="flex items-start justify-between gap-2.5 mb-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-gold/15 border border-gold/25 flex items-center justify-center text-gold shrink-0">
+                      {renderStatIcon(activeStat.iconName)}
+                    </div>
+                    <span className="font-body text-[9px] uppercase tracking-[0.2em] text-deep/45 font-semibold pt-1">
+                      Approach · {String((currentIndex % stats.length) + 1).padStart(2, "0")}
+                    </span>
                   </div>
-                  <span className="font-body text-[9px] uppercase tracking-[0.2em] text-deep/45 font-semibold pt-1">
-                    Approach · {String((currentIndex % stats.length) + 1).padStart(2, "0")}
-                  </span>
+                  <div className="font-display text-2xl sm:text-3xl font-normal text-deep leading-none mb-1.5">
+                    {activeStat.value}
+                  </div>
+                  <h5 className="font-body text-[11px] uppercase tracking-[0.14em] font-bold text-deep/85 mb-1">
+                    {activeStat.label}
+                  </h5>
+                  <p className="font-body text-xs text-muted leading-relaxed">
+                    {activeStat.desc}
+                  </p>
                 </div>
-                <div className="font-display text-2xl sm:text-3xl font-normal text-deep leading-none mb-1.5">
-                  {activeStat.value}
-                </div>
-                <h5 className="font-body text-[11px] uppercase tracking-[0.14em] font-bold text-deep/85 mb-1">
-                  {activeStat.label}
-                </h5>
-                <p className="font-body text-xs text-muted leading-relaxed">
-                  {activeStat.desc}
-                </p>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Action Trigger & Avatar Previews Cluster */}
           <div className="mt-6 md:mt-auto pt-5 flex items-center justify-between md:justify-start gap-4">
@@ -347,24 +352,27 @@ export function EditorialTestimonialSection({
             </div>
           </div>
 
-          {/* Colossal Quotation Statement with Smooth Crossfade */}
-          <div
-            className={`my-auto py-4 sm:py-6 transition-all duration-300 transform ${
-              isTransitioning
-                ? "opacity-0 translate-y-3"
-                : "opacity-100 translate-y-0"
-            }`}
-          >
-            <div className="max-w-4xl">
-              <h3 className="font-display text-2xl sm:text-4xl md:text-5xl lg:text-6xl text-deep font-normal leading-[1.12] tracking-tight mb-4">
-                <span className="text-gold font-serif mr-1">“</span>
-                {current.headline}
-              </h3>
-              <p className="font-display italic text-lg sm:text-2xl lg:text-3xl text-deep/85 font-light leading-relaxed max-w-3xl">
-                {current.quote}”
-              </p>
-            </div>
-          </div>
+          {/* Colossal Quotation Statement with Framer Motion Crossfade */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={current.id || currentIndex}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="my-auto py-4 sm:py-6"
+            >
+              <div className="max-w-4xl">
+                <h3 className="font-display text-2xl sm:text-4xl md:text-5xl lg:text-6xl text-deep font-normal leading-[1.12] tracking-tight mb-4">
+                  <span className="text-gold font-serif mr-1">“</span>
+                  {current.headline}
+                </h3>
+                <p className="font-display italic text-lg sm:text-2xl lg:text-3xl text-deep/85 font-light leading-relaxed max-w-3xl">
+                  {current.quote}”
+                </p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
 
           {/* Bottom Bar: Brand Promise Tagline, Quote Glyph, and [Next] Trigger */}
           <div className="pt-6 border-t border-deep/10 flex items-center justify-between">
