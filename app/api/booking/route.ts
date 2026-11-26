@@ -10,7 +10,13 @@ import {
 } from "@/lib/booking-hold";
 import { BookingAnswers, SessionTypeSlug } from "@/lib/types";
 
-const sql = neon(process.env.DATABASE_URL!);
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
+const sql = neon(process.env.DATABASE_URL!, {
+  fetchOptions: { cache: "no-store" },
+});
 
 /**
  * Checks whether a target WAT date ("YYYY-MM-DD") and time slot ("11:00 AM")

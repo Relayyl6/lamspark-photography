@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = neon(process.env.DATABASE_URL!, {
+  fetchOptions: { cache: "no-store" },
+});
 
 function normalizeSlot(s: string) {
   return (s || "").trim().toUpperCase().replace(/^0/, "");

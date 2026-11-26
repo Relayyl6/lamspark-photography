@@ -7,8 +7,12 @@ import {
 } from "@/lib/booking-hold";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = neon(process.env.DATABASE_URL!, {
+  fetchOptions: { cache: "no-store" },
+});
 
 export async function GET(req: NextRequest) {
   try {
@@ -54,16 +58,28 @@ export async function GET(req: NextRequest) {
          )
        ORDER BY b.shoot_start ASC`,
       [startDate, endDate]
-    ).catch(async () => {
-      // Fallback query if join fails
+    ).catch(async (err: any) => {
+      console.error("[Availability Query Error]", err);
+      // Fallback query if payment or specific join fails
       return sql.query(
-        `SELECT id, shoot_start, shoot_end, status, created_at, updated_at
-         FROM booking 
-         WHERE status NOT IN ('cancelled', 'expired')
-           AND (status != 'held' OR updated_at >= NOW() - INTERVAL '20 hours')
-           AND shoot_start >= $1 
-           AND shoot_start <= $2
-         ORDER BY shoot_start ASC`,
+        `SELECT 
+          b.id,
+          b.shoot_start,
+          b.shoot_end,
+          b.status,
+          b.created_at,
+          b.updated_at,
+          e.session_type,
+          e.reference_code,
+          e.answers,
+          e.stage
+         FROM booking b 
+         LEFT JOIN enquiry e ON b.enquiry_id = e.id
+         WHERE b.status NOT IN ('cancelled', 'expired')
+           AND (b.status != 'held' OR b.updated_at >= NOW() - INTERVAL '20 hours' OR e.stage IS NOT NULL)
+           AND b.shoot_start >= ($1::timestamptz - INTERVAL '1 day')
+           AND b.shoot_start <= ($2::timestamptz + INTERVAL '1 day')
+         ORDER BY b.shoot_start ASC`,
         [startDate, endDate]
       ).catch(() => []);
     });
@@ -115,6 +131,23 @@ export async function GET(req: NextRequest) {
         };
       })
       .filter((slot: any) => slot.date.startsWith(month));
+
+    const debug = searchParams.get("debug");
+    if (debug) {
+      const allB = await sql.query(
+        "SELECT b.id, b.shoot_start, b.status, e.reference_code, e.stage FROM booking b LEFT JOIN enquiry e ON b.enquiry_id = e.id"
+      ).catch(() => []);
+      return NextResponse.json({
+        debug: true,
+        month,
+        startDate,
+        endDate,
+        allBookingsInDB: allB,
+        bookedRowsCount: bookedRows.length,
+        bookedRows,
+        formattedBooked,
+      });
+    }
 
     return NextResponse.json(
       {
