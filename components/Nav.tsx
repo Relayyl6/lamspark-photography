@@ -155,28 +155,18 @@ export function Nav() {
         </nav>
 
         {/* 4. Mobile Controls (lg:hidden) */}
-        <div className="flex lg:hidden items-center gap-1.5 sm:gap-2">
+        <div className="flex lg:hidden items-center gap-2 sm:gap-3">
           {/* Mobile Booking Action Pill with Arrow */}
           <Link
             href="/book"
-            className="inline-flex items-center gap-1.5 sm:gap-2 bg-deep text-warm-white hover:bg-brown px-2.5 sm:px-3.5 py-1.5 rounded-full shadow-pill transition-all transform hover:-translate-y-0.5 group shrink-0"
+            className="inline-flex items-center gap-1.5 sm:gap-2 bg-deep text-warm-white hover:bg-brown px-3 sm:px-4 py-1.5 rounded-full shadow-pill transition-all transform hover:-translate-y-0.5 group shrink-0"
           >
-            <span className="font-body text-[10.5px] sm:text-xs tracking-wider uppercase font-semibold whitespace-nowrap">
+            <span className="font-body text-[11px] sm:text-xs tracking-wider uppercase font-semibold whitespace-nowrap">
               Book a session
             </span>
             <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-gold text-deep flex items-center justify-center group-hover:rotate-45 transition-transform duration-300 shrink-0">
               <ArrowUpRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[2.5]" />
             </span>
-          </Link>
-
-          {/* Quick Studio link with Person Icon on Mobile */}
-          <Link
-            href="/studio"
-            className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-line bg-cream text-brown hover:text-gold shrink-0"
-            title="Studio OS"
-            aria-label="Studio OS"
-          >
-            <User className="w-3.5 h-3.5 text-gold" />
           </Link>
 
           <button
