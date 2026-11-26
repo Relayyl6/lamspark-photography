@@ -55,6 +55,12 @@ export interface BookingAnswers {
   extraImagesCount?: number;
   additionalFamilyCount?: number;
   additionalChildCount?: number;
+  outfits?: number;
+  outfitCount?: number;
+  selectedDate?: string;
+  timeSlot?: string;
+  packageName?: string;
+  agreedPrice?: number;
   notes?: string;
 }
 
@@ -139,6 +145,9 @@ export interface EnquiryRecord {
   feeling_text?: string;
   answers: BookingAnswers;
   estimate?: EstimateResult;
+  deposit_percent?: number;
+  deposit_amount?: number;
+  balance_amount?: number;
   agreed_price?: number;
   price_agreed_at?: string;
   deposit_reported_at?: string;

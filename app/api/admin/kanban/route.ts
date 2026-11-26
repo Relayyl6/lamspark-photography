@@ -39,9 +39,19 @@ export async function GET() {
         p.bank_reference,
         p.recorded_by,
         p.recorded_at,
-        p.ai_check
+        p.ai_check,
+        est.total as estimate_total,
+        est.deposit_percent as estimate_deposit_percent,
+        est.deposit_amount as estimate_deposit_amount,
+        est.balance_amount as estimate_balance_amount
       FROM enquiry e
       LEFT JOIN client c ON e.client_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT total, deposit_percent, deposit_amount, balance_amount
+        FROM estimate_snapshot
+        WHERE estimate_snapshot.enquiry_id = e.id
+        ORDER BY created_at DESC LIMIT 1
+      ) est ON true
       LEFT JOIN LATERAL (
         SELECT id, amount_expected, amount_recorded, status, screenshot_asset_id, bank_reference, recorded_by, recorded_at, ai_check
         FROM payment 
@@ -53,7 +63,24 @@ export async function GET() {
 
     const enquiries = rawEnquiries.map((e: any) => {
       const answers = typeof e.answers === "string" ? JSON.parse(e.answers) : (e.answers || {});
-      const agreedPrice = answers.agreedPrice || (e.amount_expected ? Math.round(e.amount_expected / 0.7) : 0);
+      const depositPercent =
+        Number(e.estimate_deposit_percent) ||
+        (e.session_type === "maternity" || e.session_type === "motherhood-bundle" ? 50 : 70);
+      const agreedPrice =
+        e.estimate_total != null
+          ? Number(e.estimate_total)
+          : answers.agreedPrice ||
+            (e.amount_expected ? Math.round(Number(e.amount_expected) / (depositPercent / 100)) : 0);
+      const depositAmount =
+        e.estimate_deposit_amount != null
+          ? Number(e.estimate_deposit_amount)
+          : e.amount_expected
+          ? Number(e.amount_expected)
+          : Math.round(agreedPrice * (depositPercent / 100));
+      const balanceAmount =
+        e.estimate_balance_amount != null
+          ? Number(e.estimate_balance_amount)
+          : Math.max(0, agreedPrice - depositAmount);
 
       return {
         id: e.id,
@@ -74,6 +101,9 @@ export async function GET() {
         feeling_text: e.feeling_text,
         answers: answers,
         agreed_price: agreedPrice,
+        deposit_percent: depositPercent,
+        deposit_amount: depositAmount,
+        balance_amount: balanceAmount,
         deposit_screenshot_url: e.screenshot_asset_id,
         deposit_paid_at: e.recorded_at,
         deposit_recorded_by: e.recorded_by,

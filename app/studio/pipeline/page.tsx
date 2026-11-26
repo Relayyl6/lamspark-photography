@@ -343,35 +343,58 @@ export default function PipelinePage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-body">
-                <div>
-                  <span className="text-[10px] font-mono text-muted uppercase block">Agreed Total</span>
-                  <span className="font-display text-lg text-deep font-semibold">
-                    {selectedEnquiry.agreed_price ? `₦${selectedEnquiry.agreed_price.toLocaleString()}` : "Custom Quote"}
-                  </span>
-                </div>
+              {(() => {
+                const depositPct =
+                  selectedEnquiry.deposit_percent ||
+                  (selectedEnquiry.session_type === "maternity" || selectedEnquiry.session_type === "motherhood-bundle"
+                    ? 50
+                    : 70);
+                const agreedTotal = selectedEnquiry.agreed_price || 0;
+                const depositReq =
+                  selectedEnquiry.deposit_amount != null
+                    ? selectedEnquiry.deposit_amount
+                    : agreedTotal
+                    ? Math.round(agreedTotal * (depositPct / 100))
+                    : 0;
+                const balanceDue =
+                  selectedEnquiry.balance_amount != null
+                    ? selectedEnquiry.balance_amount
+                    : agreedTotal
+                    ? Math.max(0, agreedTotal - depositReq)
+                    : 0;
 
-                <div>
-                  <span className="text-[10px] font-mono text-muted uppercase block">70% Deposit Required</span>
-                  <span className="font-display text-lg text-gold font-semibold">
-                    {selectedEnquiry.agreed_price ? `₦${Math.round(selectedEnquiry.agreed_price * 0.7).toLocaleString()}` : "-"}
-                  </span>
-                </div>
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-body">
+                    <div>
+                      <span className="text-[10px] font-mono text-muted uppercase block">Agreed Total</span>
+                      <span className="font-display text-lg text-deep font-semibold">
+                        {agreedTotal ? `₦${agreedTotal.toLocaleString()}` : "Custom Quote"}
+                      </span>
+                    </div>
 
-                <div>
-                  <span className="text-[10px] font-mono text-muted uppercase block">30% Balance Due</span>
-                  <span className="font-display text-lg text-muted font-semibold">
-                    {selectedEnquiry.agreed_price ? `₦${Math.round(selectedEnquiry.agreed_price * 0.3).toLocaleString()}` : "-"}
-                  </span>
-                </div>
+                    <div>
+                      <span className="text-[10px] font-mono text-muted uppercase block">{depositPct}% Deposit Required</span>
+                      <span className="font-display text-lg text-gold font-semibold">
+                        {depositReq ? `₦${depositReq.toLocaleString()}` : "-"}
+                      </span>
+                    </div>
 
-                <div>
-                  <span className="text-[10px] font-mono text-muted uppercase block">Bank Narration / Ref</span>
-                  <span className="font-mono text-xs font-bold text-deep truncate block">
-                    {selectedEnquiry.bank_reference || (selectedEnquiry as any).payment?.bankReference || "Not provided"}
-                  </span>
-                </div>
-              </div>
+                    <div>
+                      <span className="text-[10px] font-mono text-muted uppercase block">{100 - depositPct}% Balance Due</span>
+                      <span className="font-display text-lg text-muted font-semibold">
+                        {balanceDue ? `₦${balanceDue.toLocaleString()}` : "-"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-mono text-muted uppercase block">Bank Narration / Ref</span>
+                      <span className="font-mono text-xs font-bold text-deep truncate block">
+                        {selectedEnquiry.bank_reference || (selectedEnquiry as any).payment?.bankReference || "Not provided"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Deposit Receipt Preview if Uploaded */}
               {selectedEnquiry.deposit_screenshot_url && (

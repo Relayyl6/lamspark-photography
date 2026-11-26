@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -26,6 +27,7 @@ import {
   UploadCloud,
   X,
   AlertCircle,
+  AlertTriangle,
   User,
   MapPin,
   FileCheck2,
@@ -150,6 +152,34 @@ function BookingWizard() {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [holdRemainingMs, setHoldRemainingMs] = useState<number | null>(null);
   const [reholdError, setReholdError] = useState<string | null>(null);
+
+  // Hydration safety for React portal
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Wardrobe outfit selection (Chosen at Step 2 Package stage)
+  const [outfitCount, setOutfitCount] = useState<number>(1);
+
+  // Studio Elegance Notification Modal (Replaces browser alert/confirm)
+  const [studioNotice, setStudioNotice] = useState<{
+    title: string;
+    message: string;
+    type?: "success" | "error" | "info";
+    details?: { label: string; value: string }[];
+    onConfirm?: () => void;
+  } | null>(null);
+
+  const showNotice = (
+    title: string,
+    message: string,
+    type: "success" | "error" | "info" = "info",
+    details?: { label: string; value: string }[],
+    onConfirm?: () => void
+  ) => {
+    setStudioNotice({ title, message, type, details, onConfirm });
+  };
 
   // Modals for self-serve management
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
@@ -303,6 +333,21 @@ function BookingWizard() {
     return currentPackages.find((p) => p.id === packageId) || currentPackages[0] || null;
   }, [currentPackages, packageId]);
 
+  // Intelligent outfit count recommendation from package inclusions
+  useEffect(() => {
+    if (!selectedPackage?.inclusions) return;
+    for (const inc of selectedPackage.inclusions) {
+      const match = inc.match(/(\d+)\s*(?:to\s*(\d+))?\s*(?:outfit|look|wardrobe|change)/i);
+      if (match) {
+        const detected = parseInt(match[2] || match[1], 10);
+        if (detected > 0 && detected <= 8) {
+          setOutfitCount(detected);
+          break;
+        }
+      }
+    }
+  }, [selectedPackage?.id]);
+
   // Concise answers object feeding estimate engine & photographer shoot record
   const bookingAnswers: BookingAnswers = useMemo(
     () => ({
@@ -311,9 +356,11 @@ function BookingWizard() {
       packageName: selectedPackage?.name,
       selectedDate,
       timeSlot,
+      outfits: outfitCount,
+      outfitCount: outfitCount,
       notes,
     }),
-    [notes, liveSessions, sessionType, selectedPackage, selectedDate, timeSlot]
+    [notes, liveSessions, sessionType, selectedPackage, selectedDate, timeSlot, outfitCount]
   );
 
   const estimate: EstimateResult = useMemo(() => {
@@ -462,12 +509,20 @@ function BookingWizard() {
   // Handle Create Booking Submission (Step 4 -> Step 5)
   async function handleCreateBooking() {
     if (!clientName.trim() || !whatsappPhone.trim() || !selectedDate || !timeSlot) {
-      alert("Please ensure your name, WhatsApp number, date, and time slot are filled.");
+      showNotice(
+        "Required Information",
+        "Please ensure your full name, WhatsApp number, session date, and time slot are all filled.",
+        "info"
+      );
       return;
     }
 
     if (!termsAgreed) {
-      alert("Please agree to the booking deposit terms to proceed.");
+      showNotice(
+        "Deposit Terms Required",
+        "Please review and agree to the booking deposit terms to complete your reservation.",
+        "info"
+      );
       return;
     }
 
@@ -532,11 +587,19 @@ function BookingWizard() {
         router.replace(`/book?ref=${data.referenceCode}`, { scroll: false });
         setStep(5);
       } else {
-        alert(data.error || "Failed to reserve slot. Please try again.");
+        showNotice(
+          "Reservation Note",
+          data.error || "Failed to reserve slot. Please try another time slot.",
+          "error"
+        );
       }
     } catch (err: any) {
       console.error("Booking error:", err);
-      alert("An unexpected error occurred. Please contact studio directly.");
+      showNotice(
+        "Studio Contact",
+        "An unexpected error occurred. Please contact our studio directly via WhatsApp.",
+        "error"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -545,7 +608,7 @@ function BookingWizard() {
   // Handle Reschedule
   async function handleReschedule() {
     if (!activeBooking?.referenceCode || !selectedDate || !timeSlot) {
-      alert("Please pick a new date and time slot.");
+      showNotice("Select Date & Time", "Please pick a new date and time slot for your session.", "info");
       return;
     }
 
@@ -569,12 +632,22 @@ function BookingWizard() {
         if (refData.success) {
           setActiveBooking(refData.booking);
         }
-        alert("Your session has been successfully rescheduled!");
+        showNotice(
+          "Session Rescheduled",
+          "Your session has been successfully moved to your selected date and time. Our studio calendar has been updated accordingly.",
+          "success",
+          [
+            { label: "New Date", value: selectedDate },
+            { label: "Time Slot", value: timeSlot },
+            { label: "Booking Ref", value: activeBooking.referenceCode },
+            { label: "Studio", value: "LamSparks Private Abuja Studio" },
+          ]
+        );
       } else {
-        alert(data.error || "Could not reschedule at this time.");
+        showNotice("Reschedule Notice", data.error || "Could not reschedule at this time.", "error");
       }
     } catch (err: any) {
-      alert("Reschedule failed: " + err.message);
+      showNotice("Reschedule Failed", "Reschedule failed: " + err.message, "error");
     } finally {
       setIsUpdatingBooking(false);
     }
@@ -603,11 +676,16 @@ function BookingWizard() {
         if (refData.success) {
           setActiveBooking(refData.booking);
         }
+        showNotice(
+          "Booking Cancelled",
+          "Your reservation has been cancelled and the slot has been returned to the atelier schedule.",
+          "info"
+        );
       } else {
-        alert(data.error || "Could not cancel booking.");
+        showNotice("Cancellation Notice", data.error || "Could not cancel booking.", "error");
       }
     } catch (err: any) {
-      alert("Cancellation failed: " + err.message);
+      showNotice("Cancellation Failed", "Cancellation failed: " + err.message, "error");
     } finally {
       setIsUpdatingBooking(false);
     }
@@ -695,7 +773,7 @@ function BookingWizard() {
         const patchData = await patchRes.json();
 
         if (!patchRes.ok) {
-          alert(patchData.error || "Could not attach deposit receipt.");
+          showNotice("Receipt Update", patchData.error || "Could not attach deposit receipt.", "error");
           if (patchRes.status === 409) {
             setIsRescheduleOpen(true);
           }
@@ -718,10 +796,10 @@ function BookingWizard() {
           }
         }
       } else {
-        alert(data.error || "Receipt upload failed.");
+        showNotice("Upload Failed", data.error || "Receipt upload failed.", "error");
       }
     } catch (err: any) {
-      alert("Failed to upload receipt: " + err.message);
+      showNotice("Upload Error", "Failed to upload receipt: " + err.message, "error");
     } finally {
       setIsUploadingReceipt(false);
     }
@@ -1274,151 +1352,6 @@ function BookingWizard() {
                 </div>
               </>
             )}
-
-            {/* Reschedule Modal (Responsive, Non-cutoff, Scrollable Body with Pinned Actions) */}
-            {isRescheduleOpen && (
-              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6 py-6 sm:py-10">
-                <div className="bg-[#FDFBF8] max-w-lg w-full rounded-3xl border border-[#E5DECF] shadow-2xl flex flex-col max-h-[calc(100vh-3rem)] overflow-hidden animate-in zoom-in-95 duration-200">
-                  {/* Pinned Modal Header */}
-                  <div className="p-5 sm:p-6 pb-4 border-b border-[#E5DECF] shrink-0 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">Move to Another Time</h3>
-                      <p className="text-xs text-[#6E6359] mt-0.5">
-                        Choose a new date and time slot for booking {activeBooking.referenceCode}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsRescheduleOpen(false)}
-                      className="w-8 h-8 rounded-full bg-[#F8F4EE] flex items-center justify-center text-[#6E6359] hover:text-[#1A1410] shrink-0 ml-2"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Scrollable Modal Body */}
-                  <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
-                    {/* Date Input */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                        Select New Date
-                      </label>
-                      <input
-                        type="date"
-                        min={new Date().toISOString().split("T")[0]}
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                      />
-                    </div>
-
-                    {/* Time Slots */}
-                    <div className="space-y-1.5">
-                      <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                        Select New Time Slot
-                      </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {TIME_SLOTS.map((slot) => {
-                          const { available, badge } = getSlotStatus(selectedDate, slot.id);
-                          const isSelected = timeSlot === slot.id;
-                          return (
-                            <button
-                              key={slot.id}
-                              type="button"
-                              disabled={!available}
-                              onClick={() => setTimeSlot(slot.id)}
-                              className={`p-2.5 rounded-xl text-xs font-semibold transition-all border flex flex-col items-center justify-center ${
-                                isSelected
-                                  ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
-                                  : !available
-                                  ? "bg-[#F8F4EE]/50 text-[#6E6359]/40 border-transparent cursor-not-allowed line-through"
-                                  : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
-                              }`}
-                            >
-                              <span>{slot.label}</span>
-                              {!available && (
-                                <span className="text-[9px] font-mono uppercase no-underline mt-0.5 text-rose-700/70">
-                                  {badge}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pinned Modal Footer */}
-                  <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsRescheduleOpen(false)}
-                      className="px-5 py-2.5 rounded-full text-xs font-semibold text-[#6E6359] hover:text-[#1A1410]"
-                    >
-                      Keep Current Time
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isUpdatingBooking || !selectedDate || !timeSlot}
-                      onClick={handleReschedule}
-                      className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
-                    >
-                      {isUpdatingBooking ? "Updating..." : "Confirm New Slot"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Calm Bespoke Atelier Cancel Modal (Responsive & Non-cutoff) */}
-            {isCancelModalOpen && (
-              <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-6 py-6 sm:py-10">
-                <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl border border-[#E5DECF] shadow-2xl flex flex-col max-h-[calc(100vh-3rem)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <div className="p-5 sm:p-6 pb-3 border-b border-[#E5DECF] shrink-0 space-y-1 text-center sm:text-left">
-                    <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#C9A96E] font-bold block">
-                      Atelier Schedule Update
-                    </span>
-                    <h3 className="font-headline uppercase tracking-tight text-2xl sm:text-3xl text-[#1A1410] font-black">
-                      CANCEL THIS SESSION?
-                    </h3>
-                    <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed pt-1">
-                      Your time goes back on the calendar for someone else.
-                    </p>
-                  </div>
-
-                  <div className="p-5 sm:p-6 space-y-1.5 overflow-y-auto flex-1">
-                    <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                      Reason (optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Schedule conflict, travel dates changed..."
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-xs text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                    />
-                  </div>
-
-                  <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsCancelModalOpen(false)}
-                      className="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider text-[#1A1410] border border-[#E5DECF] bg-white hover:bg-[#F8F4EE] transition-colors"
-                    >
-                      Keep it
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isUpdatingBooking}
-                      onClick={handleCancelBooking}
-                      className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
-                    >
-                      {isUpdatingBooking ? "Updating..." : "Yes, cancel it"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -1668,6 +1601,69 @@ function BookingWizard() {
                       })}
                     </div>
 
+                    {/* Wardrobe & Outfit Selection Card (Stage 2: Package & Look Setup) */}
+                    <div className="p-5 sm:p-6 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-xs space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#C9A96E] font-bold block mb-1">
+                            Wardrobe &amp; Styling Setup
+                          </span>
+                          <h3 className="font-serif text-lg sm:text-xl text-[#1A1410] font-medium leading-snug">
+                            Outfits &amp; Look Changes Planned
+                          </h3>
+                          <p className="text-xs text-[#6E6359] mt-0.5">
+                            How many wardrobe changes or distinct looks will you be wearing during this session?
+                          </p>
+                        </div>
+
+                        {/* Outfit Counter Stepper */}
+                        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 bg-[#F8F4EE] p-1.5 rounded-2xl border border-[#E5DECF]">
+                          <button
+                            type="button"
+                            onClick={() => setOutfitCount((prev) => Math.max(1, prev - 1))}
+                            disabled={outfitCount <= 1}
+                            className="w-8 h-8 rounded-xl bg-white border border-[#E5DECF] hover:border-[#1A1410] text-[#1A1410] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-base transition-colors shadow-2xs"
+                            aria-label="Decrease outfit count"
+                          >
+                            -
+                          </button>
+                          <div className="px-3.5 py-1 text-center min-w-[84px]">
+                            <span className="font-mono font-bold text-sm text-[#1A1410] block">
+                              {outfitCount} {outfitCount === 1 ? "Outfit" : "Outfits"}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setOutfitCount((prev) => Math.min(8, prev + 1))}
+                            disabled={outfitCount >= 8}
+                            className="w-8 h-8 rounded-xl bg-white border border-[#E5DECF] hover:border-[#1A1410] text-[#1A1410] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-base transition-colors shadow-2xs"
+                            aria-label="Increase outfit count"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quick Select Buttons */}
+                      <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-[#E5DECF]/60">
+                        <span className="text-[11px] text-[#6E6359] font-medium mr-1">Quick Select:</span>
+                        {[1, 2, 3, 4, 5].map((num) => (
+                          <button
+                            key={num}
+                            type="button"
+                            onClick={() => setOutfitCount(num)}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all border ${
+                              outfitCount === num
+                                ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410] shadow-xs"
+                                : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E] hover:text-[#1A1410]"
+                            }`}
+                          >
+                            {num} {num === 1 ? "Outfit" : "Outfits"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Terms & Conditions Card Under Packages (Inspired by Video 00:24) */}
                     <div className="p-5 sm:p-6 rounded-3xl bg-[#F8F4EE] border border-[#E5DECF] space-y-4">
                       <div className="flex items-center gap-2 text-[#1A1410]">
@@ -1716,7 +1712,7 @@ function BookingWizard() {
                 <div className="sticky bottom-4 z-30 p-4 sm:p-5 rounded-2xl bg-[#1A1410] text-[#FDFBF8] shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div>
                     <span className="text-[10px] text-[#C9A96E] uppercase tracking-widest font-bold block">
-                      Selected: {selectedPackage?.name || "Package"}
+                      Selected: {selectedPackage?.name || "Package"} · {outfitCount} {outfitCount === 1 ? "Outfit" : "Outfits"}
                     </span>
                     <div className="text-sm sm:text-base font-medium">
                       Total ₦{(selectedPackage?.price || 0).toLocaleString()} · Deposit to book ₦
@@ -2208,6 +2204,229 @@ function BookingWizard() {
           </div>
         )}
       </main>
+
+      {/* ============================================================ */}
+      {/* PORTALED MODALS: ALWAYS CENTERED, ESCAPES ALL NESTED LAYOUTS */}
+      {/* ============================================================ */}
+
+      {/* 1. Reschedule Modal (Centered, Non-cutoff, Luxury Studio Styling) */}
+      {mounted && isRescheduleOpen && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#FDFBF8] max-w-lg w-full rounded-3xl border border-[#E5DECF] shadow-2xl flex flex-col max-h-[min(90vh,760px)] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+            {/* Pinned Modal Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-[#E5DECF] shrink-0 flex items-center justify-between">
+              <div>
+                <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">Move to Another Time</h3>
+                <p className="text-xs text-[#6E6359] mt-0.5">
+                  Choose a new date and time slot for booking {activeBooking?.referenceCode || ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRescheduleOpen(false)}
+                className="w-8 h-8 rounded-full border border-[#E5DECF] bg-[#F8F4EE] flex items-center justify-center text-[#6E6359] hover:text-[#1A1410] shrink-0 ml-2 transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Modal Body */}
+            <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
+              {/* Date Input */}
+              <div className="space-y-1.5">
+                <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                  Select New Date
+                </label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split("T")[0]}
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                />
+              </div>
+
+              {/* Time Slots */}
+              <div className="space-y-1.5">
+                <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                  Select New Time Slot
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {TIME_SLOTS.map((slot) => {
+                    const { available, badge } = getSlotStatus(selectedDate, slot.id);
+                    const isSelected = timeSlot === slot.id;
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        disabled={!available}
+                        onClick={() => setTimeSlot(slot.id)}
+                        className={`p-2.5 rounded-xl text-xs font-semibold transition-all border flex flex-col items-center justify-center ${
+                          isSelected
+                            ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
+                            : !available
+                            ? "bg-[#F8F4EE]/50 text-[#6E6359]/40 border-transparent cursor-not-allowed line-through"
+                            : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
+                        }`}
+                      >
+                        <span>{slot.label}</span>
+                        {!available && (
+                          <span className="text-[9px] font-mono uppercase no-underline mt-0.5 text-rose-700/70">
+                            {badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Pinned Modal Footer */}
+            <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsRescheduleOpen(false)}
+                className="px-5 py-2.5 rounded-full text-xs font-semibold text-[#6E6359] hover:text-[#1A1410]"
+              >
+                Keep Current Time
+              </button>
+              <button
+                type="button"
+                disabled={isUpdatingBooking || !selectedDate || !timeSlot}
+                onClick={handleReschedule}
+                className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
+              >
+                {isUpdatingBooking ? "Updating..." : "Confirm New Slot"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 2. Cancel Modal (Centered, Non-cutoff) */}
+      {mounted && isCancelModalOpen && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl border border-[#E5DECF] shadow-2xl flex flex-col max-h-[min(90vh,600px)] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+            <div className="p-5 sm:p-6 pb-3 border-b border-[#E5DECF] shrink-0 space-y-1 text-center sm:text-left">
+              <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#C9A96E] font-bold block">
+                Atelier Schedule Update
+              </span>
+              <h3 className="font-headline uppercase tracking-tight text-2xl sm:text-3xl text-[#1A1410] font-black">
+                CANCEL THIS SESSION?
+              </h3>
+              <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed pt-1">
+                Your time goes back on the calendar for someone else.
+              </p>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-1.5 overflow-y-auto flex-1">
+              <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                Reason (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Schedule conflict, travel dates changed..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-xs text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+              />
+            </div>
+
+            <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(false)}
+                className="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider text-[#1A1410] border border-[#E5DECF] bg-white hover:bg-[#F8F4EE] transition-colors"
+              >
+                Keep it
+              </button>
+              <button
+                type="button"
+                disabled={isUpdatingBooking}
+                onClick={handleCancelBooking}
+                className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
+              >
+                {isUpdatingBooking ? "Updating..." : "Yes, cancel it"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 3. Studio Notice Modal (Luxury confirmation dialog replacing browser alert) */}
+      {mounted && studioNotice && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl border border-[#E5DECF] shadow-2xl p-6 sm:p-8 space-y-5 text-center relative my-auto animate-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => {
+                if (studioNotice.onConfirm) studioNotice.onConfirm();
+                setStudioNotice(null);
+              }}
+              className="w-8 h-8 rounded-full border border-[#E5DECF] bg-[#F8F4EE] text-[#6E6359] hover:text-[#1A1410] flex items-center justify-center absolute top-4 right-4 transition-colors"
+              aria-label="Close notification"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Luxury Status Badge */}
+            <div className="flex justify-center">
+              {studioNotice.type === "success" ? (
+                <div className="w-14 h-14 rounded-full bg-[#1A1410] text-[#C9A96E] flex items-center justify-center shadow-md">
+                  <Check className="w-7 h-7 stroke-[2.5]" />
+                </div>
+              ) : studioNotice.type === "error" ? (
+                <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-800 flex items-center justify-center shadow-sm">
+                  <AlertTriangle className="w-7 h-7 stroke-[2]" />
+                </div>
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-900 flex items-center justify-center shadow-sm">
+                  <Sparkles className="w-7 h-7 stroke-[2]" />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="font-serif text-2xl sm:text-3xl text-[#1A1410] font-normal leading-tight">
+                {studioNotice.title}
+              </h3>
+              <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed">
+                {studioNotice.message}
+              </p>
+            </div>
+
+            {/* Details Box if any */}
+            {studioNotice.details && studioNotice.details.length > 0 && (
+              <div className="p-4 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] text-left space-y-2 text-xs">
+                {studioNotice.details.map((d, i) => (
+                  <div key={i} className="flex items-center justify-between py-0.5 border-b border-[#E5DECF]/50 last:border-b-0">
+                    <span className="text-[#6E6359] uppercase tracking-wider text-[10px] font-mono">{d.label}</span>
+                    <span className="font-semibold text-[#1A1410] text-right">{d.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (studioNotice.onConfirm) studioNotice.onConfirm();
+                  setStudioNotice(null);
+                }}
+                className="w-full py-3.5 rounded-xl bg-[#1A1410] hover:bg-[#2C241E] text-[#FDFBF8] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-sm"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
