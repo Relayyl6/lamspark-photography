@@ -241,9 +241,20 @@ export async function POST(req: NextRequest) {
               text: { body: text.trim() },
             }),
           });
+          dispatched = true;
         } catch (waErr) {
           console.warn("[Meta WhatsApp Cloud API Fallback Notice]", waErr);
         }
+      }
+
+      // If running on Vercel serverless without local Baileys socket, queue for Render persistent worker
+      if (!dispatched && process.env.VERCEL && inserted[0]?.id) {
+        await sql.query(
+          `UPDATE message SET status = 'queued', updated_at = NOW() WHERE id = $1`,
+          [inserted[0].id]
+        );
+        inserted[0].status = "queued";
+        console.log(`[Vercel->Render Relay] Queued WhatsApp reply ${inserted[0].id} in Neon DB for persistent Baileys worker`);
       }
     }
 

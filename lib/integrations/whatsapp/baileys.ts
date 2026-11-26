@@ -90,8 +90,10 @@ export async function getWhatsAppStatusAsync(): Promise<BaileysStatus> {
     if (creds?.registered && creds?.me?.id) {
       const userJid = String(creds.me.id);
       const cleanUserPhone = userJid.split(":")[0] || userJid.split("@")[0];
-      // Trigger non-blocking socket resume on background container
-      initWhatsApp().catch(() => {});
+      // Only persistent non-Vercel host (Render) holds the live Baileys WebSocket to avoid multi-device 440 conflicts
+      if (!process.env.VERCEL) {
+        initWhatsApp().catch(() => {});
+      }
       return {
         state: "connected",
         qrCodeDataUrl: null,
@@ -233,6 +235,7 @@ export async function initWhatsApp(options: { phoneNumber?: string; forceRefresh
           phone: `+${cleanUserPhone}`,
         };
         stateRef.isInitializing = false;
+        startOutboundQueueWorker();
       }
     });
 
@@ -367,21 +370,72 @@ export async function initWhatsApp(options: { phoneNumber?: string; forceRefresh
   }
 }
 
+// Background worker on persistent host (Render) that dispatches messages queued from Vercel Inbox
+let outboundQueueTimer: NodeJS.Timeout | null = null;
+let isDrainingOutboundQueue = false;
+
+function startOutboundQueueWorker() {
+  if (process.env.VERCEL || outboundQueueTimer) return;
+  outboundQueueTimer = setInterval(async () => {
+    const stateRef = g.__lamsparks_baileys!;
+    if (isDrainingOutboundQueue || !stateRef.sock || stateRef.status.state !== "connected") return;
+
+    isDrainingOutboundQueue = true;
+    try {
+      const sql = neon(process.env.DATABASE_URL!);
+      const queued = await sql.query(
+        `SELECT m.id, m.body, c.whatsapp_e164
+         FROM message m
+         JOIN conversation conv ON conv.id = m.conversation_id
+         JOIN client c ON c.id = conv.client_id
+         WHERE m.direction = 'outbound'
+           AND m.status = 'queued'
+           AND conv.channel = 'whatsapp'
+           AND c.whatsapp_e164 IS NOT NULL
+         ORDER BY m.created_at ASC
+         LIMIT 10`
+      );
+
+      for (const row of queued) {
+        try {
+          const cleanNumber = String(row.whatsapp_e164).replace(/[^0-9]/g, "");
+          if (!cleanNumber) continue;
+          const jid = `${cleanNumber}@s.whatsapp.net`;
+          await stateRef.sock.sendMessage(jid, { text: String(row.body).trim() });
+          await sql.query(
+            `UPDATE message SET status = 'sent', updated_at = NOW() WHERE id = $1`,
+            [row.id]
+          );
+          console.log(`[Baileys Queue Worker] Dispatched queued message ${row.id} to ${row.whatsapp_e164}`);
+        } catch (sendErr) {
+          console.error(`[Baileys Queue Worker] Failed sending message ${row.id}:`, sendErr);
+        }
+      }
+    } catch (err) {
+      console.warn("[Baileys Queue Worker Warning]", err);
+    } finally {
+      isDrainingOutboundQueue = false;
+    }
+  }, 3000);
+}
+
 export async function sendWhatsAppMessage(recipientPhone: string, text: string): Promise<boolean> {
   const stateRef = g.__lamsparks_baileys!;
 
-  // If cold on Vercel / restarted instance, try waking socket briefly from Neon Postgres creds
+  // On Vercel serverless, avoid opening a competing WebSocket; caller queues via Neon for Render worker
   if (!stateRef.sock || stateRef.status.state !== "connected") {
-    try {
-      const { state } = await usePostgresAuthState();
-      if (state.creds?.registered) {
-        await initWhatsApp();
-        for (let i = 0; i < 15; i++) {
-          if (stateRef.sock && stateRef.status.state === "connected") break;
-          await new Promise((r) => setTimeout(r, 300));
+    if (!process.env.VERCEL) {
+      try {
+        const { state } = await usePostgresAuthState();
+        if (state.creds?.registered) {
+          await initWhatsApp();
+          for (let i = 0; i < 15; i++) {
+            if (stateRef.sock && stateRef.status.state === "connected") break;
+            await new Promise((r) => setTimeout(r, 300));
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
   }
 
   if (!stateRef.sock || stateRef.status.state !== "connected") {
