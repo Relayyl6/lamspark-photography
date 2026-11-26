@@ -72,14 +72,137 @@ const MOBILE_SESSION_META: Record<
   },
 };
 
+const CARD_PLACEHOLDERS: Record<string, string> = {
+  weddings: "data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAADQAwCdASoQABgAPzmGuVOvKSWisAgB4CcJZQAAXAIEvgA8hAcQy/AA/qNoFGaTYs1Rw9pXn6CzMcFoSJWR+akDoybj3wQeKsFgZvOkjTk+fT0a3tvOwz8cco2pH6yz7cybbRU71q2wAA==",
+  traditional: "data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAABwBACdASoQABgAPzmGuVOvKSWisAgB4CcJbACdOUE6UAwkTj6n5tedAMAasAD+wC9zzOi8hDu+HmtrdUboQ8DMYtrJSbO9HwO1tEBbLmPOBDgteG59NhlwIeR7FbOFL2Qf4AAA",
+  events: "data:image/webp;base64,UklGRpQAAABXRUJQVlA4IIgAAAAQBACdASoQABgAPzmGuVOvKSWisAgB4CcJQBOgBCwAIXXtUPZ19/P4AAD9+5TKrZLhLN7jQT/Wks9YGmM6IaG4P4ZkI62Zmf1ksVetiF/nP/3ygdWKLFP6Apamda0tf3O7ajYM/kbaNinDcsaPf104J9sv3vrt53FjPpNnQWwaHEC2fp+GAAAA",
+  executive: "data:image/webp;base64,UklGRo4AAABXRUJQVlA4IIIAAAAQBACdASoQABgAPzmGulOvKSWisAgB4CcJQBOgA0hkSLfWOIzT2NE2AAD9+5X7kGQPFG+920Q23YAylPfqdRPlTRxuETBdk646dUNZlmpcNCWCzoYkSQ2U4cRqSwVLDM+3zZ0dgbONeRi0uL1tQqRRPO+UpYDWz6lbz/4oL7pHFAAA",
+  lifestyle: "data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAAAwBACdASoQABgAPzmEuVOvKKWisAgB4CcJYgC7ACLWvZSbgyxKujVvbgAA90XFR+tL/GO59jyrEtwmmkWX3vMmf52aZauRHnFXnfQfO4gn3DRv7W4O14PtrHxIIU0jwTrEB7YHgaCMpLVuRrNXpt+dQvK/Io1b3iFekIEDqm78GJtaAAA=",
+  legacy: "data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAADQAwCdASoQABgAPzmKulOvKaWisAgB4CcJQBOmUABNjM5wZriKNwAA/dFe/WHnvw7PZGODKXASg2PQAnVnvBIxdeclrrYagl1NTgXZbGxJkFAj4zd2TCbzAm7lPlCzYBeJvz37HQOzT9LnV+rQAAAA",
+  atelier: "data:image/webp;base64,UklGRpgAAABXRUJQVlA4IIwAAADQAwCdASoQABgAPzmEuVOvKKWisAgB4CcJYgCdABIQgGQEY3iWrKQA+jZeoYOPqsSli1kK6oEf6anklb0/4c6y/kqY4284V39iecobIAU3gJGg2+IbiJTqU8jvtqu3QcyZp+82cqBNsG778nefo2s7lUu7CHO9EqPhh6GBAj74CBtFZMIzmBfG2JoAAA=="
+};
+
+const DEFAULT_HERO_CARDS: WheelCard[] = [
+  {
+    id: "weddings",
+    href: "/sessions",
+    image: "/images/client/hero/weddings_1_card.webp",
+    label: "Sacred Unions",
+    category: "WEDDINGS",
+    subtitle: "Unhurried wedding ceremonies in Abuja"
+  },
+  {
+    id: "traditional",
+    href: "/sessions",
+    image: "/images/client/hero/weddings_2_card.webp",
+    label: "Cultural Heritage",
+    category: "TRADITIONAL",
+    subtitle: "Vibrant Aso-Oke & generational grace"
+  },
+  {
+    id: "events",
+    href: "/sessions",
+    image: "/images/client/hero/events_1_card.webp",
+    label: "Milestone Galas",
+    category: "EVENTS",
+    subtitle: "Unscripted warmth & celebrations"
+  },
+  {
+    id: "executive",
+    href: "/portfolio",
+    image: "/images/client/hero/corporate_1_card.webp",
+    label: "Executive Leadership",
+    category: "EXECUTIVE",
+    subtitle: "Commanding visual presence"
+  },
+  {
+    id: "lifestyle",
+    href: "/sessions",
+    image: "/images/client/hero/events_3_card.webp",
+    label: "Authentic Moments",
+    category: "LIFESTYLE",
+    subtitle: "Honouring unscripted warmth & life"
+  },
+  {
+    id: "legacy",
+    href: "/sessions",
+    image: "/images/client/hero/corporate_3_card.webp",
+    label: "Generational Craft",
+    category: "LEGACY",
+    subtitle: "Heirloom memories for decades"
+  },
+  {
+    id: "atelier",
+    href: "/sessions",
+    image: "/images/client/hero/corporate_6_card.webp",
+    label: "Studio Dignity",
+    category: "ATELIER",
+    subtitle: "Quiet authority and elegance"
+  }
+];
+
+function FastCardImage({
+  src,
+  alt,
+  placeholder,
+  isPriority,
+}: {
+  src: string;
+  alt: string;
+  placeholder?: string;
+  isPriority: boolean;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, [src]);
+
+  return (
+    <div
+      className="w-full h-full relative overflow-hidden bg-[#181411]"
+      style={{
+        backgroundImage: placeholder ? `url("${placeholder}")` : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <img
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        className={`w-full h-full object-cover object-center transform group-hover:scale-105 transition-all duration-300 ease-out pointer-events-none ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+        loading="eager"
+        decoding="async"
+        fetchPriority={isPriority ? "high" : "auto"}
+        onError={(e) => {
+          const target = e.currentTarget;
+          if (target.src.endsWith(".webp")) {
+            target.src = target.src.replace(".webp", ".jpg");
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 export function HeroOverhaulSection({ initialCards = null, initialCopy = null }: HeroOverhaulSectionProps) {
   const [viewportWidth, setViewportWidth] = useState(1440);
   const [wheelH, setWheelH] = useState(320);
   const [viewportHeight, setViewportHeight] = useState(900);
   const [navH, setNavH] = useState(80);
   const [rotationAngle, setRotationAngle] = useState(0); // rendering only
-  const [cards, setCards] = useState<WheelCard[]>(initialCards || []);
-  const [loading, setLoading] = useState(!initialCards || initialCards.length === 0);
+  const [cards, setCards] = useState<WheelCard[]>(
+    initialCards && initialCards.length > 0 ? initialCards : DEFAULT_HERO_CARDS
+  );
+  const [loading, setLoading] = useState(false);
   const [heroCopy, setHeroCopy] = useState(initialCopy || {
     kicker: "I CAPTURE · YOU REMEMBER",
     headline: "REAL MOMENTS. BEAUTIFUL MEMORIES",
@@ -428,19 +551,11 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
                       : "border-white/60 hover:border-gold/80"
                   }`}
                 >
-                  <img
+                  <FastCardImage
                     src={card.image}
                     alt={card.label}
-                    className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700 ease-out pointer-events-none"
-                    loading="eager"
-                    decoding="async"
-                    fetchPriority={isCenterFocus ? "high" : "auto"}
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (target.src.endsWith(".webp")) {
-                        target.src = target.src.replace(".webp", ".jpg");
-                      }
-                    }}
+                    placeholder={CARD_PLACEHOLDERS[card.id]}
+                    isPriority={isCenterFocus}
                   />
 
                   {/* Gradient Overlay for Editorial Depth */}

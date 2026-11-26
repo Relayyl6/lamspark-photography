@@ -134,8 +134,23 @@ export default async function HomePage() {
     getHomeData(),
   ]);
 
+  const heroCardsToPreload = homeData.hero.cards || [];
+
   return (
     <>
+      {/* High-Priority HTML Preload Scanner Links (Instantly Fetches Hero Cards Before React Hydration) */}
+      {heroCardsToPreload.map((c: any) => (
+        <link
+          key={`preload-${c.id || c.image}`}
+          rel="preload"
+          as="image"
+          href={c.image}
+          type="image/webp"
+          // @ts-ignore
+          fetchpriority="high"
+        />
+      ))}
+
       {/* Editorial Navigation */}
       <Nav />
 
