@@ -243,6 +243,8 @@ export async function GET(req: NextRequest) {
         enquiryId: b.enquiry_id,
         referenceCode: b.reference_code,
         status,
+        stage: b.enquiry_stage || "enquiry",
+        waitingOn: b.waiting_on || "client",
         sessionType: b.session_type,
         shootStart: b.shoot_start,
         shootEnd: b.shoot_end,

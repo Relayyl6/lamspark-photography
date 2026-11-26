@@ -47,6 +47,104 @@ const TIME_SLOTS = [
   { id: "05:30 PM", label: "05:30 PM", period: "Evening (Golden Hour)" },
 ];
 
+// Live Kanban Pipeline milestones & stage configurations for client booking tracker
+const CLIENT_PIPELINE_STEPS = [
+  { step: 0, label: "Slot Reserved", sub: "20h hold window" },
+  { step: 1, label: "Deposit Confirmed", sub: "Locked on calendar" },
+  { step: 2, label: "Shoot & Prep", sub: "Atelier session day" },
+  { step: 3, label: "Master Retouching", sub: "Editorial grading" },
+  { step: 4, label: "Gallery Ready", sub: "High-res download" },
+];
+
+const KANBAN_STAGE_CONFIG: Record<
+  string,
+  {
+    stepIndex: number;
+    badgeLabel: string;
+    badgeColor: string;
+    title: string;
+    description: string;
+  }
+> = {
+  enquiry: {
+    stepIndex: 0,
+    badgeLabel: "Awaiting Deposit",
+    badgeColor: "bg-amber-100 text-amber-900 border-amber-300",
+    title: "Your Time Slot is Held",
+    description: "Your session slot is temporarily held. Transfer your deposit to lock this date on Osemene's Maitama calendar.",
+  },
+  agreed_to_price: {
+    stepIndex: 0,
+    badgeLabel: "Awaiting Deposit",
+    badgeColor: "bg-amber-100 text-amber-900 border-amber-300",
+    title: "Your Time Slot is Held",
+    description: "Your session slot is temporarily held. Transfer your deposit to lock this date on Osemene's Maitama calendar.",
+  },
+  deposit_reported: {
+    stepIndex: 1,
+    badgeLabel: "Verifying Deposit",
+    badgeColor: "bg-gold/25 text-[#1A1410] border-gold/40",
+    title: "Transfer Under Review",
+    description: "We received your transfer proof! Osemene's team is reconciling bank settlement. Your slot is safely protected.",
+  },
+  deposit_paid: {
+    stepIndex: 1,
+    badgeLabel: "Deposit Confirmed",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    title: "Session Confirmed & Locked",
+    description: "Deposit verified! Your shoot date is permanently locked on Osemene's private Maitama studio schedule.",
+  },
+  preparation: {
+    stepIndex: 2,
+    badgeLabel: "Prep & Styling",
+    badgeColor: "bg-purple-100 text-purple-900 border-purple-300",
+    title: "Wardrobe & Styling Prep",
+    description: "Our atelier team is preparing your lighting moodboards and dressing suite for session day.",
+  },
+  confirmed: {
+    stepIndex: 2,
+    badgeLabel: "Confirmed Shoot",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    title: "Ready for Session Day",
+    description: "Everything is prepared! We look forward to welcoming you to LamSparks Private Atelier Studio, Abuja.",
+  },
+  shot: {
+    stepIndex: 2,
+    badgeLabel: "Raw Ingest",
+    badgeColor: "bg-blue-100 text-blue-900 border-blue-300",
+    title: "Photoshoot Complete",
+    description: "Your session was successfully photographed! RAW frames have been ingested into our atelier storage.",
+  },
+  editing: {
+    stepIndex: 3,
+    badgeLabel: "Master Retouching",
+    badgeColor: "bg-indigo-100 text-indigo-900 border-indigo-300",
+    title: "Master Retouching in Progress",
+    description: "Osemene is hand-retouching and color-grading your chosen portraits with bespoke editorial precision.",
+  },
+  client_review: {
+    stepIndex: 3,
+    badgeLabel: "Client Reveal",
+    badgeColor: "bg-amber-100 text-amber-900 border-amber-300",
+    title: "Private Preview Reveal Ready",
+    description: "Your proofing collection is ready for your private selection and client reveal.",
+  },
+  delivered: {
+    stepIndex: 4,
+    badgeLabel: "Gallery Delivered",
+    badgeColor: "bg-emerald-100 text-emerald-900 border-emerald-300",
+    title: "Master Gallery Delivered",
+    description: "Your high-resolution, uncompressed master gallery has been delivered! Access your portraits anytime.",
+  },
+  closed: {
+    stepIndex: 4,
+    badgeLabel: "Archived & Complete",
+    badgeColor: "bg-neutral-100 text-neutral-800 border-neutral-300",
+    title: "Atelier Session Complete",
+    description: "Heirloom collection delivered and archived in LamSparks master vaults.",
+  },
+};
+
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
@@ -161,6 +259,7 @@ function BookingWizard() {
 
   // Wardrobe outfit selection (Chosen at Step 2 Package stage)
   const [outfitCount, setOutfitCount] = useState<number>(1);
+  const [showDirectUpload, setShowDirectUpload] = useState(false);
 
   // Studio Elegance Notification Modal (Replaces browser alert/confirm)
   const [studioNotice, setStudioNotice] = useState<{
@@ -257,7 +356,7 @@ function BookingWizard() {
             const shootStart = data.booking.shootStart || (data.booking.answers?.selectedDate ? `${data.booking.answers.selectedDate} at ${data.booking.answers.timeSlot || ""}` : "");
             const newRecord = {
               referenceCode: data.booking.referenceCode,
-              sessionTitle: data.booking.sessionType || "Atelier Session",
+              sessionTitle: (liveSessions as any)[data.booking.sessionType]?.title || data.booking.answers?.sessionTypeName || data.booking.sessionType || "Atelier Session",
               shootStart,
               status: data.booking.status || "awaiting_deposit",
               createdAt: new Date().toISOString(),
@@ -922,436 +1021,412 @@ function BookingWizard() {
                   </div>
                 </div>
               </>
-            ) : activeBooking.status === "confirmed" || activeBooking.status === "completed" ? (
-              <div className="p-5 sm:p-6 rounded-3xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-800 block">
-                      Session Confirmed &amp; Locked
-                    </span>
-                    <p className="text-xs sm:text-sm text-emerald-900 font-medium">
-                      Your deposit is verified and your date is permanently reserved on Osemene&apos;s Maitama calendar.
-                    </p>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/15 text-emerald-900 border border-emerald-300 shrink-0">
-                  Slot Locked ✓
-                </span>
-              </div>
-            ) : activeBooking.status === "reported" ? (
-              <div className="p-5 sm:p-6 rounded-3xl bg-amber-50/90 border border-gold/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <ShieldCheck className="w-5 h-5 text-[#B88746] shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#8C6226] block">
-                      Deposit Receipt Uploaded · Slot Protected
-                    </span>
-                    <p className="text-xs sm:text-sm text-[#1A1410] font-medium">
-                      We have received your transfer slip. Your time slot is safely protected from expiring while our studio confirms bank settlement.
-                    </p>
-                  </div>
-                </div>
-                <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-gold/20 text-[#1A1410] border border-gold/40 shrink-0">
-                  Verifying Transfer
-                </span>
-              </div>
-            ) : (
-              /* Active 20-Hour Temporary Hold Banner with Live Countdown */
-              <div className="p-5 sm:p-6 rounded-3xl bg-amber-50 border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-widest text-amber-800 block">
-                      Slot Held Temporarily (20 Hours)
-                    </span>
-                    <p className="text-xs sm:text-sm text-amber-900 font-medium">
-                      Reserved temporarily for 20 hours. Complete your deposit transfer and upload your receipt to lock this session.
-                    </p>
-                  </div>
-                </div>
-                <div className="shrink-0 flex flex-wrap items-center gap-2">
-                  {holdRemainingMs !== null && holdRemainingMs > 0 && (
-                    <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#1A1410] text-[#E8D5B0] shadow-xs">
-                      {pad(Math.floor(holdRemainingMs / 3600000))}h : {pad(Math.floor((holdRemainingMs % 3600000) / 60000))}m : {pad(Math.floor((holdRemainingMs % 60000) / 1000))}s left
-                    </span>
-                  )}
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-500/20 text-amber-900 border border-amber-300">
-                    {(activeBooking.estimate?.depositPercent || estimate.depositPercent || 70)}% Deposit Required
-                  </span>
-                </div>
-              </div>
-            )}
+            ) : activeBooking.status !== "cancelled" && activeBooking.status !== "expired" && !(activeBooking.status === "awaiting_deposit" && holdRemainingMs === 0) ? (
+              (() => {
+                const stageKey =
+                  activeBooking.stage ||
+                  (activeBooking.status === "confirmed"
+                    ? "confirmed"
+                    : activeBooking.status === "reported"
+                    ? "deposit_reported"
+                    : "enquiry");
+                const currentConfig = KANBAN_STAGE_CONFIG[stageKey] || KANBAN_STAGE_CONFIG.enquiry;
+                const currentStepIdx = currentConfig.stepIndex;
+                const totalInvestment = activeBooking.estimate?.total || estimate.total || 0;
+                const depositPercent = activeBooking.estimate?.depositPercent || estimate.depositPercent || 50;
+                const depositAmount =
+                  activeBooking.estimate?.depositAmount || Math.round(totalInvestment * (depositPercent / 100));
+                const balanceAmount =
+                  activeBooking.estimate?.balanceAmount || Math.max(0, totalInvestment - depositAmount);
+                const outfitsCount =
+                  (activeBooking.answers as any)?.outfits ||
+                  (activeBooking.answers as any)?.outfitCount ||
+                  outfitCount ||
+                  1;
 
-            {activeBooking.status !== "cancelled" && (
-              <>
-                {/* Main 2-Column Self-Serve Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Left Column: Bank Transfer & Receipt Flow */}
-                  <div className="lg:col-span-7 space-y-6">
-                    {/* Welcome Title */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-xs uppercase tracking-wider text-[#6E6359] font-medium">
-                          Booking Ref:
-                        </span>
-                        <span className="font-mono font-bold text-xs px-2.5 py-0.5 rounded-full bg-[#F8F4EE] border border-[#E5DECF] text-[#1A1410]">
-                          {activeBooking.referenceCode}
-                        </span>
-                      </div>
-                      <h1 className="font-serif text-3xl sm:text-5xl text-[#1A1410] font-normal">
-                        Your time is held,{" "}
-                        <span className="text-[#C9A96E] italic font-serif">
-                          {activeBooking.client?.name || clientName || "there"}
-                        </span>
-                      </h1>
-                      <p className="text-xs sm:text-sm text-[#6E6359] mt-2 leading-relaxed">
-                        Follow the two simple steps below to finalize your booking with Osemene.
-                      </p>
-                    </div>
-
-                    {/* Step 1 Card: Transfer Details */}
-                    <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
-                      <div className="flex items-center justify-between pb-3 border-b border-[#E5DECF]">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-6 h-6 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-bold flex items-center justify-center font-mono">
-                            1
-                          </span>
-                          <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">
-                            Transfer Deposit to Studio Account
-                          </h3>
-                        </div>
-                        <span className="font-serif text-xl sm:text-2xl font-bold text-[#C9A96E]">
-                          ₦{(activeBooking.estimate?.depositAmount || estimate.depositAmount).toLocaleString()}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                        <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]/80">
-                          <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
-                            Bank Name
-                          </span>
-                          <span className="font-bold text-[#1A1410] text-sm">Fidelity Bank</span>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]/80 flex items-center justify-between">
-                          <div>
-                            <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
-                              Account Number
+                return (
+                  <div className="space-y-6">
+                    {/* 1. Live Studio Pipeline Tracker Card (Connects directly to Kanban Board) */}
+                    <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-xs space-y-6">
+                      {/* Header Row: Reference, Title, Badges */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#E5DECF]/80">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#F8F4EE] border border-[#E5DECF] text-[#1A1410]">
+                              REF: {activeBooking.referenceCode}
                             </span>
-                            <span className="font-mono font-bold text-[#1A1410] text-sm tracking-wider">
-                              5080045230
+                            <span className="text-xs text-[#6E6359] font-medium">
+                              · {liveSessions[activeBooking.sessionType || sessionType]?.title || "Studio Session"}
                             </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard("5080045230", "Account Number Copied")}
-                            className="p-2 rounded-xl hover:bg-white text-[#6E6359] hover:text-[#1A1410] transition-colors"
-                            title="Copy Account Number"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]/80">
-                          <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
-                            Account Name
-                          </span>
-                          <span className="font-bold text-[#1A1410] text-sm">LamSparks Photography</span>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]/80 flex items-center justify-between">
-                          <div>
-                            <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
-                              Payment Reference
+                          <h1 className="font-serif text-2xl sm:text-3xl text-[#1A1410] font-normal leading-tight">
+                            {currentConfig.title},{" "}
+                            <span className="text-[#C9A96E] italic font-serif">
+                              {activeBooking.client?.name || clientName || "there"}
                             </span>
-                            <span className="font-mono font-bold text-[#C9A96E] text-sm">
-                              {activeBooking.referenceCode}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard(activeBooking.referenceCode, "Booking Ref Copied")}
-                            className="p-2 rounded-xl hover:bg-white text-[#6E6359] hover:text-[#1A1410] transition-colors"
-                            title="Copy Reference"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {copyFeedback && (
-                        <div className="text-center text-xs font-semibold text-emerald-700 bg-emerald-50 py-1.5 rounded-lg border border-emerald-200">
-                          ✓ {copyFeedback}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Step 2 Card: WhatsApp Handoff & Direct Receipt Upload Zone */}
-                    <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-6">
-                      <div className="flex items-center gap-2.5 pb-3 border-b border-[#E5DECF]">
-                        <span className="w-6 h-6 rounded-full bg-[#1A1410] text-[#FDFBF8] text-xs font-bold flex items-center justify-center font-mono">
-                          2
-                        </span>
-                        <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">
-                          Confirm Deposit &amp; Send Receipt
-                        </h3>
-                      </div>
-
-                      <p className="text-xs text-[#6E6359] leading-relaxed">
-                        To lock your session immediately, choose your preferred method below: send your receipt directly to Osemene on WhatsApp, or upload it here for automated studio reconciliation.
-                      </p>
-
-                      {/* Primary Action: Gold Button for WhatsApp Confirmation */}
-                      <a
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full inline-flex items-center justify-center gap-3 p-4 rounded-2xl bg-[#C9A96E] hover:bg-[#b5955a] text-[#1A1410] font-sans font-bold text-xs uppercase tracking-wider transition-all shadow-md group text-center"
-                      >
-                        <MessageCircle className="w-5 h-5 text-[#1A1410]" />
-                        <span>I&apos;ve made my deposit: send receipt on WhatsApp</span>
-                        <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                      </a>
-
-                      {/* Direct Upload Zone (Add-on fallback) */}
-                      <div className="pt-4 border-t border-[#E5DECF] space-y-3">
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-[#6E6359] block">
-                          Or Direct Studio Upload (Instant AI Receipt Verification)
-                        </span>
-
-                        <label className="block p-5 rounded-2xl border-2 border-dashed border-[#E5DECF] hover:border-[#C9A96E] bg-[#F8F4EE]/60 hover:bg-[#F8F4EE] transition-colors cursor-pointer text-center space-y-2">
-                          <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            onChange={handleUploadReceipt}
-                            disabled={isUploadingReceipt}
-                            className="hidden"
-                          />
-                          <UploadCloud className="w-8 h-8 text-[#C9A96E] mx-auto" />
-                          <div className="text-xs font-semibold text-[#1A1410]">
-                            {isUploadingReceipt ? "Analyzing receipt with AI..." : "Click to upload transfer screenshot"}
-                          </div>
-                          <p className="text-[11px] text-[#6E6359]">
-                            JPEG, PNG or PDF. Extracted details will be matched against your session deposit.
+                          </h1>
+                          <p className="text-xs text-[#6E6359] mt-1">
+                            Scheduled for {activeBooking.shootDateFormatted || selectedDate} at {activeBooking.shootTimeSlot || timeSlot} · LamSparks Private Studio, Abuja
                           </p>
-                        </label>
+                        </div>
 
-                        {/* Upload Status / AI Verification Pill */}
-                        {receiptReported && (
-                          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
-                            <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold">
-                              <CheckCircle className="w-4 h-4 text-emerald-600" />
-                              <span>Receipt Uploaded Successfully</span>
+                        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0">
+                          {/* Live Kanban Stage Pill */}
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-2xs ${currentConfig.badgeColor}`}
+                          >
+                            Stage: {currentConfig.badgeLabel}
+                          </span>
+
+                          {/* Turn Indicator */}
+                          <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[#1A1410] text-[#E8D5B0] shadow-2xs">
+                            {activeBooking.waitingOn === "us" ? "Studio Turn" : "Client Turn"}
+                          </span>
+
+                          {/* Hold Countdown */}
+                          {holdRemainingMs !== null && holdRemainingMs > 0 && activeBooking.status === "awaiting_deposit" && (
+                            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-amber-500/15 text-amber-900 border border-amber-300">
+                              <Clock className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+                              {pad(Math.floor(holdRemainingMs / 3600000))}h : {pad(Math.floor((holdRemainingMs % 3600000) / 60000))}m left
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Visual 5-Stage Stepper Bar */}
+                      <div className="py-2">
+                        <div className="grid grid-cols-5 gap-2 relative">
+                          {/* Background track line */}
+                          <div className="absolute top-4 left-[10%] right-[10%] h-0.5 bg-[#E5DECF] -z-0" />
+                          <div
+                            className="absolute top-4 left-[10%] h-0.5 bg-[#C9A96E] transition-all duration-700 -z-0"
+                            style={{ width: `${(Math.min(currentStepIdx, 4) / 4) * 80}%` }}
+                          />
+
+                          {CLIENT_PIPELINE_STEPS.map((st, i) => {
+                            const isDone = i < currentStepIdx;
+                            const isCurrent = i === currentStepIdx;
+                            return (
+                              <div key={st.step} className="flex flex-col items-center text-center relative z-[1]">
+                                <div
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all ${
+                                    isDone
+                                      ? "bg-[#C9A96E] text-[#111111] shadow-2xs"
+                                      : isCurrent
+                                      ? "bg-[#1A1410] text-[#FDFBF8] ring-4 ring-[#C9A96E]/30 shadow-sm"
+                                      : "bg-[#F8F4EE] border border-[#E5DECF] text-[#6E6359]"
+                                  }`}
+                                >
+                                  {isDone ? <Check className="w-4 h-4 stroke-[2.5]" /> : i + 1}
+                                </div>
+                                <span
+                                  className={`text-xs mt-2 font-medium block truncate max-w-full ${
+                                    isCurrent ? "text-[#1A1410] font-bold" : isDone ? "text-[#C9A96E]" : "text-[#6E6359]/70"
+                                  }`}
+                                >
+                                  {st.label}
+                                </span>
+                                <span className="text-[10px] text-[#6E6359]/80 hidden sm:block mt-0.5">
+                                  {st.sub}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Explanatory Banner */}
+                      <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] text-xs text-[#1A1410] flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <Sparkles className="w-4 h-4 text-[#C9A96E] shrink-0" />
+                          <span className="leading-relaxed">{currentConfig.description}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 2. Streamlined Two-Column Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+                      {/* Left Column: Direct Action / Payment */}
+                      <div className="lg:col-span-7 space-y-6">
+                        {activeBooking.status === "awaiting_deposit" ? (
+                          <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-xs space-y-5">
+                            <div className="flex items-center justify-between pb-3 border-b border-[#E5DECF]">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-[#C9A96E] block mb-0.5">
+                                  Direct Studio Account
+                                </span>
+                                <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">
+                                  Transfer Booking Deposit
+                                </h3>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] uppercase font-mono text-[#6E6359] block">
+                                  Deposit ({depositPercent}%)
+                                </span>
+                                <span className="font-serif text-2xl font-bold text-[#C9A96E]">
+                                  ₦{depositAmount.toLocaleString()}
+                                </span>
+                              </div>
                             </div>
-                            {aiAnalysisResult && (
-                              <div className="text-[11px] text-emerald-700 space-y-1 pt-1 border-t border-emerald-200">
-                                <div>Bank: {aiAnalysisResult.bankName || "Detected"}</div>
-                                <div>Amount: ₦{Number(aiAnalysisResult.extractedAmount || 0).toLocaleString()}</div>
-                                <div>Status: {aiAnalysisResult.statusMessage || "Pending Studio Review"}</div>
+
+                            {/* Clean 2-Column Bank Details Table */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                              <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]">
+                                <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
+                                  Bank Name
+                                </span>
+                                <span className="font-bold text-[#1A1410] text-sm">Fidelity Bank</span>
+                              </div>
+
+                              <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] flex items-center justify-between">
+                                <div>
+                                  <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
+                                    Account Number
+                                  </span>
+                                  <span className="font-mono font-bold text-[#1A1410] text-sm tracking-wider">
+                                    5080045230
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard("5080045230", "Account Number Copied")}
+                                  className="p-1.5 rounded-lg hover:bg-white text-[#6E6359] hover:text-[#1A1410] transition-colors"
+                                  title="Copy Account Number"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF]">
+                                <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
+                                  Account Name
+                                </span>
+                                <span className="font-bold text-[#1A1410] text-sm truncate block">
+                                  LamSparks Photography
+                                </span>
+                              </div>
+
+                              <div className="p-3.5 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] flex items-center justify-between">
+                                <div>
+                                  <span className="text-[#6E6359] uppercase tracking-wider text-[10px] block mb-1">
+                                    Payment Reference
+                                  </span>
+                                  <span className="font-mono font-bold text-[#C9A96E] text-sm">
+                                    {activeBooking.referenceCode}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(activeBooking.referenceCode, "Booking Ref Copied")}
+                                  className="p-1.5 rounded-lg hover:bg-white text-[#6E6359] hover:text-[#1A1410] transition-colors"
+                                  title="Copy Reference"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {copyFeedback && (
+                              <div className="text-center text-xs font-semibold text-emerald-800 bg-emerald-50 py-1.5 rounded-xl border border-emerald-200 animate-in fade-in">
+                                ✓ {copyFeedback}
                               </div>
                             )}
+
+                            {/* WhatsApp Primary Action */}
+                            <div className="pt-2 space-y-3">
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full inline-flex items-center justify-center gap-2.5 p-3.5 rounded-xl bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] font-sans font-bold text-xs uppercase tracking-wider transition-all shadow-sm group text-center"
+                              >
+                                <MessageCircle className="w-4 h-4 text-[#111111]" />
+                                <span>Confirm Deposit via WhatsApp</span>
+                                <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                              </a>
+
+                              <div className="text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowDirectUpload((prev) => !prev)}
+                                  className="text-xs text-[#6E6359] hover:text-[#1A1410] underline underline-offset-4 font-medium transition-colors"
+                                >
+                                  {showDirectUpload ? "Hide direct upload form" : "Or upload transfer receipt directly on this page"}
+                                </button>
+                              </div>
+
+                              {showDirectUpload && (
+                                <div className="p-4 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] space-y-3 animate-in fade-in">
+                                  <label className="block p-4 rounded-xl border-2 border-dashed border-[#E5DECF] hover:border-[#C9A96E] bg-white transition-colors cursor-pointer text-center space-y-1.5">
+                                    <input
+                                      type="file"
+                                      accept="image/*,application/pdf"
+                                      onChange={handleUploadReceipt}
+                                      disabled={isUploadingReceipt}
+                                      className="hidden"
+                                    />
+                                    <UploadCloud className="w-6 h-6 text-[#C9A96E] mx-auto" />
+                                    <div className="text-xs font-semibold text-[#1A1410]">
+                                      {isUploadingReceipt ? "Analyzing receipt with AI..." : "Click to select transfer screenshot (JPG, PNG, PDF)"}
+                                    </div>
+                                  </label>
+                                  {receiptReported && (
+                                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-semibold flex items-center gap-2">
+                                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                                      <span>Receipt uploaded! Studio team is reconciling the transfer.</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-xs space-y-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                                <ShieldCheck className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">
+                                  {activeBooking.status === "reported" ? "Transfer Under Studio Reconciliation" : "Session Date Confirmed & Locked"}
+                                </h3>
+                                <p className="text-xs text-[#6E6359] mt-0.5">
+                                  {activeBooking.status === "reported"
+                                    ? "Your transfer proof was uploaded. Osemene's team is confirming settlement."
+                                    : "Your shoot date is reserved on Osemene's private Maitama studio schedule."}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] space-y-2 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[#6E6359]">Studio Atelier:</span>
+                                <span className="font-semibold text-[#1A1410]">LamSparks Private Studio, Maitama, Abuja</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[#6E6359]">Arrival Guideline:</span>
+                                <span className="font-semibold text-[#1A1410]">15 minutes before session time</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[#6E6359]">Concierge Line:</span>
+                                <a href="tel:08130847299" className="font-semibold text-[#C9A96E] hover:underline">0813 084 7299</a>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
-                    </div>
 
-                    {/* Save Your Booking Link Card */}
-                    <div className="p-6 rounded-3xl bg-[#F8F4EE] border border-[#E5DECF] flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div className="space-y-1 text-center sm:text-left">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#C9A96E] block">
-                          Revisitable Link
-                        </span>
-                        <h4 className="font-serif text-lg text-[#1A1410]">Save Your Personal Booking Link</h4>
-                        <p className="text-xs text-[#6E6359]">
-                          Bookmark this URL to track deposit confirmation, reschedule, or cancel anytime.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(window.location.href, "Booking Link Copied")}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#1A1410] text-[#FDFBF8] hover:bg-[#C9A96E] hover:text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors shrink-0 shadow-sm"
-                      >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span>Copy Link</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Sticky Summary & Self-Serve Controls */}
-                  <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
-                    <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-sm space-y-5">
-                      {/* Bespoke Editorial Image Banner */}
-                      <div className="relative h-40 sm:h-48 w-full rounded-2xl overflow-hidden border border-[#E5DECF] bg-[#F8F4EE]">
-                        <img
-                          src={liveSessions[activeBooking.sessionType || sessionType]?.heroImage || "/images/client/weddings_3.webp"}
-                          alt={liveSessions[activeBooking.sessionType || sessionType]?.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-white font-bold bg-[#1A1410]/80 px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20">
-                            {liveSessions[activeBooking.sessionType || sessionType]?.title}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Session Header */}
-                      <div className="pb-3 border-b border-[#E5DECF]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-[#C9A96E] uppercase tracking-wider font-bold">
-                            Session Summary
-                          </span>
-                          <span
-                            className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
-                              activeBooking.status === "confirmed" || activeBooking.status === "completed"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : activeBooking.status === "reported"
-                                ? "bg-gold/25 text-[#1A1410]"
-                                : activeBooking.status === "expired" ||
-                                  (activeBooking.status === "awaiting_deposit" && holdRemainingMs === 0)
-                                ? "bg-rose-100 text-rose-800"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {activeBooking.status === "confirmed" || activeBooking.status === "completed"
-                              ? "Confirmed"
-                              : activeBooking.status === "reported"
-                              ? "Verifying Deposit"
-                              : activeBooking.status === "expired" ||
-                                (activeBooking.status === "awaiting_deposit" && holdRemainingMs === 0)
-                              ? "Hold Expired"
-                              : "Awaiting Deposit"}
-                          </span>
-                        </div>
-                        <h3 className="font-serif text-2xl text-[#1A1410] mt-1">
-                          {liveSessions[activeBooking.sessionType || sessionType]?.title}
-                        </h3>
-                        <p className="text-xs text-[#6E6359] mt-0.5">
-                          {activeBooking.answers?.packageName || selectedPackage?.name}
-                        </p>
-                      </div>
-
-                      {/* Shoot Details */}
-                      <div className="space-y-3 text-xs">
-                        <div className="flex items-center gap-3">
-                          <CalendarIcon className="w-4 h-4 text-[#C9A96E] shrink-0" />
-                          <div>
-                            <span className="text-[#6E6359] block text-[10px] uppercase">Shoot Date &amp; Time</span>
-                            <span className="font-semibold text-[#1A1410]">
-                              {activeBooking.shootDateFormatted && activeBooking.shootTimeSlot
-                                ? `${new Date(`${activeBooking.shootDateFormatted}T12:00:00`).toLocaleDateString("en-NG", {
-                                    weekday: "short",
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  })} at ${activeBooking.shootTimeSlot}`
-                                : activeBooking.shootStart
-                                ? `${new Date(activeBooking.shootStart).toLocaleDateString("en-NG", {
-                                    timeZone: "Africa/Lagos",
-                                    weekday: "short",
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  })} at ${new Date(activeBooking.shootStart).toLocaleTimeString("en-NG", {
-                                    timeZone: "Africa/Lagos",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}`
-                                : `${selectedDate} at ${timeSlot}`}
+                      {/* Right Column: Session & Financial Summary */}
+                      <div className="lg:col-span-5 space-y-6">
+                        <div className="p-6 sm:p-8 rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-xs space-y-5">
+                          <div className="pb-3 border-b border-[#E5DECF]">
+                            <span className="text-[10px] text-[#C9A96E] uppercase tracking-wider font-bold block mb-1">
+                              Session Overview
                             </span>
+                            <h3 className="font-serif text-2xl text-[#1A1410]">
+                              {liveSessions[activeBooking.sessionType || sessionType]?.title}
+                            </h3>
+                            <p className="text-xs text-[#6E6359] mt-0.5">
+                              {activeBooking.answers?.packageName || selectedPackage?.name}
+                            </p>
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-3">
-                          <MapPin className="w-4 h-4 text-[#C9A96E] shrink-0" />
-                          <div>
-                            <span className="text-[#6E6359] block text-[10px] uppercase">Studio Location</span>
-                            <span className="font-semibold text-[#1A1410]">
-                              LamSparks Private Abuja Studio
-                            </span>
+                          {/* Details List */}
+                          <div className="space-y-3 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[#6E6359]">Scheduled Slot:</span>
+                              <span className="font-semibold text-[#1A1410]">
+                                {activeBooking.shootDateFormatted && activeBooking.shootTimeSlot
+                                  ? `${new Date(`${activeBooking.shootDateFormatted}T12:00:00`).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} at ${activeBooking.shootTimeSlot}`
+                                  : `${selectedDate} at ${timeSlot}`}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="text-[#6E6359]">Wardrobe Outfits:</span>
+                              <span className="font-semibold text-[#1A1410]">
+                                {outfitsCount} {outfitsCount === 1 ? "Outfit" : "Outfits"} Planned
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="text-[#6E6359]">Studio Location:</span>
+                              <span className="font-semibold text-[#1A1410]">LamSparks Atelier · Abuja</span>
+                            </div>
+                          </div>
+
+                          {/* Financial Breakdown */}
+                          <div className="pt-4 border-t border-[#E5DECF] space-y-2 text-xs">
+                            <div className="flex items-center justify-between text-[#6E6359]">
+                              <span>Total Investment:</span>
+                              <span className="font-semibold text-[#1A1410] text-sm">₦{totalInvestment.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-amber-900 bg-amber-500/10 p-2.5 rounded-xl border border-amber-300/60 font-semibold">
+                              <span>Deposit ({depositPercent}%):</span>
+                              <span>₦{depositAmount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[#6E6359]">
+                              <span>Balance on Shoot Day ({100 - depositPercent}%):</span>
+                              <span className="font-semibold text-[#1A1410]">₦{balanceAmount.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          {/* Self-Serve Action Bar */}
+                          <div className="pt-4 border-t border-[#E5DECF] space-y-2.5">
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setIsRescheduleOpen(true)}
+                                className="p-2.5 rounded-xl border border-[#E5DECF] hover:border-[#1A1410] bg-[#F8F4EE] text-xs font-semibold text-[#1A1410] transition-colors text-center"
+                              >
+                                Move Time
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(typeof window !== "undefined" ? window.location.href : "", "Booking Link Copied")}
+                                className="p-2.5 rounded-xl border border-[#E5DECF] hover:border-[#1A1410] bg-[#F8F4EE] text-xs font-semibold text-[#1A1410] transition-colors text-center flex items-center justify-center gap-1.5"
+                              >
+                                <Share2 className="w-3.5 h-3.5 text-[#C9A96E]" />
+                                <span>Copy Link</span>
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <a
+                                href={getGoogleCalendarUrl(calendarEvent)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-xl border border-[#E5DECF]/70 hover:border-[#1A1410] text-[11px] font-medium text-[#6E6359] hover:text-[#1A1410] transition-colors text-center"
+                              >
+                                + Google Cal
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => downloadIcsFile(calendarEvent)}
+                                className="p-2 rounded-xl border border-[#E5DECF]/70 hover:border-[#1A1410] text-[11px] font-medium text-[#6E6359] hover:text-[#1A1410] transition-colors text-center"
+                              >
+                                + Apple (.ics)
+                              </button>
+                            </div>
+
+                            <div className="pt-1 text-center">
+                              <button
+                                type="button"
+                                onClick={() => setIsCancelModalOpen(true)}
+                                className="text-[11px] text-rose-700 hover:text-rose-900 hover:underline transition-colors"
+                              >
+                                Cancel this booking
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-
-                      {/* Mathematically Correct Financial Breakdown */}
-                      <div className="pt-4 border-t border-[#E5DECF] space-y-2.5 text-xs">
-                        <div className="flex items-center justify-between text-[#6E6359]">
-                          <span>Total Investment:</span>
-                          <span className="font-semibold text-[#1A1410] text-sm">
-                            ₦{(activeBooking.estimate?.total || estimate.total).toLocaleString()}
-                          </span>
-                        </div>
-                        {(() => {
-                          const tot = activeBooking.estimate?.total || estimate.total;
-                          const dep = activeBooking.estimate?.depositAmount || estimate.depositAmount;
-                          const bal = activeBooking.estimate?.balanceAmount || estimate.balanceAmount;
-                          const pct = tot > 0 ? Math.round((dep / tot) * 100) : (activeBooking.estimate?.depositPercent || estimate.depositPercent || 70);
-                          return (
-                            <>
-                              <div className="flex items-center justify-between text-amber-900 bg-amber-500/10 p-2.5 rounded-lg border border-amber-300/60 font-semibold">
-                                <span>Deposit to Book ({pct}%):</span>
-                                <span>₦{dep.toLocaleString()}</span>
-                              </div>
-                              <div className="flex items-center justify-between text-[#6E6359]">
-                                <span>Balance on Shoot Day ({100 - pct}%):</span>
-                                <span className="font-semibold text-[#1A1410]">₦{bal.toLocaleString()}</span>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-
-                      {/* Add to Calendar Buttons */}
-                      <div className="pt-4 border-t border-[#E5DECF] space-y-2">
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-[#6E6359] block">
-                          Add to Calendar
-                        </span>
-                        <div className="grid grid-cols-2 gap-2">
-                          <a
-                            href={getGoogleCalendarUrl(calendarEvent)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-[#E5DECF] hover:border-[#1A1410] bg-[#F8F4EE] text-xs font-semibold text-[#1A1410] transition-colors"
-                          >
-                            <CalendarIcon className="w-3.5 h-3.5 text-[#C9A96E]" />
-                            <span>Google Calendar</span>
-                          </a>
-
-                          <button
-                            type="button"
-                            onClick={() => downloadIcsFile(calendarEvent)}
-                            className="inline-flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-[#E5DECF] hover:border-[#1A1410] bg-[#F8F4EE] text-xs font-semibold text-[#1A1410] transition-colors"
-                          >
-                            <Download className="w-3.5 h-3.5 text-[#C9A96E]" />
-                            <span>Apple / Outlook (.ics)</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Self-Serve Actions: Reschedule & Cancel */}
-                      <div className="pt-4 border-t border-[#E5DECF] flex items-center justify-between gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setIsRescheduleOpen(true)}
-                          className="flex-1 py-2.5 px-3 rounded-xl border border-[#E5DECF] hover:border-[#1A1410] text-xs font-semibold text-[#1A1410] hover:bg-[#F8F4EE] transition-colors text-center"
-                        >
-                          Move to another time
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setIsCancelModalOpen(true)}
-                          className="py-2.5 px-3 rounded-xl text-xs font-semibold text-rose-700 hover:text-rose-900 hover:bg-rose-50 transition-colors"
-                        >
-                          Cancel booking
-                        </button>
-                      </div>
                     </div>
                   </div>
-                </div>
-              </>
-            )}
+                );
+              })()
+            ) : null}
           </div>
         )}
 
@@ -2211,95 +2286,100 @@ function BookingWizard() {
 
       {/* 1. Reschedule Modal (Centered, Non-cutoff, Luxury Studio Styling) */}
       {mounted && isRescheduleOpen && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-[#FDFBF8] max-w-lg w-full rounded-3xl border border-[#E5DECF] shadow-2xl flex flex-col max-h-[min(90vh,760px)] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
-            {/* Pinned Modal Header */}
-            <div className="p-5 sm:p-6 pb-4 border-b border-[#E5DECF] shrink-0 flex items-center justify-between">
-              <div>
-                <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">Move to Another Time</h3>
-                <p className="text-xs text-[#6E6359] mt-0.5">
-                  Choose a new date and time slot for booking {activeBooking?.referenceCode || ""}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRescheduleOpen(false)}
-                className="w-8 h-8 rounded-full border border-[#E5DECF] bg-[#F8F4EE] flex items-center justify-center text-[#6E6359] hover:text-[#1A1410] shrink-0 ml-2 transition-colors"
-                aria-label="Close modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Scrollable Modal Body */}
-            <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
-              {/* Date Input */}
-              <div className="space-y-1.5">
-                <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                  Select New Date
-                </label>
-                <input
-                  type="date"
-                  min={new Date().toISOString().split("T")[0]}
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-                />
+        <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/65 backdrop-blur-sm p-3 sm:p-6 text-center animate-in fade-in duration-200">
+          <div className="flex min-h-full items-center justify-center">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-2xl text-left overflow-hidden flex flex-col max-h-[calc(100dvh-2.5rem)] animate-in zoom-in-95 duration-200"
+            >
+              {/* Pinned Modal Header */}
+              <div className="p-5 sm:p-6 pb-4 border-b border-[#E5DECF] shrink-0 flex items-center justify-between">
+                <div>
+                  <h3 className="font-serif text-xl sm:text-2xl text-[#1A1410]">Move to Another Time</h3>
+                  <p className="text-xs text-[#6E6359] mt-0.5">
+                    Choose a new date and time slot for booking {activeBooking?.referenceCode || ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRescheduleOpen(false)}
+                  className="w-8 h-8 rounded-full border border-[#E5DECF] bg-[#F8F4EE] flex items-center justify-center text-[#6E6359] hover:text-[#1A1410] shrink-0 ml-2 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* Time Slots */}
-              <div className="space-y-1.5">
-                <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                  Select New Time Slot
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {TIME_SLOTS.map((slot) => {
-                    const { available, badge } = getSlotStatus(selectedDate, slot.id);
-                    const isSelected = timeSlot === slot.id;
-                    return (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        disabled={!available}
-                        onClick={() => setTimeSlot(slot.id)}
-                        className={`p-2.5 rounded-xl text-xs font-semibold transition-all border flex flex-col items-center justify-center ${
-                          isSelected
-                            ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
-                            : !available
-                            ? "bg-[#F8F4EE]/50 text-[#6E6359]/40 border-transparent cursor-not-allowed line-through"
-                            : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
-                        }`}
-                      >
-                        <span>{slot.label}</span>
-                        {!available && (
-                          <span className="text-[9px] font-mono uppercase no-underline mt-0.5 text-rose-700/70">
-                            {badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+              {/* Scrollable Modal Body */}
+              <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
+                {/* Date Input */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                    Select New Date
+                  </label>
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split("T")[0]}
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-sm text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                  />
+                </div>
+
+                {/* Time Slots */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                    Select New Time Slot
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {TIME_SLOTS.map((slot) => {
+                      const { available, badge } = getSlotStatus(selectedDate, slot.id);
+                      const isSelected = timeSlot === slot.id;
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          disabled={!available}
+                          onClick={() => setTimeSlot(slot.id)}
+                          className={`p-2.5 rounded-xl text-xs font-semibold transition-all border flex flex-col items-center justify-center ${
+                            isSelected
+                              ? "bg-[#1A1410] text-[#FDFBF8] border-[#1A1410]"
+                              : !available
+                              ? "bg-[#F8F4EE]/50 text-[#6E6359]/40 border-transparent cursor-not-allowed line-through"
+                              : "bg-[#F8F4EE] text-[#6E6359] border-[#E5DECF] hover:border-[#C9A96E]"
+                          }`}
+                        >
+                          <span>{slot.label}</span>
+                          {!available && (
+                            <span className="text-[9px] font-mono uppercase no-underline mt-0.5 text-rose-700/70">
+                              {badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Pinned Modal Footer */}
-            <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsRescheduleOpen(false)}
-                className="px-5 py-2.5 rounded-full text-xs font-semibold text-[#6E6359] hover:text-[#1A1410]"
-              >
-                Keep Current Time
-              </button>
-              <button
-                type="button"
-                disabled={isUpdatingBooking || !selectedDate || !timeSlot}
-                onClick={handleReschedule}
-                className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
-              >
-                {isUpdatingBooking ? "Updating..." : "Confirm New Slot"}
-              </button>
+              {/* Pinned Modal Footer */}
+              <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsRescheduleOpen(false)}
+                  className="px-5 py-2.5 rounded-full text-xs font-semibold text-[#6E6359] hover:text-[#1A1410]"
+                >
+                  Keep Current Time
+                </button>
+                <button
+                  type="button"
+                  disabled={isUpdatingBooking || !selectedDate || !timeSlot}
+                  onClick={handleReschedule}
+                  className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  {isUpdatingBooking ? "Updating..." : "Confirm New Slot"}
+                </button>
+              </div>
             </div>
           </div>
         </div>,
@@ -2308,49 +2388,54 @@ function BookingWizard() {
 
       {/* 2. Cancel Modal (Centered, Non-cutoff) */}
       {mounted && isCancelModalOpen && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl border border-[#E5DECF] shadow-2xl flex flex-col max-h-[min(90vh,600px)] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
-            <div className="p-5 sm:p-6 pb-3 border-b border-[#E5DECF] shrink-0 space-y-1 text-center sm:text-left">
-              <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#C9A96E] font-bold block">
-                Atelier Schedule Update
-              </span>
-              <h3 className="font-headline uppercase tracking-tight text-2xl sm:text-3xl text-[#1A1410] font-black">
-                CANCEL THIS SESSION?
-              </h3>
-              <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed pt-1">
-                Your time goes back on the calendar for someone else.
-              </p>
-            </div>
+        <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/65 backdrop-blur-sm p-3 sm:p-6 text-center animate-in fade-in duration-200">
+          <div className="flex min-h-full items-center justify-center">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-2xl text-left overflow-hidden flex flex-col max-h-[calc(100dvh-2.5rem)] animate-in zoom-in-95 duration-200"
+            >
+              <div className="p-5 sm:p-6 pb-3 border-b border-[#E5DECF] shrink-0 space-y-1 text-center sm:text-left">
+                <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#C9A96E] font-bold block">
+                  Atelier Schedule Update
+                </span>
+                <h3 className="font-headline uppercase tracking-tight text-2xl sm:text-3xl text-[#1A1410] font-black">
+                  CANCEL THIS SESSION?
+                </h3>
+                <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed pt-1">
+                  Your time goes back on the calendar for someone else.
+                </p>
+              </div>
 
-            <div className="p-5 sm:p-6 space-y-1.5 overflow-y-auto flex-1">
-              <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
-                Reason (optional)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Schedule conflict, travel dates changed..."
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-xs text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
-              />
-            </div>
+              <div className="p-5 sm:p-6 space-y-1.5 overflow-y-auto flex-1">
+                <label className="block text-xs uppercase tracking-wider font-bold text-[#1A1410]">
+                  Reason (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Schedule conflict, travel dates changed..."
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-[#E5DECF] bg-[#F8F4EE] text-xs text-[#1A1410] focus:outline-none focus:border-[#C9A96E]"
+                />
+              </div>
 
-            <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsCancelModalOpen(false)}
-                className="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider text-[#1A1410] border border-[#E5DECF] bg-white hover:bg-[#F8F4EE] transition-colors"
-              >
-                Keep it
-              </button>
-              <button
-                type="button"
-                disabled={isUpdatingBooking}
-                onClick={handleCancelBooking}
-                className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
-              >
-                {isUpdatingBooking ? "Updating..." : "Yes, cancel it"}
-              </button>
+              <div className="p-4 sm:p-6 pt-3 border-t border-[#E5DECF] bg-[#FDFBF8] shrink-0 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCancelModalOpen(false)}
+                  className="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider text-[#1A1410] border border-[#E5DECF] bg-white hover:bg-[#F8F4EE] transition-colors"
+                >
+                  Keep it
+                </button>
+                <button
+                  type="button"
+                  disabled={isUpdatingBooking}
+                  onClick={handleCancelBooking}
+                  className="px-6 py-2.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  {isUpdatingBooking ? "Updating..." : "Yes, cancel it"}
+                </button>
+              </div>
             </div>
           </div>
         </div>,
@@ -2359,69 +2444,74 @@ function BookingWizard() {
 
       {/* 3. Studio Notice Modal (Luxury confirmation dialog replacing browser alert) */}
       {mounted && studioNotice && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-[#FDFBF8] max-w-md w-full rounded-3xl border border-[#E5DECF] shadow-2xl p-6 sm:p-8 space-y-5 text-center relative my-auto animate-in zoom-in-95 duration-200">
-            <button
-              type="button"
-              onClick={() => {
-                if (studioNotice.onConfirm) studioNotice.onConfirm();
-                setStudioNotice(null);
-              }}
-              className="w-8 h-8 rounded-full border border-[#E5DECF] bg-[#F8F4EE] text-[#6E6359] hover:text-[#1A1410] flex items-center justify-center absolute top-4 right-4 transition-colors"
-              aria-label="Close notification"
+        <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/65 backdrop-blur-sm p-4 text-center animate-in fade-in duration-200">
+          <div className="flex min-h-full items-center justify-center">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md rounded-3xl bg-[#FDFBF8] border border-[#E5DECF] shadow-2xl p-6 sm:p-8 space-y-5 text-center my-auto animate-in zoom-in-95 duration-200"
             >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* Luxury Status Badge */}
-            <div className="flex justify-center">
-              {studioNotice.type === "success" ? (
-                <div className="w-14 h-14 rounded-full bg-[#1A1410] text-[#C9A96E] flex items-center justify-center shadow-md">
-                  <Check className="w-7 h-7 stroke-[2.5]" />
-                </div>
-              ) : studioNotice.type === "error" ? (
-                <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-800 flex items-center justify-center shadow-sm">
-                  <AlertTriangle className="w-7 h-7 stroke-[2]" />
-                </div>
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-900 flex items-center justify-center shadow-sm">
-                  <Sparkles className="w-7 h-7 stroke-[2]" />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <h3 className="font-serif text-2xl sm:text-3xl text-[#1A1410] font-normal leading-tight">
-                {studioNotice.title}
-              </h3>
-              <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed">
-                {studioNotice.message}
-              </p>
-            </div>
-
-            {/* Details Box if any */}
-            {studioNotice.details && studioNotice.details.length > 0 && (
-              <div className="p-4 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] text-left space-y-2 text-xs">
-                {studioNotice.details.map((d, i) => (
-                  <div key={i} className="flex items-center justify-between py-0.5 border-b border-[#E5DECF]/50 last:border-b-0">
-                    <span className="text-[#6E6359] uppercase tracking-wider text-[10px] font-mono">{d.label}</span>
-                    <span className="font-semibold text-[#1A1410] text-right">{d.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="pt-2">
               <button
                 type="button"
                 onClick={() => {
                   if (studioNotice.onConfirm) studioNotice.onConfirm();
                   setStudioNotice(null);
                 }}
-                className="w-full py-3.5 rounded-xl bg-[#1A1410] hover:bg-[#2C241E] text-[#FDFBF8] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-sm"
+                className="w-8 h-8 rounded-full border border-[#E5DECF] bg-[#F8F4EE] text-[#6E6359] hover:text-[#1A1410] flex items-center justify-center absolute top-4 right-4 transition-colors"
+                aria-label="Close notification"
               >
-                Continue
+                <X className="w-4 h-4" />
               </button>
+
+              {/* Luxury Status Badge */}
+              <div className="flex justify-center">
+                {studioNotice.type === "success" ? (
+                  <div className="w-14 h-14 rounded-full bg-[#1A1410] text-[#C9A96E] flex items-center justify-center shadow-md">
+                    <Check className="w-7 h-7 stroke-[2.5]" />
+                  </div>
+                ) : studioNotice.type === "error" ? (
+                  <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-800 flex items-center justify-center shadow-sm">
+                    <AlertTriangle className="w-7 h-7 stroke-[2]" />
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-900 flex items-center justify-center shadow-sm">
+                    <Sparkles className="w-7 h-7 stroke-[2]" />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="font-serif text-2xl sm:text-3xl text-[#1A1410] font-normal leading-tight">
+                  {studioNotice.title}
+                </h3>
+                <p className="text-xs sm:text-sm text-[#6E6359] leading-relaxed">
+                  {studioNotice.message}
+                </p>
+              </div>
+
+              {/* Details Box if any */}
+              {studioNotice.details && studioNotice.details.length > 0 && (
+                <div className="p-4 rounded-2xl bg-[#F8F4EE] border border-[#E5DECF] text-left space-y-2 text-xs">
+                  {studioNotice.details.map((d, i) => (
+                    <div key={i} className="flex items-center justify-between py-0.5 border-b border-[#E5DECF]/50 last:border-b-0">
+                      <span className="text-[#6E6359] uppercase tracking-wider text-[10px] font-mono">{d.label}</span>
+                      <span className="font-semibold text-[#1A1410] text-right">{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (studioNotice.onConfirm) studioNotice.onConfirm();
+                    setStudioNotice(null);
+                  }}
+                  className="w-full py-3.5 rounded-xl bg-[#1A1410] hover:bg-[#2C241E] text-[#FDFBF8] font-sans text-xs uppercase tracking-wider font-bold transition-all shadow-sm"
+                >
+                  Continue
+                </button>
+              </div>
             </div>
           </div>
         </div>,

@@ -117,7 +117,11 @@ function CollectionCardImage({
       }
     };
     const onNativeError = () => {
-      setIsLoaded(true);
+      if (img.src.endsWith(".webp")) {
+        img.src = img.src.replace(/\.webp$/, ".jpg");
+      } else {
+        setIsLoaded(true);
+      }
     };
 
     img.addEventListener("load", onNativeLoad);
@@ -164,10 +168,11 @@ function CollectionCardImage({
         decoding="async"
         onLoad={() => setIsLoaded(true)}
         onError={(e) => {
-          setIsLoaded(true);
           const target = e.currentTarget;
           if (target.src.endsWith(".webp")) {
             target.src = target.src.replace(/\.webp$/, ".jpg");
+          } else {
+            setIsLoaded(true);
           }
         }}
         className={`relative z-[1] w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 ease-out ${
@@ -343,8 +348,8 @@ export function CuratedCollectionsSection({
                   priority={idx < 3}
                 />
 
-                {/* Subtle gradient so top pill and bottom explore button pop */}
-                <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/60 via-transparent to-black/35 pointer-events-none" />
+                {/* Subtle soft gradient so top pill and bottom explore button pop without muddying image shadows */}
+                <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/35 via-transparent to-black/15 pointer-events-none" />
 
                 {/* Category Badge Atop the Picture */}
                 <div className="absolute top-3.5 left-3.5 right-3.5 z-[3] flex items-center justify-between pointer-events-none">

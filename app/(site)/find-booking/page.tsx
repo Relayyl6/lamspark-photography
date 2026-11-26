@@ -26,6 +26,52 @@ interface SavedBookingItem {
   status?: string;
 }
 
+const SESSION_NAME_MAP: Record<string, string> = {
+  "motherhood-bundle": "Motherhood Bundle (Maternity + Newborn)",
+  "toddler": "Toddler & Children",
+  "maternity": "Maternity & Motherhood",
+  "wedding": "Weddings & Ceremonies",
+  "event": "Event Coverage",
+  "newborn": "Newborn Portraits",
+  "family": "Family Portraits",
+  "couple": "Couple & Engagement",
+  "individual-portrait": "Individual Portraits",
+  "official-portrait": "Executive & Official Portraits",
+  "not-sure": "Bespoke Consultation",
+};
+
+function formatSessionTitle(raw?: string): string {
+  if (!raw) return "Atelier Session";
+  const slug = raw.toLowerCase().trim();
+  if (SESSION_NAME_MAP[slug]) return SESSION_NAME_MAP[slug];
+  return slug
+    .split(/[-_]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function formatBookingDate(raw?: string): string {
+  if (!raw) return "Date held with studio";
+  try {
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) {
+      const datePart = d.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+      const timePart = d.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+      return `${datePart} · ${timePart}`;
+    }
+  } catch {}
+  return raw;
+}
+
 export default function FindBookingPage() {
   const router = useRouter();
   const [deviceBookings, setDeviceBookings] = useState<SavedBookingItem[]>([]);
@@ -107,7 +153,7 @@ export default function FindBookingPage() {
         const shootStart = data.booking.shootStart || (data.booking.answers?.selectedDate ? `${data.booking.answers.selectedDate} at ${data.booking.answers.timeSlot || ""}` : "");
         const newRecord: SavedBookingItem = {
           referenceCode: data.booking.referenceCode,
-          sessionTitle: data.booking.sessionType || "Atelier Session",
+          sessionTitle: formatSessionTitle(data.booking.answers?.sessionTypeName || data.booking.sessionType || "Atelier Session"),
           shootStart,
           status: data.booking.status || "awaiting_deposit",
           createdAt: new Date().toISOString(),
@@ -182,8 +228,8 @@ export default function FindBookingPage() {
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-headline text-xl sm:text-2xl uppercase tracking-tight text-[#1A1410] font-black group-hover:text-[#C9A96E] transition-colors leading-none">
-                          {b.sessionTitle}
+                        <h3 className="font-serif text-lg sm:text-xl font-semibold text-[#1A1410] group-hover:text-[#C9A96E] transition-colors leading-snug">
+                          {formatSessionTitle(b.sessionTitle)}
                         </h3>
                         {b.status && (
                           <span
@@ -201,8 +247,8 @@ export default function FindBookingPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-[#6E6359]">
-                        {b.shootStart || "Date held with studio"}
+                      <p className="text-xs text-[#6E6359] font-sans">
+                        {formatBookingDate(b.shootStart)}
                       </p>
                     </div>
 
