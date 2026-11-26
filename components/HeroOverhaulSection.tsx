@@ -675,10 +675,11 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
           </Link>
           <Link
             href="/book"
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] px-5 sm:px-6 py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] transition-all shadow-sm hover:shadow-md group"
+            aria-label="Book a session"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#C9A96E] hover:bg-[#b5955a] text-[#111111] w-[34px] h-[34px] sm:w-auto sm:h-auto sm:px-6 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.2em] transition-all shadow-sm hover:shadow-md group"
           >
-            <span>BOOK</span>
-            <ArrowUpRight className="w-3 sm:w-3.5 h-3 sm:h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            <span className="hidden sm:inline">BOOK</span>
+            <ArrowUpRight className="w-4 h-4 sm:w-3.5 sm:h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </Link>
         </div>
 
