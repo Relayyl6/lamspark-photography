@@ -128,57 +128,83 @@ function renderBookingSummaryCard(ctx: BookingEmailContext): string {
   const dateLabel = formatReadableDateWAT(ctx.shootDateFormatted || ctx.answers?.selectedDate);
   const timeLabel = ctx.shootTimeSlot || ctx.answers?.timeSlot || "To be finalized";
 
+  const scopeParts = [
+    ctx.client.name,
+    ctx.answers?.outfitCount ? `${ctx.answers.outfitCount} outfit(s)` : "",
+    ctx.answers?.peopleCount ? `${ctx.answers.peopleCount} people` : "",
+    ctx.answers?.age || ctx.answers?.ages ? `Age: ${ctx.answers.age || ctx.answers.ages}` : "",
+    ctx.answers?.guestCount ? `${ctx.answers.guestCount} guests` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return `
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#FFFFFF;border:1px solid #E5DECF;border-radius:14px;margin:20px 0;">
-    <tr>
-      <td style="padding:16px 18px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#B8893A;margin-bottom:10px;">
-          SESSION OVERVIEW · REF ${esc(ctx.referenceCode)}
-        </div>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:13px;color:#3A312A;line-height:1.65;">
-          <tr>
-            <td style="padding:3px 0;color:#7A6E63;width:36%;">Client</td>
-            <td style="padding:3px 0;font-weight:600;color:#1A1410;">${esc(ctx.client.name)}</td>
-          </tr>
-          <tr>
-            <td style="padding:3px 0;color:#7A6E63;">Session</td>
-            <td style="padding:3px 0;font-weight:600;color:#1A1410;">${esc(ctx.sessionTitle)}${ctx.answers?.packageName ? ` (${esc(ctx.answers.packageName)})` : ""}</td>
-          </tr>
-          <tr>
-            <td style="padding:3px 0;color:#7A6E63;">Scheduled Date</td>
-            <td style="padding:3px 0;font-weight:600;color:#1A1410;">${esc(dateLabel)}</td>
-          </tr>
-          <tr>
-            <td style="padding:3px 0;color:#7A6E63;">Time Slot</td>
-            <td style="padding:3px 0;font-weight:600;color:#1A1410;">${esc(timeLabel)} (WAT)</td>
-          </tr>
-          <tr>
-            <td style="padding:3px 0;color:#7A6E63;">Location</td>
-            <td style="padding:3px 0;font-weight:600;color:#1A1410;">${esc(ctx.locationDetail || STUDIO_BUSINESS_INFO.location)}</td>
-          </tr>
-          ${
-            ctx.answers?.outfitCount
-              ? `<tr><td style="padding:3px 0;color:#7A6E63;">Wardrobe</td><td style="padding:3px 0;font-weight:600;color:#1A1410;">${esc(ctx.answers.outfitCount)} outfit(s)</td></tr>`
-              : ""
-          }
-          ${
-            ctx.estimate.total > 0
-              ? `<tr><td style="padding:3px 0;color:#7A6E63;">Total Investment</td><td style="padding:3px 0;font-weight:700;color:#1A1410;">${formatNaira(ctx.estimate.total)}</td></tr>
-                 <tr><td style="padding:3px 0;color:#7A6E63;">Required Deposit (${ctx.estimate.depositPercent}%)</td><td style="padding:3px 0;font-weight:700;color:#B8893A;">${formatNaira(ctx.estimate.depositAmount)}</td></tr>`
-              : ""
-          }
-          ${
-            ctx.answers?.notes
-              ? `<tr><td style="padding:3px 0;color:#7A6E63;vertical-align:top;">Notes</td><td style="padding:3px 0;color:#4B4036;">${esc(ctx.answers.notes)}</td></tr>`
-              : ""
-          }
-        </table>
-        <div style="margin-top:12px;padding-top:10px;border-top:1px solid #EFEAE0;font-size:12px;">
-          <a href="${esc(bookingUrl)}" style="color:#B8893A;font-weight:700;text-decoration:underline;">Booking Link: ${esc(bookingUrl)}</a>
-        </div>
-      </td>
-    </tr>
-  </table>`;
+  <div style="border-top:1px solid #E5DECF;margin-top:26px;padding-top:22px;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#B8893A;margin-bottom:16px;">
+      SESSION OVERVIEW · REF ${esc(ctx.referenceCode)}
+    </div>
+
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+      <tr>
+        <td width="50%" valign="top" style="padding:0 12px 16px 0;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:4px;">Session</div>
+          <div style="font-size:13.5px;font-weight:600;color:#1A1410;line-height:1.45;">
+            ${esc(ctx.sessionTitle)}${ctx.answers?.packageName ? `<br/><span style="font-weight:400;color:#5D5248;">${esc(ctx.answers.packageName)}</span>` : ""}
+          </div>
+        </td>
+        <td width="50%" valign="top" style="padding:0 0 16px 12px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:4px;">Date &amp; Time</div>
+          <div style="font-size:13.5px;font-weight:600;color:#1A1410;line-height:1.45;">
+            ${esc(dateLabel)}<br/><span style="font-weight:400;color:#5D5248;">${esc(timeLabel)} (WAT)</span>
+          </div>
+        </td>
+      </tr>
+
+      <tr>
+        <td width="50%" valign="top" style="padding:0 12px 16px 0;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:4px;">Location</div>
+          <div style="font-size:13.5px;font-weight:500;color:#1A1410;line-height:1.45;">
+            ${esc(ctx.locationDetail || STUDIO_BUSINESS_INFO.location)}
+          </div>
+        </td>
+        <td width="50%" valign="top" style="padding:0 0 16px 12px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:4px;">Client &amp; Scope</div>
+          <div style="font-size:13.5px;font-weight:500;color:#1A1410;line-height:1.45;">
+            ${esc(scopeParts)}
+          </div>
+        </td>
+      </tr>
+
+      ${
+        ctx.estimate.total > 0
+          ? `
+      <tr>
+        <td width="50%" valign="top" style="padding:0 12px 16px 0;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:4px;">Total Investment</div>
+          <div style="font-size:14px;font-weight:700;color:#1A1410;">${formatNaira(ctx.estimate.total)}</div>
+        </td>
+        <td width="50%" valign="top" style="padding:0 0 16px 12px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:4px;">Required Deposit (${ctx.estimate.depositPercent}%)</div>
+          <div style="font-size:14px;font-weight:700;color:#B8893A;">${formatNaira(ctx.estimate.depositAmount)}</div>
+        </td>
+      </tr>`
+          : ""
+      }
+    </table>
+
+    ${
+      ctx.purposeText || ctx.answers?.notes
+        ? `<div style="border-top:1px solid #EDE7DC;padding-top:12px;margin-top:2px;font-size:12.5px;color:#5D5248;line-height:1.55;">
+            ${ctx.purposeText ? `<div><strong style="color:#1A1410;">Purpose:</strong> ${esc(ctx.purposeText)}</div>` : ""}
+            ${ctx.answers?.notes ? `<div><strong style="color:#1A1410;">Notes:</strong> ${esc(ctx.answers.notes)}</div>` : ""}
+          </div>`
+        : ""
+    }
+
+    <div style="border-top:1px solid #EDE7DC;padding-top:12px;margin-top:12px;font-size:12px;color:#7A6E63;">
+      Booking Link: <a href="${esc(bookingUrl)}" style="color:#B8893A;font-weight:600;text-decoration:underline;">${esc(bookingUrl)}</a>
+    </div>
+  </div>`;
 }
 
 function wrapAtelierEmail({
@@ -208,61 +234,59 @@ function wrapAtelierEmail({
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
-<body style="margin:0;padding:24px 12px;background:#F4EFE6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1A1410;">
-  <div style="max-width:640px;margin:0 auto;">
+<body style="margin:0;padding:28px 14px;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1A1410;">
+  <div style="max-width:600px;margin:0 auto;">
     <!-- Top Brand Mark -->
-    <div style="padding:4px 6px 16px 6px;">
-      <span style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:700;color:#1A1410;letter-spacing:-0.02em;">LAMSPARKS</span><span style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#C9A96E;">.</span>
-      <span style="display:block;font-size:10px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:#7A6E63;margin-top:2px;">
-        PRIVATE PORTRAIT &amp; EVENT STUDIO · ABUJA
+    <div style="padding:0 4px 18px 4px;">
+      <span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:700;color:#1A1410;letter-spacing:-0.01em;">LAMSPARKS</span><span style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#C9A96E;">.</span>
+      <span style="display:block;font-size:10px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:#8A7E72;margin-top:3px;">
+        Private Portrait &amp; Event Studio · Abuja
       </span>
     </div>
 
-    <!-- Main Warm Ivory Card -->
-    <div style="background:#FAF7F2;border:1px solid #E5DECF;border-radius:20px;padding:30px 26px;box-shadow:0 8px 28px rgba(26,20,16,0.05);">
-      <div style="font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:#B8893A;margin-bottom:10px;">
+    <!-- Single Calm Warm Ivory Editorial Card -->
+    <div style="background:#FAF8F4;border:1px solid #EAE3D5;border-radius:18px;padding:34px 30px;">
+      <div style="font-size:10.5px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#B8893A;margin-bottom:10px;">
         ${esc(eyebrow)} · REF ${esc(ctx.referenceCode)}
       </div>
 
-      <h1 style="margin:0 0 14px 0;font-size:28px;line-height:1.12;font-weight:900;letter-spacing:-0.02em;text-transform:uppercase;color:#1A1410;">
+      <h1 style="margin:0 0 14px 0;font-size:27px;line-height:1.14;font-weight:900;letter-spacing:-0.02em;text-transform:uppercase;color:#1A1410;">
         ${esc(headlinePrefix)}<span style="color:#B8893A;">${esc(headlineAccent)}</span>
       </h1>
 
-      <p style="margin:0 0 18px 0;font-size:15px;line-height:1.62;color:#3E352D;">
+      <p style="margin:0 0 24px 0;font-size:15px;line-height:1.65;color:#443A32;">
         ${esc(introText)}
       </p>
+
+      <!-- Primary Action Pill Above Details for Instant Clarity -->
+      <div style="margin:0 0 8px 0;">
+        <a href="${esc(ctaHref)}" style="display:inline-block;background:#C9A96E;color:#1A1410;text-decoration:none;font-size:12.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:13px 26px;border-radius:999px;">
+          ${esc(ctaLabel)} &rarr;
+        </a>
+      </div>
 
       ${renderBookingSummaryCard(ctx)}
 
       ${
         bankNotice && ctx.estimate.depositAmount > 0
-          ? `<div style="background:#FFFBF0;border:1px solid #E8D5AA;border-radius:12px;padding:14px 16px;margin:16px 0;font-size:13px;line-height:1.6;color:#3E352D;">
-              <div style="font-size:10px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#B45309;margin-bottom:4px;">
-                STUDIO DEPOSIT DETAILS (20-HOUR HOLD)
+          ? `<div style="border-left:2.5px solid #C9A96E;padding:4px 0 4px 16px;margin:20px 0 0 0;font-size:13px;line-height:1.6;color:#443A32;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#B8893A;margin-bottom:3px;">
+                Bank Transfer Details
               </div>
-              Transfer <strong>${formatNaira(ctx.estimate.depositAmount)}</strong> to:<br/>
-              <strong>${esc(STUDIO_BUSINESS_INFO.bankName)}</strong> · Account <strong>${esc(STUDIO_BUSINESS_INFO.accountNumber)}</strong> · <strong>${esc(STUDIO_BUSINESS_INFO.accountName)}</strong><br/>
-              Then upload your receipt via your booking link below to confirm your date immediately.
+              Transfer <strong>${formatNaira(ctx.estimate.depositAmount)}</strong> to <strong>${esc(STUDIO_BUSINESS_INFO.bankName)}</strong> · <strong>${esc(STUDIO_BUSINESS_INFO.accountNumber)}</strong> (${esc(STUDIO_BUSINESS_INFO.accountName)}), then upload your receipt on your booking link.
             </div>`
           : ""
       }
 
-      <!-- Primary Action Pill -->
-      <div style="margin:22px 0 18px 0;">
-        <a href="${esc(ctaHref)}" style="display:inline-block;background:#C9A96E;color:#1A1410;text-decoration:none;font-size:13px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:14px 26px;border-radius:999px;">
-          ${esc(ctaLabel)} &rarr;
-        </a>
-      </div>
-
-      <p style="margin:0;font-size:13.5px;color:#5D5248;line-height:1.55;">
+      <p style="margin:22px 0 0 0;font-size:13px;color:#6E6359;line-height:1.55;">
         Questions or need help? <a href="${esc(STUDIO_BUSINESS_INFO.whatsappUrl)}?text=${encodeURIComponent(`Hello Osemene, reaching out regarding booking ${ctx.referenceCode}`)}" style="color:#B8893A;font-weight:700;text-decoration:underline;">WhatsApp Osemene directly</a>.
       </p>
     </div>
 
-    ${extraHtml ? `<div style="margin-top:20px;">${extraHtml}</div>` : ""}
+    ${extraHtml ? `<div style="margin-top:26px;">${extraHtml}</div>` : ""}
 
     <!-- Footer Signoff -->
-    <div style="padding:18px 8px 6px 8px;font-size:12px;color:#7A6E63;line-height:1.6;">
+    <div style="padding:18px 6px 4px 6px;font-size:11.5px;color:#8A7E72;line-height:1.6;">
       ${esc(STUDIO_BUSINESS_INFO.name)} · ${esc(STUDIO_BUSINESS_INFO.location)} · ${esc(STUDIO_BUSINESS_INFO.phone)} · ${esc(STUDIO_BUSINESS_INFO.socialHandle)}
     </div>
   </div>
