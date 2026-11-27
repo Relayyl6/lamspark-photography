@@ -14,14 +14,14 @@ export function Footer() {
         }
         @media (min-width: 640px) {
           .footer-fullscreen-container {
-            min-height: calc(100vh - 4rem);
-            min-height: calc(100dvh - 4rem); /* Small/Tablet landscape sticky nav is h-16 (4rem / 64px) */
+            min-height: 100vh;
+            min-height: 100dvh; /* Full viewport height since floating nav overlays top */
           }
         }
         @media (min-width: 1024px) {
           .footer-fullscreen-container {
-            min-height: calc(100vh - 4.5rem);
-            min-height: calc(100dvh - 4.5rem); /* Desktop sticky nav is h-18 (4.5rem / 72px) */
+            min-height: 100vh;
+            min-height: 100dvh;
           }
         }
         /* Tall tablets in portrait mode (iPad, iPad Air, iPad Pro, Android tablets):
@@ -93,7 +93,7 @@ export function Footer() {
       `}</style>
 
       {/* Top Section: Brand Info + Edge Column (Legal) */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pt-5 sm:pt-10 lg:pt-12 pb-3 sm:pb-6">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pt-10 sm:pt-28 lg:pt-28 pb-3 sm:pb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-8" data-stagger="true">
           {/* Brand Left Column */}
           <div className="reveal-up space-y-2 sm:space-y-4 max-w-sm">
