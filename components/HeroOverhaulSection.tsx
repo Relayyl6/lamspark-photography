@@ -345,7 +345,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
   return (
     <section
       style={{ height: "100dvh" }}
-      className="relative w-full min-h-0 sm:min-h-[600px] flex flex-col overflow-hidden pt-[max(5rem,calc(env(safe-area-inset-top)+4.5rem))] sm:pt-[6.5rem] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5 select-none bg-[#FAF7F2] border-b border-[#E8E2D8]"
+      className="relative w-full min-h-0 sm:min-h-[600px] flex flex-col overflow-hidden pt-[max(5.25rem,calc(env(safe-area-inset-top)+4.75rem))] sm:pt-[6.5rem] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5 select-none bg-[#FAF7F2] border-b border-[#E8E2D8]"
     >
       {/* Background Ambience: Subtle warm ivory canvas */}
       <div className="absolute inset-0 bg-[#FAF7F2] pointer-events-none -z-10" />
@@ -353,7 +353,7 @@ export function HeroOverhaulSection({ initialCards = null, initialCopy = null }:
       {/* Mobile-Only Subtle Blurred LAMSPARKS Hue in Nav Slot (Subtly Covered When Nav Appears) */}
       <div
         aria-hidden="true"
-        className="sm:hidden absolute top-2.5 inset-x-2.5 h-13 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
+        className="sm:hidden absolute top-2.5 inset-x-2.5 h-[60px] flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden"
       >
         <div className="absolute inset-x-12 h-7 rounded-full bg-gradient-to-r from-[#C9A96E]/15 via-[#D93829]/8 to-[#C9A96E]/15 blur-lg" />
         <span className="font-display text-[22px] font-semibold uppercase tracking-[0.3em] text-[#6E583D]/45 blur-[1.4px] whitespace-nowrap">

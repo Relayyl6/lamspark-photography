@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
 import { expireStaleHeldBookings, HOLD_DURATION_MS } from "@/lib/booking-hold";
+import { dispatchBookingEmail } from "@/lib/email/mailer";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -107,6 +108,12 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Booking id is required" }, { status: 400 });
     }
 
+    const prevRows = await sql.query(
+      `SELECT id, enquiry_id, status, shoot_start FROM booking WHERE id = $1 LIMIT 1`,
+      [id]
+    );
+    const prev = prevRows[0];
+
     const updated = await sql.query(
       `UPDATE booking
        SET 
@@ -132,7 +139,32 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, booking: updated[0] });
+    const bookingRow = updated[0];
+    if (bookingRow.enquiry_id) {
+      if (status === "completed") {
+        await sql.query(
+          `UPDATE enquiry SET stage = 'delivered', stage_entered_at = NOW(), updated_at = NOW() WHERE id = $1`,
+          [bookingRow.enquiry_id]
+        ).catch(() => {});
+        await dispatchBookingEmail(sql, "receipt_issued", { bookingId: id });
+      } else if (status === "cancelled") {
+        await sql.query(
+          `UPDATE enquiry SET stage = 'lost', closed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+          [bookingRow.enquiry_id]
+        ).catch(() => {});
+        await dispatchBookingEmail(sql, "cancelled", { bookingId: id });
+      } else if (shootStart && prev?.shoot_start && new Date(shootStart).toISOString() !== new Date(prev.shoot_start).toISOString()) {
+        await dispatchBookingEmail(sql, "rescheduled", { bookingId: id });
+      } else if (status && status !== prev?.status) {
+        if (status === "confirmed") {
+          await dispatchBookingEmail(sql, "stage_updated", { bookingId: id });
+        } else if (status === "held") {
+          await dispatchBookingEmail(sql, "hold_started", { bookingId: id });
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, booking: bookingRow });
   } catch (err: any) {
     console.error("[bookings PUT error]", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

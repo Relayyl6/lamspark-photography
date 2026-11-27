@@ -53,7 +53,7 @@ export function Nav() {
           : "bg-[#FAF8F5]/85 backdrop-blur-xl border-white/70"
       }`}
     >
-      <div className="px-3.5 sm:px-6 lg:px-8 h-13 sm:h-16 flex items-center justify-between gap-2.5 sm:gap-4">
+      <div className="px-3.5 sm:px-6 lg:px-8 h-[60px] sm:h-16 flex items-center justify-between gap-2.5 sm:gap-4">
         {/* 1. Left Brand Wordmark */}
         <Link href="/" className="group flex flex-col justify-center shrink-0">
           <span className="font-display text-xl sm:text-2xl lg:text-3xl tracking-tight text-deep font-semibold transition-colors group-hover:text-gold leading-none">

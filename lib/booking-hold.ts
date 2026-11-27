@@ -129,8 +129,17 @@ export async function expireStaleHeldBookings(sql: any): Promise<number> {
              AND p.kind = 'deposit'
              AND p.status IN ('reported', 'confirmed', 'recorded')
          )
-       RETURNING b.id, e.reference_code`
+       RETURNING b.id, e.id as enquiry_id, e.reference_code`
     );
+
+    if (Array.isArray(expiredRows) && expiredRows.length > 0) {
+      const { dispatchBookingEmail } = await import("@/lib/email/mailer");
+      for (const row of expiredRows) {
+        await dispatchBookingEmail(sql, "hold_ended", { enquiryId: row.enquiry_id }).catch((e) =>
+          console.warn("[expireStaleHeldBookings email notice]", e)
+        );
+      }
+    }
 
     return Array.isArray(expiredRows) ? expiredRows.length : 0;
   } catch (err) {

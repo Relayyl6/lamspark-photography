@@ -113,8 +113,8 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
     <>
       <Nav />
       <main className="flex-1 pb-24">
-        {/* 1. Tall Atmospheric Hero Banner with Portfolio Preselect CTA */}
-        <div className="relative w-full min-h-[430px] sm:min-h-[520px] lg:min-h-[580px] flex flex-col justify-center bg-deep text-warm-white pt-32 pb-20 sm:pt-40 sm:pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* 1. Balanced Atmospheric Hero Banner with Portfolio Preselect CTA */}
+        <div className="relative w-full min-h-[290px] sm:min-h-[380px] lg:min-h-[420px] flex flex-col justify-center bg-deep text-warm-white pt-28 pb-12 sm:pt-32 sm:pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
           <div className="absolute inset-0 opacity-35">
             <img
               src={session.heroImage?.replace(/\.jpg$/, ".webp") || session.heroImage}

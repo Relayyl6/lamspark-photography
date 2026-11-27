@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
 import { verifyDepositAccounting } from "@/lib/ai/service";
+import { dispatchBookingEmail } from "@/lib/email/mailer";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -150,6 +151,9 @@ export async function PUT(req: NextRequest) {
         );
       }
 
+      // Send Deposit Confirmed + Crisp Invoice email to Client & Studio Owner
+      await dispatchBookingEmail(sql, "deposit_confirmed", { enquiryId });
+
       return NextResponse.json({
         success: true,
         message: `Deposit verified & recorded with bank reference ${bankReference}. Moved to Deposit Confirmed.`,
@@ -178,6 +182,8 @@ export async function PUT(req: NextRequest) {
          RETURNING *`,
         [enquiryId]
       );
+
+      await dispatchBookingEmail(sql, "stage_updated", { enquiryId });
 
       return NextResponse.json({
         success: true,

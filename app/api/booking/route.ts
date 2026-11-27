@@ -9,6 +9,8 @@ import {
   parseSlotToTimestampsWAT,
 } from "@/lib/booking-hold";
 import { BookingAnswers, SessionTypeSlug } from "@/lib/types";
+import { dispatchBookingEmail } from "@/lib/email/mailer";
+import { formatReadableDateWAT } from "@/lib/email/documents";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -530,32 +532,76 @@ export async function POST(req: NextRequest) {
       bookingRecord = bookingRows[0];
     }
 
-    // 6. If receipt was uploaded, insert payment record
+    // 6. If receipt was uploaded, inspect OCR check and record payment
     let paymentRecord = null;
+    let ocrConfirmed = false;
+    const incomingAiCheck = (body as any).aiCheck || null;
     if (receiptUrl) {
+      const acctStatus = incomingAiCheck?.accountingCheck?.status;
+      const isOfficialAcct = incomingAiCheck?.accountingCheck?.isOfficialAccount !== false;
+      ocrConfirmed =
+        Boolean(incomingAiCheck) &&
+        isOfficialAcct &&
+        (acctStatus === "exact_match" || acctStatus === "full_session_paid");
+
+      const paymentStatus = ocrConfirmed ? "recorded" : "reported";
       const paymentRows = await sql.query(
         `INSERT INTO payment (
-          id, enquiry_id, kind, amount_expected, status, 
-          screenshot_asset_id, ai_check, created_at, updated_at
+          id, enquiry_id, kind, amount_expected, amount_recorded, status,
+          screenshot_asset_id, bank_reference, ai_check, recorded_by, recorded_at, created_at, updated_at
         )
         VALUES (
-          gen_random_uuid(), $1, 'deposit', $2, 'reported',
-          $3, $4, NOW(), NOW()
+          gen_random_uuid(), $1, 'deposit', $2, $3, $4,
+          $5, $6, $7, $8, ${ocrConfirmed ? "NOW()" : "NULL"}, NOW(), NOW()
         )
         RETURNING *`,
         [
           enquiry.id,
           estimate.depositAmount,
+          ocrConfirmed ? incomingAiCheck?.extractedAmount || estimate.depositAmount : null,
+          paymentStatus,
           receiptUrl,
-          JSON.stringify({
-            summary: "Receipt uploaded via Client Booking Wizard. Pending staff bank verification.",
-            extractedAmount: estimate.depositAmount,
-            reference: refCode,
-            status: "pending_verification",
-          }),
+          incomingAiCheck?.reference || refCode,
+          JSON.stringify(
+            incomingAiCheck || {
+              summary: "Receipt uploaded via Client Booking Wizard. Pending staff bank verification.",
+              extractedAmount: estimate.depositAmount,
+              reference: refCode,
+              status: "pending_verification",
+            }
+          ),
+          ocrConfirmed ? "Gemini Vision OCR Verified" : null,
         ]
       );
       paymentRecord = paymentRows[0];
+
+      if (ocrConfirmed) {
+        await sql.query(
+          `UPDATE enquiry SET stage = 'deposit_paid', waiting_on = 'us', stage_entered_at = NOW(), updated_at = NOW() WHERE id = $1`,
+          [enquiry.id]
+        ).catch(() => {});
+        if (bookingRecord) {
+          await sql.query(
+            `UPDATE booking SET status = 'confirmed', updated_at = NOW() WHERE id = $1`,
+            [bookingRecord.id]
+          ).catch(() => {});
+          bookingRecord.status = "confirmed";
+        }
+        enquiry.stage = "deposit_paid";
+      }
+    }
+
+    // 7. Dispatch automatic confirmation / hold / invoice email to Client & Owner
+    if (ocrConfirmed) {
+      await dispatchBookingEmail(sql, "deposit_confirmed", { enquiryId: enquiry.id });
+    } else if (receiptUrl) {
+      await dispatchBookingEmail(sql, "deposit_reported", { enquiryId: enquiry.id });
+    } else if (bookingRecord) {
+      await dispatchBookingEmail(sql, "hold_started", { enquiryId: enquiry.id });
+    } else if (priceAgreed) {
+      await dispatchBookingEmail(sql, "agreed_to_price", { enquiryId: enquiry.id });
+    } else {
+      await dispatchBookingEmail(sql, "stage_updated", { enquiryId: enquiry.id });
     }
 
     const holdAnchor = bookingRecord
@@ -573,7 +619,7 @@ export async function POST(req: NextRequest) {
         booking: bookingRecord,
         payment: paymentRecord,
         holdExpiresAt,
-        stage: initialStage,
+        stage: enquiry.stage || initialStage,
       },
       { status: 201 }
     );
@@ -671,6 +717,11 @@ export async function PATCH(req: NextRequest) {
         );
       }
 
+      const prevSlot = row.shoot_start ? extractDateAndSlotWAT(row.shoot_start, answers) : null;
+      const oldDateLabel = prevSlot?.date
+        ? `${formatReadableDateWAT(prevSlot.date)}${prevSlot.timeSlot ? ` at ${prevSlot.timeSlot}` : ""}`
+        : undefined;
+
       await sql.query(
         `UPDATE enquiry 
          SET answers = jsonb_set(
@@ -680,6 +731,13 @@ export async function PATCH(req: NextRequest) {
          updated_at = NOW()
          WHERE id = $3`,
         [newDate, newTimeSlot, enquiry_id]
+      );
+
+      await dispatchBookingEmail(
+        sql,
+        "rescheduled",
+        { enquiryId: enquiry_id },
+        { oldDateLabel }
       );
 
       return NextResponse.json({
@@ -724,6 +782,8 @@ export async function PATCH(req: NextRequest) {
         [booking_id]
       );
 
+      await dispatchBookingEmail(sql, "hold_started", { enquiryId: enquiry_id });
+
       return NextResponse.json({
         success: true,
         message: "Slot temporarily re-reserved for 20 hours.",
@@ -751,6 +811,8 @@ export async function PATCH(req: NextRequest) {
          WHERE id = $2`,
         [reason || "Cancelled by client via booking self-service link", enquiry_id]
       );
+
+      await dispatchBookingEmail(sql, "cancelled", { enquiryId: enquiry_id });
 
       return NextResponse.json({
         success: true,
@@ -792,34 +854,62 @@ export async function PATCH(req: NextRequest) {
       const amountRecorded = aiCheckData.extractedAmount || body.amountRecorded || null;
       const bankRef = aiCheckData.reference || body.bankReference || cleanRef;
 
+      // Auto-confirm deposit & issue crisp Invoice immediately when Gemini Vision OCR verifies exact/full transfer to Fidelity Bank
+      const acctStatus = aiCheckData?.accountingCheck?.status;
+      const isOfficialAcct = aiCheckData?.accountingCheck?.isOfficialAccount !== false;
+      const ocrConfirmed =
+        isOfficialAcct && (acctStatus === "exact_match" || acctStatus === "full_session_paid");
+
+      const paymentStatus = ocrConfirmed ? "recorded" : "reported";
+      const nextEnquiryStage = ocrConfirmed ? "deposit_paid" : "deposit_reported";
+
       await sql.query(
         `INSERT INTO payment (
-          id, enquiry_id, kind, status, screenshot_asset_id, amount_expected, amount_recorded, bank_reference, ai_check, created_at, updated_at
+          id, enquiry_id, kind, status, screenshot_asset_id, amount_expected, amount_recorded, bank_reference, ai_check, recorded_by, recorded_at, created_at, updated_at
         ) VALUES (
-          gen_random_uuid(), $1, 'deposit', 'reported', $2, $3, $4, $5, $6, NOW(), NOW()
+          gen_random_uuid(), $1, 'deposit', $2, $3, $4, $5, $6, $7, $8, ${ocrConfirmed ? "NOW()" : "NULL"}, NOW(), NOW()
         )`,
         [
           enquiry_id,
+          paymentStatus,
           receiptUrl,
           amountExpected,
           amountRecorded,
           bankRef,
           JSON.stringify(aiCheckData),
+          ocrConfirmed ? "Gemini Vision OCR Verified" : null,
         ]
       );
 
       await sql.query(
         `UPDATE enquiry 
-         SET stage = 'deposit_reported', 
-             waiting_on = 'us', 
+         SET stage = $1, 
+             waiting_on = 'us',
+             stage_entered_at = NOW(),
              updated_at = NOW() 
-         WHERE id = $1`,
-        [enquiry_id]
+         WHERE id = $2`,
+        [nextEnquiryStage, enquiry_id]
+      );
+
+      if (ocrConfirmed && booking_id) {
+        await sql.query(
+          `UPDATE booking SET status = 'confirmed', updated_at = NOW() WHERE id = $1 AND status != 'cancelled'`,
+          [booking_id]
+        );
+      }
+
+      await dispatchBookingEmail(
+        sql,
+        ocrConfirmed ? "deposit_confirmed" : "deposit_reported",
+        { enquiryId: enquiry_id }
       );
 
       return NextResponse.json({
         success: true,
-        message: "Receipt reported successfully. Verification in progress.",
+        ocrConfirmed,
+        message: ocrConfirmed
+          ? "Deposit verified via OCR! Your slot is confirmed and your invoice has been emailed."
+          : "Receipt reported successfully. Verification in progress.",
         aiCheck: aiCheckData,
       });
     }

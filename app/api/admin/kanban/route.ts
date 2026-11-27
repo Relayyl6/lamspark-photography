@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
+import { dispatchBookingEmail } from "@/lib/email/mailer";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -141,6 +142,9 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "id and stage are required" }, { status: 400 });
     }
 
+    const prevRows = await sql.query(`SELECT stage FROM enquiry WHERE id = $1 LIMIT 1`, [id]);
+    const prevStage = prevRows[0]?.stage;
+
     const result = await sql.query(
       `UPDATE enquiry
        SET 
@@ -175,6 +179,27 @@ export async function PUT(req: NextRequest) {
          WHERE enquiry_id = $1 AND status = 'held'`,
         [id]
       ).catch(() => {});
+    }
+
+    if (stage === "delivered" || stage === "closed") {
+      await sql.query(
+        `UPDATE booking
+         SET status = 'completed',
+             updated_at = NOW()
+         WHERE enquiry_id = $1 AND status NOT IN ('cancelled', 'expired')`,
+        [id]
+      ).catch(() => {});
+    }
+
+    // Dispatch tailored Kanban update / Invoice / Official Receipt email to client & studio owner
+    if (prevStage !== stage) {
+      const emailEvent =
+        stage === "deposit_paid"
+          ? "deposit_confirmed"
+          : stage === "delivered" || stage === "closed"
+          ? "receipt_issued"
+          : "stage_updated";
+      await dispatchBookingEmail(sql, emailEvent, { enquiryId: id });
     }
 
     return NextResponse.json({ enquiry: result[0] });
@@ -249,6 +274,8 @@ export async function POST(req: NextRequest) {
         purposeText || "Studio Concierge Lead",
       ]
     );
+
+    await dispatchBookingEmail(sql, "stage_updated", { enquiryId: newEnquiry[0].id });
 
     return NextResponse.json({ enquiry: newEnquiry[0] }, { status: 201 });
   } catch (err: any) {
