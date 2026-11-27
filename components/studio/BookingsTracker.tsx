@@ -25,8 +25,32 @@ import {
   AlertTriangle,
   X,
   Mail,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { extractDateAndSlotWAT, parseSlotToTimestampsWAT } from "@/lib/booking-hold";
 import { StudioCalendarManager } from "./StudioCalendarManager";
+
+const STUDIO_TIME_SLOTS = [
+  { id: "09:30 AM", label: "09:30 AM", period: "Morning" },
+  { id: "11:00 AM", label: "11:00 AM", period: "Morning" },
+  { id: "01:30 PM", label: "01:30 PM", period: "Afternoon" },
+  { id: "03:00 PM", label: "03:00 PM", period: "Afternoon" },
+  { id: "04:30 PM", label: "04:30 PM", period: "Afternoon" },
+  { id: "05:30 PM", label: "05:30 PM", period: "Evening" },
+];
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+function normalizeSlot(s: string): string {
+  return (s || "").trim().toUpperCase().replace(/^0/, "");
+}
+
+function normalizeDate(d: string): string {
+  return (d || "").trim().slice(0, 10);
+}
 
 interface BookingItem {
   id: string;
@@ -65,6 +89,12 @@ export function BookingsTracker() {
   const [detailBooking, setDetailBooking] = useState<BookingItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleSlot, setRescheduleSlot] = useState("");
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [bookedSlots, setBookedSlots] = useState<Array<{ date: string; timeSlot: string; status: string }>>([]);
+  const [lockedSlots, setLockedSlots] = useState<Array<{ date: string; timeSlot: string; reason?: string }>>([]);
+  const [blockedDays, setBlockedDays] = useState<string[]>([]);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -72,6 +102,128 @@ export function BookingsTracker() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Pre-seed date, slot, and calendar month from the selected booking when opening Reschedule modal
+  useEffect(() => {
+    if (!selectedBooking) return;
+    const parsed = selectedBooking.shoot_start
+      ? extractDateAndSlotWAT(selectedBooking.shoot_start)
+      : { date: "", timeSlot: "" };
+    if (parsed.date && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)) {
+      setRescheduleDate(parsed.date);
+      const [y, m] = parsed.date.split("-").map((v) => parseInt(v, 10));
+      setCalendarMonth(new Date(y, m - 1, 1));
+    } else {
+      setRescheduleDate("");
+      setCalendarMonth(new Date());
+    }
+    setRescheduleSlot("");
+  }, [selectedBooking]);
+
+  // Fetch live studio availability for the active calendar month while modal is open
+  useEffect(() => {
+    if (!selectedBooking) return;
+    let active = true;
+    const monthParam = `${calendarMonth.getFullYear()}-${pad2(calendarMonth.getMonth() + 1)}`;
+    setIsLoadingAvailability(true);
+    fetch(`/api/availability?month=${monthParam}&_t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        if (data.success) {
+          setBookedSlots(
+            (data.bookedSlots || []).map((b: any) => ({
+              date: normalizeDate(b.date),
+              timeSlot: b.timeSlot,
+              status: b.status,
+            }))
+          );
+          setLockedSlots(
+            (data.lockedSlots || []).map((l: any) => ({
+              date: normalizeDate(l.date),
+              timeSlot: l.timeSlot,
+              reason: l.reason,
+            }))
+          );
+          setBlockedDays((data.blockedDays || []).map((d: any) => normalizeDate(d.date || d)));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setIsLoadingAvailability(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedBooking, calendarMonth]);
+
+  const calendarDays = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });
+
+    const days: {
+      dateStr: string;
+      dayNum: number;
+      isCurrentMonth: boolean;
+      isPast: boolean;
+      isBlocked: boolean;
+      openCount: number;
+    }[] = [];
+
+    for (let i = 0; i < firstDay; i++) {
+      days.push({ dateStr: "", dayNum: 0, isCurrentMonth: false, isPast: true, isBlocked: false, openCount: 0 });
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${pad2(month + 1)}-${pad2(d)}`;
+      const isPast = dateStr < todayStr;
+      const isBlocked = blockedDays.includes(dateStr);
+      const takenCount =
+        bookedSlots.filter((b) => b.date === dateStr).length +
+        lockedSlots.filter((l) => l.date === dateStr).length;
+      const openCount = isPast || isBlocked ? 0 : Math.max(0, STUDIO_TIME_SLOTS.length - takenCount);
+      days.push({ dateStr, dayNum: d, isCurrentMonth: true, isPast, isBlocked, openCount });
+    }
+
+    return days;
+  }, [calendarMonth, bookedSlots, lockedSlots, blockedDays]);
+
+  const getSlotStatus = (dateStr: string, slotLabel: string) => {
+    if (!dateStr) return { available: true, badge: "" };
+    const normDate = normalizeDate(dateStr);
+    const normSlot = normalizeSlot(slotLabel);
+    const currentSlot = selectedBooking?.shoot_start
+      ? extractDateAndSlotWAT(selectedBooking.shoot_start)
+      : null;
+
+    if (
+      currentSlot &&
+      normalizeDate(currentSlot.date) === normDate &&
+      normalizeSlot(currentSlot.timeSlot) === normSlot
+    ) {
+      return { available: false, badge: "Current" };
+    }
+    if (blockedDays.includes(normDate)) {
+      return { available: false, badge: "Closed" };
+    }
+    const locked = lockedSlots.find(
+      (l) => normalizeDate(l.date) === normDate && normalizeSlot(l.timeSlot) === normSlot
+    );
+    if (locked) return { available: false, badge: "Reserved" };
+    const booked = bookedSlots.find(
+      (b) => normalizeDate(b.date) === normDate && normalizeSlot(b.timeSlot) === normSlot
+    );
+    if (booked) {
+      return { available: false, badge: booked.status === "held" ? "Held (20h)" : "Booked" };
+    }
+    return { available: true, badge: "" };
+  };
 
   useEffect(() => {
     if (selectedBooking || bookingToDelete || detailBooking) {
@@ -171,12 +323,15 @@ export function BookingsTracker() {
   // Handle rescheduling
   async function handleReschedule(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedBooking || !rescheduleDate) return;
+    if (!selectedBooking || !rescheduleDate || !rescheduleSlot) return;
 
     setIsUpdating(true);
     try {
-      const start = new Date(rescheduleDate);
-      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 hours shoot
+      const { start: startIso, end: endIso } = parseSlotToTimestampsWAT(
+        rescheduleDate,
+        rescheduleSlot,
+        120
+      );
 
       const res = await fetch("/api/admin/bookings", {
         method: "PUT",
@@ -184,8 +339,8 @@ export function BookingsTracker() {
         body: JSON.stringify({
           id: selectedBooking.id,
           status: "rescheduled",
-          shootStart: start.toISOString(),
-          shootEnd: end.toISOString(),
+          shootStart: startIso,
+          shootEnd: endIso,
         }),
       });
       const data = await res.json();
@@ -196,17 +351,18 @@ export function BookingsTracker() {
               ? {
                   ...b,
                   status: "rescheduled",
-                  shoot_start: start.toISOString(),
-                  shoot_end: end.toISOString(),
+                  shoot_start: startIso,
+                  shoot_end: endIso,
                   reschedule_count: b.reschedule_count + 1,
                 }
               : b
           )
         );
-        setStatusMessage(`Session rescheduled to ${start.toLocaleDateString()}`);
-        setTimeout(() => setStatusMessage(null), 3000);
+        setStatusMessage(`Session rescheduled to ${rescheduleDate} · ${rescheduleSlot}`);
+        setTimeout(() => setStatusMessage(null), 3500);
         setSelectedBooking(null);
         setRescheduleDate("");
+        setRescheduleSlot("");
       }
     } catch (err) {
       console.error("Failed to reschedule:", err);
@@ -514,10 +670,10 @@ export function BookingsTracker() {
           onClick={() => setSelectedBooking(null)}
         >
           <div
-            className="bg-warm-white rounded-2xl border border-line max-w-md w-full p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4 max-h-[94vh] overflow-y-auto"
+            className="bg-warm-white rounded-3xl border border-line max-w-lg w-full shadow-2xl animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-line pb-3">
+            <div className="flex items-center justify-between border-b border-line px-5 py-4 shrink-0">
               <div>
                 <h3 className="font-display text-lg sm:text-xl text-deep font-semibold">
                   Reschedule Shoot
@@ -527,32 +683,185 @@ export function BookingsTracker() {
                 </span>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedBooking(null)}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border border-line flex items-center justify-center text-muted hover:text-deep"
+                className="w-8 h-8 rounded-full border border-line bg-cream/60 flex items-center justify-center text-muted hover:text-deep transition-colors"
+                aria-label="Close modal"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleReschedule} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-deep uppercase tracking-wider mb-1">
-                  Select New Shoot Date &amp; Time *
-                </label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={rescheduleDate}
-                  onChange={(e) => setRescheduleDate(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-line bg-cream/40 text-xs font-body text-deep focus:border-gold focus:outline-none"
-                />
+            <form onSubmit={handleReschedule} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
+                {/* Custom Atelier Month Calendar */}
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-[#F8F4EE] border border-line space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-gold font-bold block">
+                        Atelier Availability
+                      </span>
+                      <h4 className="font-display text-lg text-deep font-medium leading-tight">
+                        {calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                      </h4>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCalendarMonth(
+                            (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+                          )
+                        }
+                        className="w-8 h-8 rounded-full border border-line bg-white hover:border-deep flex items-center justify-center text-deep transition-colors"
+                        aria-label="Previous month"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCalendarMonth(
+                            (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+                          )
+                        }
+                        className="w-8 h-8 rounded-full border border-line bg-white hover:border-deep flex items-center justify-center text-deep transition-colors"
+                        aria-label="Next month"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+                      <span key={day} className="text-[10px] uppercase tracking-wider font-bold text-muted py-0.5">
+                        {day}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {calendarDays.map((cd, idx) => {
+                      if (!cd.isCurrentMonth) {
+                        return <div key={idx} className="w-full aspect-square" />;
+                      }
+
+                      const isSelected = rescheduleDate === cd.dateStr;
+                      const isUnavailable = cd.isPast || cd.isBlocked;
+
+                      return (
+                        <button
+                          key={cd.dateStr}
+                          type="button"
+                          disabled={isUnavailable}
+                          onClick={() => {
+                            setRescheduleDate(cd.dateStr);
+                            setRescheduleSlot("");
+                          }}
+                          className={`w-full aspect-square rounded-xl flex flex-col items-center justify-center text-xs sm:text-sm font-semibold transition-all ${
+                            isSelected
+                              ? "bg-deep text-warm-white shadow-md ring-2 ring-gold"
+                              : isUnavailable
+                              ? "text-muted/30 cursor-not-allowed bg-transparent"
+                              : "hover:bg-white text-deep hover:text-gold border border-transparent hover:border-line"
+                          }`}
+                        >
+                          <span className="leading-none">{cd.dayNum}</span>
+                          {!isUnavailable && !isSelected && (
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full mt-1 ${
+                                cd.openCount > 0 ? "bg-emerald-500" : "bg-line"
+                              }`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pt-2 border-t border-line/60 flex items-center justify-between text-[11px] text-muted">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                        <span>Open</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-deep inline-block" />
+                        <span>Selected</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-line inline-block" />
+                        <span>Full</span>
+                      </span>
+                    </div>
+                    {isLoadingAvailability && (
+                      <span className="text-[10px] font-mono text-gold flex items-center gap-1">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> Syncing...
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Studio Time Slots */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-semibold text-deep uppercase tracking-wider">
+                      Select New Time Slot (WAT) *
+                    </label>
+                    {rescheduleDate && (
+                      <span className="text-xs text-gold font-medium">
+                        {new Date(rescheduleDate + "T12:00:00").toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    )}
+                  </div>
+
+                  {!rescheduleDate ? (
+                    <div className="p-3.5 rounded-xl border border-dashed border-line text-center text-xs text-muted">
+                      Choose a date on the calendar above to view studio time slots.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {STUDIO_TIME_SLOTS.map((slot) => {
+                        const { available, badge } = getSlotStatus(rescheduleDate, slot.id);
+                        const isSelected = normalizeSlot(rescheduleSlot) === normalizeSlot(slot.id);
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            disabled={!available}
+                            onClick={() => setRescheduleSlot(slot.id)}
+                            className={`p-2.5 rounded-xl text-xs font-semibold transition-all border flex flex-col items-center justify-center ${
+                              isSelected
+                                ? "bg-deep text-warm-white border-deep shadow-sm"
+                                : !available
+                                ? "bg-cream/50 text-muted/45 border-transparent cursor-not-allowed line-through"
+                                : "bg-white text-brown border-line hover:border-gold hover:text-deep"
+                            }`}
+                          >
+                            <span>{slot.label}</span>
+                            {!available && (
+                              <span className="text-[9px] font-mono uppercase no-underline mt-0.5 text-rose-700/80">
+                                {badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-muted font-body leading-relaxed">
+                  Per studio policy, date changes within 72 hours of the original shoot date carry no penalty when coordinated with the Maitama studio assistant.
+                </p>
               </div>
 
-              <p className="text-[11px] text-muted font-body leading-relaxed">
-                Per studio policy, date changes within 72 hours of the original shoot date carry no penalty when coordinated with the Maitama studio assistant.
-              </p>
-
-              <div className="pt-3 border-t border-line flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
+              <div className="px-5 py-3.5 border-t border-line bg-warm-white shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setSelectedBooking(null)}
@@ -562,8 +871,8 @@ export function BookingsTracker() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUpdating}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all text-center"
+                  disabled={isUpdating || !rescheduleDate || !rescheduleSlot}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-deep text-warm-white text-xs font-body font-semibold hover:bg-gold hover:text-deep transition-all text-center disabled:opacity-50"
                 >
                   {isUpdating ? "Saving..." : "Confirm New Date"}
                 </button>
