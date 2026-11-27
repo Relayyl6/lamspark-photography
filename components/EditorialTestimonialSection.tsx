@@ -12,33 +12,6 @@ export interface TrustStatItem {
   iconName?: string;
 }
 
-const DEFAULT_TRUST_STATS: TrustStatItem[] = [
-  {
-    value: "10+",
-    label: "Years of Empathy",
-    desc: "Gentle pacing, calm studio lighting, and patient direction built around every family's comfort.",
-    iconName: "Clock",
-  },
-  {
-    value: "1,200+",
-    label: "Heirloom Keepsakes",
-    desc: "Archival fine-art frames, museum-grade prints, and timeless digital collections delivered with care.",
-    iconName: "Award",
-  },
-  {
-    value: "100%",
-    label: "Unhurried Pace",
-    desc: "Dedicated time buffers for nursing, outfit changes, toddlers, and quiet moments—never rushed.",
-    iconName: "Heart",
-  },
-  {
-    value: "4.98★",
-    label: "Client Reverence",
-    desc: "Trusted by discerning Abuja & diaspora families for melanin tonal fidelity and discretion.",
-    iconName: "Sparkles",
-  },
-];
-
 function renderStatIcon(iconName?: string) {
   const key = (iconName || "").trim().toLowerCase();
   const cls = "w-4 h-4 stroke-[1.75]";
@@ -78,7 +51,7 @@ export function EditorialTestimonialSection({
     hasInitialTestimonials ? initialTestimonials! : []
   );
   const [stats, setStats] = useState<TrustStatItem[]>(
-    hasInitialStats ? initialStats! : DEFAULT_TRUST_STATS
+    hasInitialStats ? initialStats! : []
   );
   const [loading, setLoading] = useState(!hasInitialTestimonials);
   const [currentIndex, setCurrentIndex] = useState(0);

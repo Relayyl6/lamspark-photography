@@ -41,80 +41,6 @@ type Photo = {
 type TextBlock = { lead: string; body: string; x: number; cta?: boolean };
 type Note = { text: string; x: number; y: number; arrow?: "up" | "down" };
 
-// Canonical default photos loaded immediately with zero flash of loading skeleton
-const CANONICAL_PHOTOS: Photo[] = [
-  {
-    src: "/images/client/weddings_1.webp",
-    ar: 0.72,
-    cluster: 0,
-    z: 3,
-    title: "Sacred Unions",
-    sub: "Wedding ceremonies",
-    d: { x: 30, y: 235, w: 200, rot: -3 },
-    m: { x: 12, y: 96, w: 118, rot: -3 },
-  },
-  {
-    src: "/images/client/weddings_2.webp",
-    ar: 0.72,
-    cluster: 0,
-    z: 1,
-    title: "Cultural Heritage",
-    sub: "Aso-Oke & grace",
-    d: { x: 178, y: 90, w: 185, rot: 0.5 },
-    m: { x: 100, y: 20, w: 118, rot: 0.5 },
-  },
-  {
-    src: "/images/client/events_1.webp",
-    ar: 0.72,
-    cluster: 0,
-    z: 2,
-    title: "Milestone Galas",
-    sub: "Unscripted warmth",
-    d: { x: 345, y: 150, w: 205, rot: 3 },
-    m: { x: 200, y: 110, w: 130, rot: 3 },
-  },
-  {
-    src: "/images/client/corporate_1.webp",
-    ar: 0.72,
-    cluster: 1,
-    z: 2,
-    title: "Executive Gravitas",
-    sub: "Commanding presence",
-    d: { x: 960, y: 220, w: 210, rot: -2 },
-    m: { x: 20, y: 100, w: 130, rot: -2 },
-  },
-  {
-    src: "/images/client/events_3.webp",
-    ar: 0.72,
-    cluster: 1,
-    z: 1,
-    title: "Authentic Moments",
-    sub: "Life, as it happens",
-    d: { x: 1210, y: 140, w: 220, rot: 2.5 },
-    m: { x: 180, y: 40, w: 140, rot: 2 },
-  },
-  {
-    src: "/images/client/corporate_3.webp",
-    ar: 0.72,
-    cluster: 2,
-    z: 2,
-    title: "Dynasty & Legacy",
-    sub: "Portraits of honor",
-    d: { x: 1780, y: 220, w: 200, rot: -1.5 },
-    m: { x: 20, y: 110, w: 130, rot: -1.5 },
-  },
-  {
-    src: "/images/client/corporate_6.webp",
-    ar: 0.72,
-    cluster: 2,
-    z: 1,
-    title: "Studio Dignity",
-    sub: "Tailored composure",
-    d: { x: 1990, y: 80, w: 195, rot: 2 },
-    m: { x: 170, y: 30, w: 130, rot: 2 },
-  },
-];
-
 // One text block per cluster
 const TEXTS: TextBlock[] = [
   {
@@ -172,7 +98,7 @@ function Arrow({ dir, s }: { dir: "up" | "down"; s: number }) {
   );
 }
 
-export function PhilosophyGallery() {
+export function PhilosophyGallery({ initialPhotos = [] }: { initialPhotos?: Photo[] }) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -182,7 +108,7 @@ export function PhilosophyGallery() {
   const wheelLock = useRef(0);
   const idxRef = useRef(0);
 
-  const [photos, setPhotos] = useState<Photo[]>(CANONICAL_PHOTOS);
+  const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
   const [idx, setIdx] = useState(0);
   const [size, setSize] = useState<{ w: number; h: number }>({
     w: typeof window !== "undefined" ? window.innerWidth : 1200,
@@ -323,8 +249,9 @@ export function PhilosophyGallery() {
       if (!el) return;
       const t = Math.min(n - 1, Math.max(0, i));
       const scrollable = el.offsetHeight - (window.innerHeight - navH);
+      const denom = Math.max(1, n - 1);
       const targetTop =
-        el.getBoundingClientRect().top + window.scrollY - navH + (scrollable * t) / (n - 1);
+        el.getBoundingClientRect().top + window.scrollY - navH + (scrollable * t) / denom;
       window.scrollTo({ top: targetTop, behavior: "smooth" });
     },
     [navH, n]

@@ -35,6 +35,7 @@ async function getHomeData() {
       "hero_kicker",
       "hero_headline",
       "hero_subtitle",
+      "philosophy_photos",
       "about_stats",
       "site_testimonials",
     ];
@@ -115,6 +116,7 @@ async function getHomeData() {
       },
       aboutStats,
       testimonials,
+      philosophyPhotos: Array.isArray(map.philosophy_photos) ? map.philosophy_photos : [],
       galleryPhotos,
     };
   } catch (e) {
@@ -123,6 +125,7 @@ async function getHomeData() {
       hero: { cards: null, copy: null },
       aboutStats: undefined,
       testimonials: undefined,
+      philosophyPhotos: [],
       galleryPhotos: [],
     };
   }
@@ -165,7 +168,7 @@ export default async function HomePage() {
         <LiveCalendarSection />
 
         {/* Brand Line & Editorial Philosophy Section */}
-        <PhilosophyGallery />
+        <PhilosophyGallery initialPhotos={homeData.philosophyPhotos} />
 
         {/* Unboxed Full-Width Curated Collections with Category Filter & Infinite Scroll */}
         <CuratedCollectionsSection
