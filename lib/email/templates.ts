@@ -196,17 +196,14 @@ function wrapAtelierEmail({
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     @media only screen and (max-width: 559px) {
-      .email-body { padding: 14px 8px !important; }
+      .email-body { padding: 12px 8px !important; }
       .email-card { padding: 22px 18px !important; border-radius: 14px !important; }
       .email-h1 { font-size: 22px !important; }
       .email-cta { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding: 13px 16px !important; }
       .doc-card { padding: 18px 14px !important; }
-    }
-    @media only screen and (min-width: 560px) {
-      .doc-card { padding: 26px 24px !important; }
-      .doc-split { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 18px !important; }
-      .doc-col { flex: 1 1 0 !important; width: auto !important; max-width: none !important; margin-bottom: 0 !important; }
-      .doc-right { text-align: right !important; }
+      .doc-split-cell { display: block !important; width: 100% !important; text-align: left !important; padding-left: 0 !important; padding-right: 0 !important; padding-bottom: 12px !important; }
+      .doc-hide-sm { display: none !important; }
+      .doc-total-label { text-align: left !important; padding-left: 0 !important; }
     }
   </style>
 </head>
