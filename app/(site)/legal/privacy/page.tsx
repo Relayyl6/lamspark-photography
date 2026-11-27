@@ -6,7 +6,7 @@ export default function PrivacyPolicyPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 pt-24 sm:pt-28 pb-16 sm:pb-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-12">
           <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-2">
             Legal & Compliance

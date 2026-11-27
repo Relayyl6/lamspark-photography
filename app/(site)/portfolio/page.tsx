@@ -226,7 +226,7 @@ export default function PortfolioPage() {
         {/* CURATED GALLERY SECTION */}
         <section
           id="gallery-section"
-          className="pb-14 pt-6 sm:pb-20 sm:pt-10 lg:pt-12 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          className="pb-14 pt-24 sm:pb-20 sm:pt-28 lg:pt-28 lg:pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
         >
           {/* Header & Filter Controls */}
           <div className="flex flex-col gap-5 mb-8 pb-6 border-b border-line reveal-down">

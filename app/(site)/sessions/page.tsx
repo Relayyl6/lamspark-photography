@@ -42,7 +42,7 @@ export default async function SessionsIndexPage() {
   return (
     <>
       <Nav />
-      <main className="flex-1 pt-6 sm:pt-10 pb-16 sm:pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 pt-24 sm:pt-28 pb-16 sm:pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Editorial Header - Tightened Spacing */}
         <div className="max-w-3xl mb-6 sm:mb-8 reveal-down">
           <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-semibold block mb-2">

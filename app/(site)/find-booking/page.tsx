@@ -182,7 +182,7 @@ export default function FindBookingPage() {
     <div className="min-h-screen bg-[#FDFBF8] text-[#1A1410] flex flex-col font-sans selection:bg-[#C9A96E]/20">
       <Nav />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-10 sm:pb-16">
         <div className="space-y-10 animate-fade-up">
           {/* Header */}
           <div className="text-center max-w-2xl mx-auto space-y-2">

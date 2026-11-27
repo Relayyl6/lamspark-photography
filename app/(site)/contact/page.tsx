@@ -69,7 +69,7 @@ export default function ContactPage() {
       {/* Editorial Navigation */}
       <Nav />
 
-      <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-8 sm:py-12 lg:py-16 flex items-center">
+      <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 pt-24 sm:pt-28 pb-8 sm:pb-12 lg:pb-16 flex items-center">
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
           
           {/* LEFT COLUMN: Editorial Contact Hero & Direct Action Pills */}

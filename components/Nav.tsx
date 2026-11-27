@@ -1,58 +1,17 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Menu, X, ChevronDown, Sparkles, BookOpen, Camera, Shield, User } from "lucide-react";
-import { motion } from "framer-motion";
 
 export function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<"sessions" | null>(null);
-  const [isVisible, setIsVisible] = useState(true);
-  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Mobile accordion states
   const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
 
   const navRef = useRef<HTMLElement>(null);
-
-  const showNav = useCallback(() => {
-    setIsVisible(true);
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => {
-      setIsVisible((prev) => {
-        if (mobileMenuOpen || openDropdown !== null) return true;
-        return false;
-      });
-    }, 3200);
-  }, [mobileMenuOpen, openDropdown]);
-
-  useEffect(() => {
-    // Keep nav visible at initial page load, then exit shortly after
-    showNav();
-
-    const handleTouchOrPointer = () => {
-      showNav();
-    };
-
-    window.addEventListener("pointerdown", handleTouchOrPointer, { passive: true });
-    window.addEventListener("touchstart", handleTouchOrPointer, { passive: true });
-    window.addEventListener("scroll", handleTouchOrPointer, { passive: true });
-
-    return () => {
-      window.removeEventListener("pointerdown", handleTouchOrPointer);
-      window.removeEventListener("touchstart", handleTouchOrPointer);
-      window.removeEventListener("scroll", handleTouchOrPointer);
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
-  }, [showNav]);
-
-  useEffect(() => {
-    if (mobileMenuOpen || openDropdown !== null) {
-      setIsVisible(true);
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    }
-  }, [mobileMenuOpen, openDropdown]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -87,26 +46,11 @@ export function Nav() {
   ];
 
   return (
-    <motion.header
-      initial={{ y: 0, opacity: 1 }}
-      animate={{
-        y: isVisible || mobileMenuOpen ? 0 : -90,
-        opacity: isVisible || mobileMenuOpen ? 1 : 0,
-      }}
-      transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      onMouseEnter={() => {
-        setIsVisible(true);
-        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-      }}
-      onMouseLeave={() => {
-        if (!mobileMenuOpen && !openDropdown) {
-          hideTimerRef.current = setTimeout(() => setIsVisible(false), 2400);
-        }
-      }}
+    <header
       className={`fixed top-2.5 sm:top-4 inset-x-2.5 sm:inset-x-6 max-w-7xl mx-auto z-50 rounded-2xl sm:rounded-full border shadow-[0_12px_36px_rgba(20,16,13,0.08)] transition-colors duration-300 ${
         mobileMenuOpen
           ? "bg-[#FAF8F5] border-[#E5DDD2]"
-          : "bg-[#FAF8F5]/80 backdrop-blur-xl border-white/70"
+          : "bg-[#FAF8F5]/85 backdrop-blur-xl border-white/70"
       }`}
     >
       <div className="px-3.5 sm:px-6 lg:px-8 h-13 sm:h-16 flex items-center justify-between gap-2.5 sm:gap-4">
@@ -336,6 +280,6 @@ export function Nav() {
           </div>
         </div>
       )}
-    </motion.header>
+    </header>
   );
 }

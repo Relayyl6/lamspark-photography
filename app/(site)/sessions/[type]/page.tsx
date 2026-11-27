@@ -84,7 +84,7 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
       <Nav />
       <main className="flex-1 pb-24">
         {/* 1. Hero Image & One-Line Promise */}
-        <div className="relative w-full bg-deep text-warm-white py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="relative w-full bg-deep text-warm-white pt-28 pb-16 sm:pt-32 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
           <div className="absolute inset-0 opacity-25">
             <img
               src={session.heroImage?.replace(/\.jpg$/, ".webp") || session.heroImage}

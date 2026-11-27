@@ -1046,7 +1046,7 @@ function BookingWizard() {
     <div className="min-h-screen bg-[#FDFBF8] text-[#1A1410] flex flex-col font-sans selection:bg-[#C9A96E]/20">
       <Nav />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8 sm:pb-12">
         {/* Loading Spinner for Existing Booking Query */}
         {isLoadingBooking && (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">
