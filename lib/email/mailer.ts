@@ -1,6 +1,7 @@
 import nodemailer, { type Transporter, type SendMailOptions } from "nodemailer";
 import { extractDateAndSlotWAT, HOLD_DURATION_MS } from "@/lib/booking-hold";
 import { SESSION_TYPES } from "@/lib/catalog/seed";
+import { getLiveSessionTypes } from "@/lib/catalog/live";
 import { getSiteUrl } from "@/lib/metadata";
 import { buildBookingIcs } from "./ics";
 import { buildPrintableDocumentPage } from "./documents";
@@ -138,7 +139,10 @@ export async function loadBookingEmailContext(
       r.booking_updated_at || r.booking_created_at || r.enquiry_created_at
     ).getTime();
 
-    const sessionMeta = SESSION_TYPES[r.session_type as SessionTypeSlug];
+    const liveSessions = await getLiveSessionTypes().catch(() => SESSION_TYPES);
+    const sessionMeta =
+      liveSessions[r.session_type as SessionTypeSlug] ||
+      SESSION_TYPES[r.session_type as SessionTypeSlug];
     const sessionTitle = sessionMeta?.title || String(r.session_type || "Portrait Session");
 
     const depositPercent = Number(r.estimate_deposit_percent) || (r.session_type === "maternity" || r.session_type === "motherhood-bundle" ? 50 : 70);
@@ -233,6 +237,7 @@ export async function dispatchBookingEmail(
     const rendered = renderBookingEmail(event, ctx, options);
 
     const attachments: SendMailOptions["attachments"] = [];
+    let icalEvent: SendMailOptions["icalEvent"] | undefined;
     if (rendered.icsMethod) {
       const icsContent = buildBookingIcs(ctx, {
         method: rendered.icsMethod,
@@ -240,11 +245,11 @@ export async function dispatchBookingEmail(
         senderEmail: smtp.user,
       });
       if (icsContent) {
-        attachments.push({
+        icalEvent = {
           filename: `lamsparks-${ctx.referenceCode.toLowerCase()}.ics`,
+          method: rendered.icsMethod,
           content: icsContent,
-          contentType: `text/calendar; charset=utf-8; method=${rendered.icsMethod}`,
-        });
+        };
       }
     }
 
@@ -268,6 +273,7 @@ export async function dispatchBookingEmail(
           subject: rendered.subject,
           text: rendered.text,
           html: rendered.html,
+          ...(icalEvent ? { icalEvent } : {}),
           attachments,
         });
         result.sentToClient = true;
@@ -291,6 +297,7 @@ export async function dispatchBookingEmail(
           subject: `[Studio Alert] ${rendered.subject} — ${ctx.client.name}`,
           text: `STUDIO OWNER NOTIFICATION (${event})\nClient: ${ctx.client.name} (${ctx.client.whatsapp} / ${ctx.client.email || "no email"})\n\n${rendered.text}`,
           html: ownerHtml,
+          ...(icalEvent ? { icalEvent } : {}),
           attachments,
         });
         result.sentToOwner = true;

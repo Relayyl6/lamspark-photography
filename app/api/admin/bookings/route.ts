@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { neon } from "@neondatabase/serverless";
-import { expireStaleHeldBookings, HOLD_DURATION_MS } from "@/lib/booking-hold";
+import { expireStaleHeldBookings, extractDateAndSlotWAT, HOLD_DURATION_MS } from "@/lib/booking-hold";
 import { dispatchBookingEmail } from "@/lib/email/mailer";
+import { formatReadableDateWAT } from "@/lib/email/documents";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -141,6 +142,27 @@ export async function PUT(req: NextRequest) {
 
     const bookingRow = updated[0];
     if (bookingRow.enquiry_id) {
+      const shootTimeChanged =
+        Boolean(shootStart) &&
+        (!prev?.shoot_start ||
+          new Date(shootStart).toISOString() !== new Date(prev.shoot_start).toISOString());
+
+      if (shootStart && (status === "rescheduled" || shootTimeChanged)) {
+        const newSlot = extractDateAndSlotWAT(shootStart);
+        if (newSlot.date && newSlot.timeSlot) {
+          await sql.query(
+            `UPDATE enquiry
+             SET answers = jsonb_set(
+               jsonb_set(COALESCE(answers, '{}'::jsonb), '{selectedDate}', to_jsonb($1::text)),
+               '{timeSlot}', to_jsonb($2::text)
+             ),
+             updated_at = NOW()
+             WHERE id = $3`,
+            [newSlot.date, newSlot.timeSlot, bookingRow.enquiry_id]
+          ).catch(() => {});
+        }
+      }
+
       if (status === "completed") {
         await sql.query(
           `UPDATE enquiry SET stage = 'delivered', stage_entered_at = NOW(), updated_at = NOW() WHERE id = $1`,
@@ -153,8 +175,12 @@ export async function PUT(req: NextRequest) {
           [bookingRow.enquiry_id]
         ).catch(() => {});
         await dispatchBookingEmail(sql, "cancelled", { bookingId: id });
-      } else if (shootStart && prev?.shoot_start && new Date(shootStart).toISOString() !== new Date(prev.shoot_start).toISOString()) {
-        await dispatchBookingEmail(sql, "rescheduled", { bookingId: id });
+      } else if (status === "rescheduled" || shootTimeChanged) {
+        const oldSlot = prev?.shoot_start ? extractDateAndSlotWAT(prev.shoot_start) : null;
+        const oldDateLabel = oldSlot?.date
+          ? `${formatReadableDateWAT(oldSlot.date)}${oldSlot.timeSlot ? ` at ${oldSlot.timeSlot}` : ""}`
+          : undefined;
+        await dispatchBookingEmail(sql, "rescheduled", { bookingId: id }, { oldDateLabel });
       } else if (status && status !== prev?.status) {
         if (status === "confirmed") {
           await dispatchBookingEmail(sql, "stage_updated", { bookingId: id });

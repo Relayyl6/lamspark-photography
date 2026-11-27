@@ -61,6 +61,15 @@ function buildBookingSummaryLines(ctx: BookingEmailContext): { label: string; va
   if (ctx.answers?.peopleCount) {
     details.push({ label: "Participants", value: `${ctx.answers.peopleCount} person(s)` });
   }
+  if (ctx.answers?.age || ctx.answers?.ages) {
+    details.push({ label: "Age(s)", value: String(ctx.answers.age || ctx.answers.ages) });
+  }
+  if (ctx.answers?.guestCount) {
+    details.push({ label: "Guest Count", value: String(ctx.answers.guestCount) });
+  }
+  if (ctx.answers?.coupleNames) {
+    details.push({ label: "Couple", value: String(ctx.answers.coupleNames) });
+  }
   if (ctx.purposeText) {
     details.push({ label: "Purpose", value: ctx.purposeText });
   }
@@ -183,7 +192,7 @@ export function buildCrispFinancialDocumentInner(
         </div>
         <div style="font-size:12px;color:#374151;line-height:1.6;">
           ${serviceDetails
-            .filter((d) => ["Date", "Time", "Location", "Outfits", "Participants"].includes(d.label))
+            .filter((d) => ["Session", "Package", "Date", "Time", "Location", "Outfits", "Participants", "Age(s)", "Guest Count", "Couple"].includes(d.label))
             .map((d) => `<strong>${esc(d.label)}:</strong> ${esc(d.value)}`)
             .join("<br/>")}
         </div>

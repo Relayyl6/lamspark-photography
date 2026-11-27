@@ -397,6 +397,9 @@ export async function POST(req: NextRequest) {
       referenceCode?.trim() ||
       "LS-" + Math.random().toString(36).substring(2, 6).toUpperCase();
 
+    const effectivePackageId = (body as any).packageId || answers?.packageId;
+    const effectivePackageName = (body as any).packageName || answers?.packageName;
+
     // 1. Calculate live estimate against Neon session overrides
     const [livePackages, liveSessions] = await Promise.all([
       getLivePackages(sessionType),
@@ -405,10 +408,14 @@ export async function POST(req: NextRequest) {
     const estimate = calculateEstimate(
       sessionType,
       answers || {},
-      answers?.packageId,
+      effectivePackageId,
       livePackages,
       liveSessions[sessionType]
     );
+    const resolvedPackageName =
+      effectivePackageName ||
+      livePackages.find((p) => p.id === effectivePackageId)?.name ||
+      undefined;
 
     // 2. Insert or update client in DB
     const clientRows = await sql.query(
@@ -443,6 +450,8 @@ export async function POST(req: NextRequest) {
 
     const normalizedAnswers = {
       ...answers,
+      ...(effectivePackageId ? { packageId: effectivePackageId } : {}),
+      ...(resolvedPackageName ? { packageName: resolvedPackageName } : {}),
       agreedPrice: estimate.total,
       ...(effectiveDate ? { selectedDate: effectiveDate } : {}),
       ...(effectiveTimeSlot ? { timeSlot: effectiveTimeSlot } : {}),
