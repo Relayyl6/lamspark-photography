@@ -129,18 +129,20 @@ function renderBookingSummaryCard(ctx: BookingEmailContext): string {
   const timeLabel = ctx.shootTimeSlot || ctx.answers?.timeSlot || "To be finalized";
 
   return `
-  <div style="border-top:1px solid #E8E1D3;margin-top:26px;padding-top:18px;">
+  <div style="border-top:1px solid #E8E1D3;margin-top:22px;padding-top:14px;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
       <tr>
-        <td width="50%" valign="top" style="padding:0 12px 12px 0;">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:3px;">Session</div>
-          <div style="font-size:13.5px;font-weight:600;color:#1A1410;line-height:1.45;">
+        <td style="padding:8px 0;border-bottom:1px solid #EFEAE0;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:2px;">Session</div>
+          <div style="font-size:14px;font-weight:600;color:#1A1410;line-height:1.45;">
             ${esc(ctx.sessionTitle)}${ctx.answers?.packageName ? ` <span style="font-weight:400;color:#6E6359;">· ${esc(ctx.answers.packageName)}</span>` : ""}
           </div>
         </td>
-        <td width="50%" valign="top" style="padding:0 0 12px 12px;">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:3px;">Date &amp; Time</div>
-          <div style="font-size:13.5px;font-weight:600;color:#1A1410;line-height:1.45;">
+      </tr>
+      <tr>
+        <td style="padding:8px 0;border-bottom:1px solid #EFEAE0;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:2px;">Date &amp; Time</div>
+          <div style="font-size:14px;font-weight:600;color:#1A1410;line-height:1.45;">
             ${esc(dateLabel)} · <span style="font-weight:400;color:#6E6359;">${esc(timeLabel)} WAT</span>
           </div>
         </td>
@@ -149,20 +151,18 @@ function renderBookingSummaryCard(ctx: BookingEmailContext): string {
         ctx.estimate.total > 0
           ? `
       <tr>
-        <td width="50%" valign="top" style="padding:2px 12px 4px 0;">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:3px;">Total Investment</div>
-          <div style="font-size:13.5px;font-weight:700;color:#1A1410;">${formatNaira(ctx.estimate.total)}</div>
-        </td>
-        <td width="50%" valign="top" style="padding:2px 0 4px 12px;">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:3px;">Deposit (${ctx.estimate.depositPercent}%)</div>
-          <div style="font-size:13.5px;font-weight:700;color:#B8893A;">${formatNaira(ctx.estimate.depositAmount)}</div>
+        <td style="padding:8px 0;border-bottom:1px solid #EFEAE0;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#8A7E72;margin-bottom:2px;">Investment</div>
+          <div style="font-size:14px;font-weight:700;color:#1A1410;line-height:1.45;">
+            ${formatNaira(ctx.estimate.total)} <span style="font-weight:600;color:#B8893A;">· Deposit (${ctx.estimate.depositPercent}%): ${formatNaira(ctx.estimate.depositAmount)}</span>
+          </div>
         </td>
       </tr>`
           : ""
       }
     </table>
 
-    <div style="margin-top:12px;font-size:12px;color:#7A6E63;line-height:1.5;">
+    <div style="margin-top:12px;font-size:12.5px;color:#7A6E63;line-height:1.5;">
       Full scope, location &amp; notes: <a href="${esc(bookingUrl)}" style="color:#B8893A;font-weight:600;text-decoration:underline;">Open live booking &rarr;</a>
     </div>
   </div>`;
@@ -194,30 +194,45 @@ function wrapAtelierEmail({
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    @media only screen and (max-width: 559px) {
+      .email-body { padding: 14px 8px !important; }
+      .email-card { padding: 22px 18px !important; border-radius: 14px !important; }
+      .email-h1 { font-size: 22px !important; }
+      .email-cta { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding: 13px 16px !important; }
+      .doc-card { padding: 18px 14px !important; }
+    }
+    @media only screen and (min-width: 560px) {
+      .doc-card { padding: 26px 24px !important; }
+      .doc-split { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 18px !important; }
+      .doc-col { flex: 1 1 0 !important; width: auto !important; max-width: none !important; margin-bottom: 0 !important; }
+      .doc-right { text-align: right !important; }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:28px 14px;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1A1410;">
-  <div style="max-width:580px;margin:0 auto;">
+<body class="email-body" style="margin:0;padding:24px 12px;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1A1410;-webkit-text-size-adjust:100%;">
+  <div style="max-width:580px;width:100%;margin:0 auto;">
     <!-- Top Brand Mark -->
-    <div style="padding:0 4px 16px 4px;">
-      <span style="font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:700;color:#1A1410;letter-spacing:-0.01em;">LAMSPARKS</span><span style="font-family:Georgia,serif;font-size:21px;font-weight:700;color:#C9A96E;">.</span>
+    <div style="padding:0 4px 14px 4px;">
+      <span style="font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;color:#1A1410;letter-spacing:-0.01em;">LAMSPARKS</span><span style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:#C9A96E;">.</span>
     </div>
 
     <!-- Clean Warm Ivory Editorial Card -->
-    <div style="background:#FAF8F4;border-radius:18px;padding:34px 30px;">
-      <div style="font-size:10.5px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#B8893A;margin-bottom:10px;">
+    <div class="email-card" style="background:#FAF8F4;border-radius:16px;padding:30px 26px;box-sizing:border-box;">
+      <div style="font-size:10.5px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#B8893A;margin-bottom:8px;">
         ${esc(eyebrow)} · REF ${esc(ctx.referenceCode)}
       </div>
 
-      <h1 style="margin:0 0 14px 0;font-size:27px;line-height:1.14;font-weight:900;letter-spacing:-0.02em;text-transform:uppercase;color:#1A1410;">
+      <h1 class="email-h1" style="margin:0 0 12px 0;font-size:26px;line-height:1.15;font-weight:900;letter-spacing:-0.02em;text-transform:uppercase;color:#1A1410;">
         ${esc(headlinePrefix)}<span style="color:#B8893A;">${esc(headlineAccent)}</span>
       </h1>
 
-      <p style="margin:0 0 24px 0;font-size:15px;line-height:1.65;color:#443A32;">
+      <p style="margin:0 0 22px 0;font-size:14.5px;line-height:1.62;color:#443A32;">
         ${esc(introText)}
       </p>
 
       <div style="margin:0;">
-        <a href="${esc(ctaHref)}" style="display:inline-block;background:#C9A96E;color:#1A1410;text-decoration:none;font-size:12.5px;font-weight:800;letter-spacing:0.06em;padding:13px 26px;border-radius:12px;">
+        <a href="${esc(ctaHref)}" class="email-cta" style="display:inline-block;background:#C9A96E;color:#1A1410;text-decoration:none;font-size:12.5px;font-weight:800;letter-spacing:0.06em;padding:13px 24px;border-radius:12px;">
           ${esc(ctaLabel)} &rarr;
         </a>
       </div>
@@ -226,7 +241,7 @@ function wrapAtelierEmail({
 
       ${
         bankNotice && ctx.estimate.depositAmount > 0
-          ? `<div style="border-left:2.5px solid #C9A96E;padding:3px 0 3px 14px;margin:18px 0 0 0;font-size:12.5px;line-height:1.6;color:#443A32;">
+          ? `<div style="border-left:2.5px solid #C9A96E;padding:3px 0 3px 12px;margin:18px 0 0 0;font-size:12.5px;line-height:1.6;color:#443A32;">
               <strong>Deposit Transfer:</strong> ${formatNaira(ctx.estimate.depositAmount)} to <strong>${esc(STUDIO_BUSINESS_INFO.bankName)} · ${esc(STUDIO_BUSINESS_INFO.accountNumber)}</strong> (${esc(STUDIO_BUSINESS_INFO.accountName)}), then upload proof on your booking link.
             </div>`
           : ""
@@ -237,10 +252,10 @@ function wrapAtelierEmail({
       </p>
     </div>
 
-    ${extraHtml ? `<div style="margin-top:26px;">${extraHtml}</div>` : ""}
+    ${extraHtml ? `<div style="margin-top:20px;">${extraHtml}</div>` : ""}
 
     <!-- Footer Signoff -->
-    <div style="padding:16px 6px 4px 6px;font-size:11.5px;color:#8A7E72;line-height:1.6;">
+    <div style="padding:14px 4px 4px 4px;font-size:11.5px;color:#8A7E72;line-height:1.6;">
       ${esc(STUDIO_BUSINESS_INFO.name)} · Abuja, Nigeria · ${esc(STUDIO_BUSINESS_INFO.phone)}
     </div>
   </div>
@@ -452,8 +467,8 @@ export function wrapOwnerCopyHtml(
 ): string {
   const siteUrl = getSiteUrl();
   const banner = `
-  <div style="max-width:640px;margin:0 auto 14px auto;background:#1A1410;color:#FAF7F2;border-radius:12px;padding:14px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12.5px;line-height:1.55;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:0.18em;color:#C9A96E;text-transform:uppercase;margin-bottom:4px;">
+  <div style="max-width:580px;width:100%;box-sizing:border-box;margin:0 auto 12px auto;background:#1A1410;color:#FAF7F2;border-radius:12px;padding:13px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;line-height:1.55;overflow-wrap:anywhere;">
+    <div style="font-size:10px;font-weight:800;letter-spacing:0.16em;color:#C9A96E;text-transform:uppercase;margin-bottom:4px;">
       STUDIO OWNER COPY · EVENT: ${esc(event.toUpperCase())} (${esc(ctx.stage.toUpperCase())})
     </div>
     <div><strong>Client:</strong> ${esc(ctx.client.name)} · <strong>WhatsApp:</strong> ${esc(ctx.client.whatsapp)} · <strong>Email:</strong> ${esc(ctx.client.email || "Not provided")}</div>

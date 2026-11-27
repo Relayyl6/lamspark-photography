@@ -144,77 +144,67 @@ export function buildCrispFinancialDocumentInner(
   const serviceDetails = buildBookingSummaryLines(ctx);
 
   return `
-<div style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:12px;padding:28px 26px;color:#111827;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:640px;margin:0 auto;">
-  <!-- Header Row -->
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
-    <tr>
-      <td valign="top" style="padding-bottom:14px;">
-        <div style="font-size:22px;font-weight:800;letter-spacing:0.02em;color:#111111;margin:0 0 6px 0;">${docTitle}</div>
-        <div style="font-size:12px;color:#4B5563;line-height:1.55;">
-          <strong>${isReceipt ? "Receipt No" : "Invoice No"}:</strong> ${esc(docNo)}<br/>
-          <strong>Booking Ref:</strong> ${esc(ctx.referenceCode)}<br/>
-          <strong>Date Issued:</strong> ${esc(issuedDate)}
-          ${ctx.payment.bankReference ? `<br/><strong>Bank Ref:</strong> ${esc(ctx.payment.bankReference)}` : ""}
-        </div>
-      </td>
-      <td valign="top" align="right" style="padding-bottom:14px;">
-        <div style="font-size:17px;font-weight:800;color:#111111;margin:0 0 4px 0;">${esc(STUDIO_BUSINESS_INFO.name)}</div>
-        <div style="font-size:11.5px;color:#4B5563;line-height:1.55;">
-          ${esc(STUDIO_BUSINESS_INFO.shortLocation)}<br/>
-          Tel: ${esc(STUDIO_BUSINESS_INFO.displayPhone)}<br/>
-          IG/FB: ${esc(STUDIO_BUSINESS_INFO.socialHandle)}<br/>
-          ${esc(STUDIO_BUSINESS_INFO.email)}
-        </div>
-        <div style="margin-top:8px;font-size:11px;font-weight:800;letter-spacing:0.08em;color:${statusColor};">
-          STATUS: ${statusBadgeText}
-        </div>
-      </td>
-    </tr>
-  </table>
+<div class="doc-card" style="background:#FFFFFF;border:1px solid #E5E7EB;border-radius:12px;padding:18px 16px;color:#111827;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:620px;width:100%;box-sizing:border-box;margin:0 auto;overflow-wrap:break-word;">
+  <!-- Responsive Header (Stacks cleanly on narrow phones, splits left/right on desktop & print) -->
+  <div class="doc-split" style="font-size:0;">
+    <div class="doc-col" style="display:inline-block;width:100%;max-width:270px;vertical-align:top;margin-bottom:14px;font-size:12px;">
+      <div style="font-size:20px;font-weight:800;letter-spacing:0.02em;color:#111111;margin:0 0 4px 0;">${docTitle}</div>
+      <div style="font-size:10.5px;font-weight:800;letter-spacing:0.08em;color:${statusColor};margin-bottom:8px;">
+        STATUS: ${statusBadgeText}
+      </div>
+      <div style="font-size:12px;color:#4B5563;line-height:1.6;">
+        <strong>${isReceipt ? "Receipt No" : "Invoice No"}:</strong> ${esc(docNo)}<br/>
+        <strong>Booking Ref:</strong> ${esc(ctx.referenceCode)}<br/>
+        <strong>Date Issued:</strong> ${esc(issuedDate)}
+        ${ctx.payment.bankReference ? `<br/><strong>Bank Ref:</strong> ${esc(ctx.payment.bankReference)}` : ""}
+      </div>
+    </div>
+    <div class="doc-col doc-right" style="display:inline-block;width:100%;max-width:270px;vertical-align:top;margin-bottom:10px;font-size:12px;">
+      <div style="font-size:16px;font-weight:800;color:#111111;margin:0 0 3px 0;">${esc(STUDIO_BUSINESS_INFO.name)}</div>
+      <div style="font-size:11.5px;color:#4B5563;line-height:1.58;overflow-wrap:anywhere;word-break:break-word;">
+        ${esc(STUDIO_BUSINESS_INFO.shortLocation)}<br/>
+        Tel: ${esc(STUDIO_BUSINESS_INFO.displayPhone)}<br/>
+        IG/FB: ${esc(STUDIO_BUSINESS_INFO.socialHandle)}<br/>
+        ${esc(STUDIO_BUSINESS_INFO.email)}
+      </div>
+    </div>
+  </div>
 
-  <div style="border-top:2px solid #111111;margin:10px 0 18px 0;"></div>
+  <div style="border-top:2px solid #111111;margin:8px 0 16px 0;"></div>
 
-  <!-- Bill To & Service Details -->
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:20px;">
-    <tr>
-      <td width="48%" valign="top" style="padding-right:12px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6B7280;margin-bottom:6px;">
-          BILL TO
-        </div>
-        <div style="font-size:13.5px;font-weight:700;color:#111111;margin-bottom:3px;">
-          ${esc(ctx.client.name)}
-        </div>
-        <div style="font-size:12px;color:#4B5563;line-height:1.6;">
-          ${ctx.client.email ? `${esc(ctx.client.email)}<br/>` : ""}
-          ${esc(ctx.client.whatsapp)}
-        </div>
-      </td>
-      <td width="52%" valign="top" align="right" style="padding-left:12px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6B7280;margin-bottom:6px;">
-          SERVICE DETAILS
-        </div>
-        <div style="font-size:12px;color:#374151;line-height:1.6;">
-          ${serviceDetails
-            .filter((d) => ["Session", "Package", "Date", "Time", "Location", "Outfits", "Participants", "Age(s)", "Guest Count", "Couple"].includes(d.label))
-            .map((d) => `<strong>${esc(d.label)}:</strong> ${esc(d.value)}`)
-            .join("<br/>")}
-        </div>
-      </td>
-    </tr>
-  </table>
+  <!-- Bill To & Service Details (Fluid stacked blocks on mobile, 2 columns on desktop & print) -->
+  <div class="doc-split" style="font-size:0;margin-bottom:16px;">
+    <div class="doc-col" style="display:inline-block;width:100%;max-width:265px;vertical-align:top;margin-bottom:14px;font-size:12px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6B7280;margin-bottom:5px;">
+        BILL TO
+      </div>
+      <div style="font-size:13.5px;font-weight:700;color:#111111;margin-bottom:3px;">
+        ${esc(ctx.client.name)}
+      </div>
+      <div style="font-size:12px;color:#4B5563;line-height:1.58;overflow-wrap:anywhere;word-break:break-word;">
+        ${ctx.client.email ? `${esc(ctx.client.email)}<br/>` : ""}
+        ${esc(ctx.client.whatsapp)}
+      </div>
+    </div>
+    <div class="doc-col doc-right" style="display:inline-block;width:100%;max-width:275px;vertical-align:top;margin-bottom:4px;font-size:12px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6B7280;margin-bottom:5px;">
+        SERVICE DETAILS
+      </div>
+      <div style="font-size:12px;color:#374151;line-height:1.6;">
+        ${serviceDetails
+          .filter((d) => ["Session", "Package", "Date", "Time", "Location", "Outfits", "Participants", "Age(s)", "Guest Count", "Couple"].includes(d.label))
+          .map((d) => `<strong>${esc(d.label)}:</strong> ${esc(d.value)}`)
+          .join("<br/>")}
+      </div>
+    </div>
+  </div>
 
-  <!-- Itemised Table -->
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:14px;">
+  <!-- Clean 2-Column Itemised Table (Leaves full room for description on mobile) -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:12px;">
     <thead>
       <tr style="border-top:1px solid #D1D5DB;border-bottom:1.5px solid #111111;background:#F9FAFB;">
-        <th align="left" style="padding:9px 8px;font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4B5563;">SERVICE DESCRIPTION</th>
-        <th align="center" style="padding:9px 8px;font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4B5563;width:48px;">QTY</th>
-        ${
-          !isReceipt
-            ? `<th align="right" style="padding:9px 8px;font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4B5563;width:95px;">RATE</th>`
-            : ""
-        }
-        <th align="right" style="padding:9px 8px;font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4B5563;width:105px;">AMOUNT</th>
+        <th align="left" style="padding:9px 8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4B5563;">SERVICE</th>
+        <th align="right" style="padding:9px 8px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4B5563;white-space:nowrap;">AMOUNT</th>
       </tr>
     </thead>
     <tbody>
@@ -222,14 +212,11 @@ export function buildCrispFinancialDocumentInner(
         .map(
           (row) => `
         <tr style="border-bottom:1px solid #E5E7EB;">
-          <td style="padding:10px 8px;font-size:12.5px;font-weight:600;color:#111827;">${esc(row.description)}</td>
-          <td align="center" style="padding:10px 8px;font-size:12.5px;color:#374151;">${row.qty}</td>
-          ${
-            !isReceipt
-              ? `<td align="right" style="padding:10px 8px;font-size:12.5px;color:#374151;">${row.rate > 0 ? formatNaira(row.rate) : "Custom"}</td>`
-              : ""
-          }
-          <td align="right" style="padding:10px 8px;font-size:12.5px;font-weight:600;color:#111827;">${row.amount > 0 ? formatNaira(row.amount) : "Bespoke"}</td>
+          <td style="padding:10px 8px;font-size:12.5px;font-weight:600;color:#111827;line-height:1.45;">
+            ${esc(row.description)}
+            ${row.qty > 1 ? `<div style="font-size:11px;font-weight:400;color:#6B7280;">Qty: ${row.qty}</div>` : ""}
+          </td>
+          <td align="right" valign="top" style="padding:10px 8px;font-size:12.5px;font-weight:700;color:#111827;white-space:nowrap;">${row.amount > 0 ? formatNaira(row.amount) : "Bespoke"}</td>
         </tr>`
         )
         .join("")}
@@ -246,7 +233,7 @@ export function buildCrispFinancialDocumentInner(
         ? ctx.purposeText.trim()
         : "";
       return note || ctx.feelingText
-        ? `<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11.5px;color:#4B5563;line-height:1.55;">
+        ? `<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:#4B5563;line-height:1.55;">
             ${note ? `<div><strong>Notes:</strong> ${esc(note)}</div>` : ""}
             ${ctx.feelingText ? `<div><strong>Mood / Vision:</strong> ${esc(ctx.feelingText)}</div>` : ""}
           </div>`
@@ -254,54 +241,53 @@ export function buildCrispFinancialDocumentInner(
     })()
   }
 
-  <!-- Totals Block -->
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border-top:1.5px solid #111111;padding-top:10px;">
+  <!-- Clean Left-Label / Right-Value Totals Block -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;border-top:1.5px solid #111111;">
     ${
       isReceipt
         ? `
       <tr>
-        <td align="right" style="padding:12px 8px 4px 8px;font-size:13px;font-weight:700;color:#374151;">Deposit Received (${ctx.estimate.depositPercent}%):</td>
-        <td align="right" width="130" style="padding:12px 8px 4px 8px;font-size:13px;color:#111827;">${formatNaira(depositPaid)}</td>
+        <td align="left" style="padding:11px 6px 4px 2px;font-size:12.5px;font-weight:600;color:#374151;">Deposit Received (${ctx.estimate.depositPercent}%)</td>
+        <td align="right" style="padding:11px 2px 4px 6px;font-size:13px;color:#111827;white-space:nowrap;">${formatNaira(depositPaid)}</td>
       </tr>
       <tr>
-        <td align="right" style="padding:4px 8px 10px 8px;font-size:14.5px;font-weight:800;color:#111111;">Total Paid:</td>
-        <td align="right" width="130" style="padding:4px 8px 10px 8px;font-size:15px;font-weight:800;color:#15803D;">${totalAmount > 0 ? formatNaira(effectivePaid) : "Settled"}</td>
+        <td align="left" style="padding:5px 6px 8px 2px;font-size:14.5px;font-weight:800;color:#111111;">Total Paid:</td>
+        <td align="right" style="padding:5px 2px 8px 6px;font-size:15px;font-weight:800;color:#15803D;white-space:nowrap;">${totalAmount > 0 ? formatNaira(effectivePaid) : "Settled"}</td>
       </tr>`
         : `
       <tr>
-        <td align="right" style="padding:10px 8px 3px 8px;font-size:12.5px;color:#4B5563;">Total Investment:</td>
-        <td align="right" width="130" style="padding:10px 8px 3px 8px;font-size:12.5px;font-weight:700;color:#111827;">${totalAmount > 0 ? formatNaira(totalAmount) : "Custom Quote"}</td>
+        <td align="left" style="padding:10px 6px 3px 2px;font-size:12.5px;color:#4B5563;">Total Investment</td>
+        <td align="right" style="padding:10px 2px 3px 6px;font-size:12.5px;font-weight:700;color:#111827;white-space:nowrap;">${totalAmount > 0 ? formatNaira(totalAmount) : "Custom Quote"}</td>
       </tr>
       <tr>
-        <td align="right" style="padding:3px 8px;font-size:12.5px;color:#15803D;font-weight:600;">Deposit Paid (${ctx.estimate.depositPercent}%):</td>
-        <td align="right" width="130" style="padding:3px 8px;font-size:12.5px;color:#15803D;font-weight:700;">${formatNaira(effectivePaid)}</td>
+        <td align="left" style="padding:3px 6px 3px 2px;font-size:12.5px;color:#15803D;font-weight:600;">Deposit Paid (${ctx.estimate.depositPercent}%)</td>
+        <td align="right" style="padding:3px 2px 3px 6px;font-size:12.5px;color:#15803D;font-weight:700;white-space:nowrap;">${formatNaira(effectivePaid)}</td>
       </tr>
       <tr>
-        <td align="right" style="padding:6px 8px 10px 8px;font-size:14px;font-weight:800;color:#111111;">Balance Due on Shoot Day:</td>
-        <td align="right" width="130" style="padding:6px 8px 10px 8px;font-size:14px;font-weight:800;color:#111111;">${formatNaira(balanceDue)}</td>
+        <td align="left" style="padding:6px 6px 8px 2px;font-size:14px;font-weight:800;color:#111111;">Balance Due (Shoot Day)</td>
+        <td align="right" style="padding:6px 2px 8px 6px;font-size:14px;font-weight:800;color:#111111;white-space:nowrap;">${formatNaira(balanceDue)}</td>
       </tr>`
     }
   </table>
 
   <!-- Payment & Terms -->
-  <div style="border-top:1px solid #E5E7EB;margin-top:10px;padding-top:14px;font-size:11.5px;color:#4B5563;line-height:1.6;">
+  <div style="border-top:1px solid #E5E7EB;margin-top:8px;padding-top:12px;font-size:11.5px;color:#4B5563;line-height:1.6;">
     ${
       !isReceipt && balanceDue > 0
-        ? `<div><strong>Balance Payment Account:</strong> ${esc(STUDIO_BUSINESS_INFO.bankName)} · <strong>${esc(STUDIO_BUSINESS_INFO.accountNumber)}</strong> (${esc(STUDIO_BUSINESS_INFO.accountName)})</div>`
+        ? `<div style="margin-bottom:4px;"><strong>Balance Account:</strong> ${esc(STUDIO_BUSINESS_INFO.bankName)} · <strong>${esc(STUDIO_BUSINESS_INFO.accountNumber)}</strong> (${esc(STUDIO_BUSINESS_INFO.accountName)})</div>`
         : ""
     }
     <div><strong>Terms:</strong> ${esc(STUDIO_BUSINESS_INFO.terms)}</div>
-    <div style="margin-top:8px;">
-      <a href="${esc(bookingUrl)}" style="color:#111111;font-weight:700;text-decoration:underline;">View Live Booking Portal (${esc(ctx.referenceCode)})</a>
-      &nbsp;&middot;&nbsp;
-      <a href="${esc(docUrl)}" style="color:#111111;font-weight:700;text-decoration:underline;">Open Printable ${isReceipt ? "Receipt" : "Invoice"}</a>
+    <div style="margin-top:10px;">
+      <a href="${esc(bookingUrl)}" style="display:inline-block;margin:2px 12px 2px 0;color:#111111;font-weight:700;text-decoration:underline;">View Live Booking (${esc(ctx.referenceCode)})</a>
+      <a href="${esc(docUrl)}" style="display:inline-block;margin:2px 0;color:#111111;font-weight:700;text-decoration:underline;">Open Printable ${isReceipt ? "Receipt" : "Invoice"}</a>
     </div>
   </div>
 
   <!-- Centered Footer -->
-  <div style="text-align:center;margin-top:20px;padding-top:14px;border-top:1px solid #F3F4F6;font-size:11.5px;color:#6B7280;line-height:1.6;">
+  <div style="text-align:center;margin-top:18px;padding-top:12px;border-top:1px solid #F3F4F6;font-size:11.5px;color:#6B7280;line-height:1.55;">
     Thank you for choosing ${esc(STUDIO_BUSINESS_INFO.name)}.<br/>
-    If you have any questions about this document, reach us anytime on WhatsApp (${esc(STUDIO_BUSINESS_INFO.phone)}).
+    Questions? WhatsApp us anytime (${esc(STUDIO_BUSINESS_INFO.phone)}).
   </div>
 </div>`;
 }
@@ -314,6 +300,8 @@ export function buildPrintableDocumentPage(
   ctx: BookingEmailContext,
   kind: "invoice" | "receipt"
 ): string {
+  const siteUrl = getSiteUrl();
+  const bookingUrl = `${siteUrl}/book?ref=${encodeURIComponent(ctx.referenceCode)}`;
   const title =
     kind === "receipt"
       ? `OFFICIAL RECEIPT - ${ctx.referenceCode} | ${STUDIO_BUSINESS_INFO.name}`
@@ -327,17 +315,28 @@ export function buildPrintableDocumentPage(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${esc(title)}</title>
   <style>
-    body { margin: 0; padding: 24px 14px; background: #F3F4F6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .toolbar { max-width: 640px; margin: 0 auto 14px auto; display: flex; justify-content: flex-end; gap: 8px; }
-    .print-btn { background: #111111; color: #FFFFFF; border: none; padding: 9px 18px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 12px 10px 28px 10px; background: #F3F4F6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .toolbar { max-width: 620px; margin: 0 auto 12px auto; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .back-link { font-size: 12px; font-weight: 600; color: #374151; text-decoration: none; }
+    .print-btn { background: #111111; color: #FFFFFF; border: none; padding: 9px 16px; border-radius: 999px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+    @media (min-width: 560px), print {
+      body { padding: 24px 16px; }
+      .doc-card { padding: 28px 26px !important; }
+      .doc-split { display: flex !important; justify-content: space-between !important; align-items: flex-start !important; gap: 18px !important; }
+      .doc-col { flex: 1 1 0 !important; width: auto !important; max-width: none !important; margin-bottom: 0 !important; }
+      .doc-right { text-align: right !important; }
+    }
     @media print {
       body { background: #FFFFFF; padding: 0; }
       .toolbar { display: none !important; }
+      .doc-card { border: none !important; padding: 8px 4px !important; }
     }
   </style>
 </head>
 <body>
   <div class="toolbar">
+    <a class="back-link" href="${esc(bookingUrl)}">&larr; Back to Booking</a>
     <button class="print-btn" onclick="window.print()">Print / Save PDF</button>
   </div>
   ${inner}
