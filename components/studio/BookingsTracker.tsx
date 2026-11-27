@@ -28,7 +28,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { extractDateAndSlotWAT, parseSlotToTimestampsWAT } from "@/lib/booking-hold";
+import { extractDateAndSlotWAT, parseSlotToTimestampsWAT } from "@/lib/booking-time";
 import { StudioCalendarManager } from "./StudioCalendarManager";
 
 const STUDIO_TIME_SLOTS = [
