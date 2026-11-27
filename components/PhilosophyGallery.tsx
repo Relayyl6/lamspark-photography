@@ -188,7 +188,7 @@ export function PhilosophyGallery() {
     w: typeof window !== "undefined" ? window.innerWidth : 1200,
     h: 560,
   });
-  const [navH, setNavH] = useState(64);
+  const [navH, setNavH] = useState(92);
   const [reduceMotion, setReduceMotion] = useState(false);
 
   // Fetch live photos from Neon DB (with canonical fallbacks)
@@ -213,11 +213,19 @@ export function PhilosophyGallery() {
   useEffect(() => {
     const nav = document.querySelector("header") as HTMLElement | null;
     if (!nav) return;
-    const update = () => setNavH(nav.offsetHeight);
+    const update = () => {
+      const rect = nav.getBoundingClientRect();
+      // Account for elevated/floating header top offset + clearance gap
+      setNavH(Math.ceil(rect.bottom) + 12);
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(nav);
-    return () => ro.disconnect();
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
   }, []);
 
   useEffect(() => {
@@ -484,8 +492,7 @@ export function PhilosophyGallery() {
                   }`}
                   aria-current={isActive ? "true" : undefined}
                 >
-                  <span className="hidden sm:inline mr-1 opacity-70">{chap.kicker}:</span>
-                  <span>{chap.label}</span>
+                  <span>{chap.kicker}</span>
                 </button>
               );
             })}

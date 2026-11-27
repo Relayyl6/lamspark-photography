@@ -8,7 +8,6 @@ import {
   Camera,
   Maximize2,
   SlidersHorizontal,
-  Database,
   CheckCircle2,
   ChevronRight,
 } from "lucide-react";
@@ -144,7 +143,6 @@ export default function PortfolioPage() {
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [isLiveFromDb, setIsLiveFromDb] = useState<boolean>(false);
 
   // Close mobile active card when clicking outside
   useEffect(() => {
@@ -166,7 +164,6 @@ export default function PortfolioPage() {
         const data = await res.json();
         if (data.success && Array.isArray(data.galleries)) {
           setGalleries(data.galleries);
-          setIsLiveFromDb(data.source === "neon_database");
 
           // Flatten gallery items into uniform GalleryImage format
           const flattened: GalleryImage[] = [];
@@ -236,12 +233,6 @@ export default function PortfolioPage() {
                   <span className="font-body text-xs uppercase tracking-[0.24em] text-gold font-bold">
                     Visual Archive
                   </span>
-                  {isLiveFromDb && (
-                    <span className="inline-flex items-center gap-1 text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-950/20 text-emerald-700 border border-emerald-500/30">
-                      <Database className="w-2.5 h-2.5 text-emerald-600" />
-                      <span>Neon PostgreSQL Live</span>
-                    </span>
-                  )}
                 </div>
                 <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl text-deep font-normal tracking-tight">
                   Curated Works &amp; Events
