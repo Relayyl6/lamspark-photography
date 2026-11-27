@@ -2,16 +2,23 @@ import type { Metadata } from "next";
 
 /**
  * Resolves the canonical public origin for metadataBase, OpenGraph, and Twitter URLs.
- * Automatically respects Vercel production/preview domains instead of falling back to Render.
+ * Automatically ignores leftover placeholder values (e.g. "your-project.vercel.app")
+ * and resolves the live Vercel domain so social/WhatsApp previews always fetch valid images.
  */
 export function getSiteUrl(): string {
-  const raw =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "https://lamsparks.vercel.app");
+  const configured = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
+  const isPlaceholder =
+    !configured ||
+    /your-project|your-vercel|example\.com/i.test(configured) ||
+    (Boolean(process.env.VERCEL) && /localhost/i.test(configured));
+
+  const raw = !isPlaceholder
+    ? configured
+    : process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://lamsparks.vercel.app";
 
   return raw.replace(/\/+$/, "");
 }
@@ -27,6 +34,7 @@ interface BuildMetadataInput {
   imageAlt?: string;
   keywords?: string[];
   noIndex?: boolean;
+  absoluteTitle?: boolean;
 }
 
 export function buildPageMetadata({
@@ -37,13 +45,15 @@ export function buildPageMetadata({
   imageAlt = "LamSparks Photography Atelier · Abuja, Nigeria",
   keywords,
   noIndex = false,
+  absoluteTitle = false,
 }: BuildMetadataInput): Metadata {
   const siteUrl = getSiteUrl();
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const fullUrl = `${siteUrl}${normalizedPath === "/" ? "" : normalizedPath}`;
+  const fullOgTitle = title.includes("LamSparks") ? title : `${title} | ${SITE_NAME}`;
 
   return {
-    title,
+    title: absoluteTitle ? { absolute: title } : title,
     description,
     ...(keywords ? { keywords } : {}),
     alternates: {
@@ -69,7 +79,7 @@ export function buildPageMetadata({
           },
         }),
     openGraph: {
-      title: `${title} | ${SITE_NAME}`,
+      title: fullOgTitle,
       description,
       url: fullUrl,
       siteName: `${SITE_NAME} · Abuja`,
@@ -77,7 +87,7 @@ export function buildPageMetadata({
       type: "website",
       images: [
         {
-          url: image,
+          url: `${siteUrl}${image.startsWith("/") ? image : `/${image}`}`,
           width: 1200,
           height: 630,
           type: "image/jpeg",
@@ -87,11 +97,11 @@ export function buildPageMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | ${SITE_NAME}`,
+      title: fullOgTitle,
       description,
       images: [
         {
-          url: image,
+          url: `${siteUrl}${image.startsWith("/") ? image : `/${image}`}`,
           alt: imageAlt,
         },
       ],

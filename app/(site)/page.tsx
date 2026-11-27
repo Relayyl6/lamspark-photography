@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "LamSparks Photography | Bespoke Portrait & Event Studio in Abuja",
+  absoluteTitle: true,
   description:
     "Private portrait & event studio in Maitama, Abuja by Osemene. Explore Toddler, Maternity, Newborn, Family, Executive & Wedding collections, view live calendar slots, and reserve your shoot online.",
   path: "/",
