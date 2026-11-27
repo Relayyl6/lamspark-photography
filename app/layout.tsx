@@ -2,17 +2,18 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { WelcomeIntro } from "@/components/WelcomeIntro";
 import { ScrollRevealObserver } from "@/components/ScrollRevealObserver";
+import { getSiteUrl, DEFAULT_OG_IMAGE } from "@/lib/metadata";
+
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "https://lamspark-photography.onrender.com"
-  ),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "LamSparks Photography | Bespoke Portrait & Event Studio | Abuja, Nigeria",
     template: "%s | LamSparks Photography Abuja",
   },
   description:
-    "Unhurried, personal photography in Abuja. Capturing Moments. Preserving Memories. Sparkling Lives. Toddler, maternity, family, weddings and milestone events by Osemene.",
+    "Unhurried private portrait & event photography in Maitama, Abuja by Osemene. Book Toddler, Maternity, Newborn, Family, Executive Headshots, and Traditional & White Weddings with transparent packages from ₦85,000 and live studio date booking.",
   keywords: [
     "LamSparks Photography",
     "Abuja photographer",
@@ -24,9 +25,23 @@ export const metadata: Metadata = {
     "Osemene photography",
     "executive headshots Abuja",
   ],
-  authors: [{ name: "Osemene / LamSparks Photography" }],
+  authors: [{ name: "Osemene · LamSparks Photography" }],
   creator: "LamSparks Photography",
   publisher: "LamSparks Photography Atelier",
+  applicationName: "LamSparks Studio",
+  alternates: {
+    canonical: siteUrl,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
@@ -38,17 +53,18 @@ export const metadata: Metadata = {
     shortcut: ["/icon.svg"],
   },
   openGraph: {
-    title: "LamSparks Photography | Bespoke Portrait & Event Studio | Abuja",
+    title: "LamSparks Photography | Bespoke Portrait & Event Studio · Abuja",
     description:
-      "Unhurried, personal photography in Abuja. Capturing Moments. Preserving Memories. Sparkling Lives. Toddler, maternity, family, weddings and milestone events by Osemene.",
-    url: "https://lamspark-photography.onrender.com",
-    siteName: "LamSparks Photography",
+      "Private photography atelier in Maitama, Abuja by Osemene. Toddlers, Maternity, Newborn, Families, Executive Portraits & Luxury Weddings — view packages from ₦85,000, explore portfolios, and lock your shoot date online.",
+    url: siteUrl,
+    siteName: "LamSparks Photography · Abuja Atelier",
     images: [
       {
-        url: "/images/client/weddings_1.webp",
+        url: DEFAULT_OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: "LamSparks Photography Atelier · Abuja, Nigeria",
+        type: "image/jpeg",
+        alt: "LamSparks Photography Atelier · Bespoke Portrait & Event Studio in Abuja, Nigeria",
       },
     ],
     locale: "en_NG",
@@ -56,11 +72,16 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "LamSparks Photography | Bespoke Portrait & Event Studio | Abuja",
+    title: "LamSparks Photography | Bespoke Portrait & Event Studio · Abuja",
     description:
-      "Unhurried, personal photography in Abuja. Capturing Moments. Preserving Memories. Sparkling Lives.",
-    images: ["/images/client/weddings_1.webp"],
-    creator: "@lamsparks",
+      "Private photography studio in Maitama, Abuja for Toddlers, Maternity, Families, Executive Portraits & Weddings. View pricing and book your session date online.",
+    images: [
+      {
+        url: DEFAULT_OG_IMAGE,
+        alt: "LamSparks Photography Atelier · Abuja, Nigeria",
+      },
+    ],
+    creator: "@lamsparksphotography",
   },
 };
 
@@ -104,6 +125,30 @@ export default function RootLayout({
                 } catch(e) {}
               })();
             `,
+          }}
+        />
+        {/* Structured Data for Search Engines & Rich Link Parsers */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "PhotographyBusiness",
+              name: "LamSparks Photography",
+              description:
+                "Bespoke portrait and event photography studio in Maitama, Abuja, Nigeria by Osemene — specialising in toddler, maternity, newborn, family, executive headshots, and luxury weddings.",
+              url: siteUrl,
+              image: `${siteUrl}${DEFAULT_OG_IMAGE}`,
+              telephone: "+2348130847299",
+              priceRange: "₦85,000 - ₦650,000+",
+              address: {
+                "@type": "PostalAddress",
+                addressLocality: "Maitama, Abuja",
+                addressRegion: "FCT",
+                addressCountry: "NG",
+              },
+              sameAs: ["https://instagram.com/lamsparksphotography"],
+            }),
           }}
         />
       </head>

@@ -1,6 +1,15 @@
 import React from "react";
+import type { Metadata } from "next";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { buildPageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Privacy Notice & NDPA Data Compliance",
+  description:
+    "How LamSparks Photography in Abuja protects your private images, client records, and consent preferences under the Nigeria Data Protection Act (NDPA) 2023.",
+  path: "/legal/privacy",
+});
 
 export default function PrivacyPolicyPage() {
   return (

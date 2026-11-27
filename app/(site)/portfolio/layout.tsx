@@ -1,30 +1,14 @@
 import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Curated Fine Art & Editorial Portfolio",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Curated Fine Art & Event Portfolio",
   description:
-    "Explore fine art portraits, luxury Nigerian weddings, bilateral diplomatic signing ceremonies, and grand cultural galas photographed in Abuja by LamSparks Photography.",
-  openGraph: {
-    title: "Curated Fine Art & Editorial Portfolio | LamSparks Abuja",
-    description:
-      "Explore fine art portraits, luxury Nigerian weddings, bilateral diplomatic ceremonies, and grand galas photographed in Abuja by LamSparks Photography.",
-    images: [
-      {
-        url: "/images/client/weddings_1.webp",
-        width: 1200,
-        height: 630,
-        alt: "LamSparks Curated Photography Portfolio Abuja",
-      },
-    ],
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Curated Fine Art & Editorial Portfolio | LamSparks Abuja",
-    description: "Explore fine art portraits, luxury weddings, and executive delegations in Abuja.",
-    images: ["/images/client/weddings_1.webp"],
-  },
-};
+    "Explore over 120 curated works across luxury Nigerian weddings, private Maitama studio portraits, diplomatic accords & milestone galas photographed by LamSparks in Abuja.",
+  path: "/portfolio",
+  image: "/og/portfolio.jpg",
+  imageAlt: "LamSparks Curated Photography Portfolio · Abuja",
+});
 
 export default function PortfolioLayout({
   children,

@@ -1,6 +1,15 @@
 import React from "react";
+import type { Metadata } from "next";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { buildPageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Studio Shoot Guidelines & Wardrobe Prep",
+  description:
+    "Wardrobe tonal guidance, arrival timing, and studio preparation checklist for a calm portrait session at LamSparks Photography in Maitama, Abuja.",
+  path: "/legal/shoot-guidelines",
+});
 
 export default function ShootGuidelinesPage() {
   return (

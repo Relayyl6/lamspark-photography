@@ -1,12 +1,23 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight, ArrowRight, Check } from "lucide-react";
 import { neon } from "@neondatabase/serverless";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { buildPageMetadata } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Weddings & Milestone Celebrations",
+  description:
+    "Bespoke Nigerian traditional & white wedding photography in Abuja by Osemene. Unhurried storytelling, planner timeline direction, 5–7 day highlight galleries & Italian heirloom albums.",
+  path: "/weddings-and-events",
+  image: "/og/weddings.jpg",
+  imageAlt: "LamSparks Photography · Weddings & Milestone Celebrations Abuja",
+});
 
 interface WeddingFrame {
   id: string;

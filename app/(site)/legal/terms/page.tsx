@@ -1,6 +1,15 @@
 import React from "react";
+import type { Metadata } from "next";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { buildPageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Terms of Service & Booking Policy",
+  description:
+    "Deposit policy, rescheduling notice, delivery turnaround, and booking terms for LamSparks Photography Studio in Abuja, Nigeria.",
+  path: "/legal/terms",
+});
 
 export default function TermsOfServicePage() {
   return (

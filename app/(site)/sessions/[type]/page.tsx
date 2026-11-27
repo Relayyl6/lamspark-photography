@@ -7,6 +7,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { SESSION_TYPES, ADD_ONS } from "@/lib/catalog/seed";
 import { getLiveSessionTypes, getLivePackages } from "@/lib/catalog/live";
+import { buildPageMetadata } from "@/lib/metadata";
 import { SessionTypeSlug } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,20 @@ interface SessionPageProps {
   };
 }
 
+const KNOWN_SESSION_OG_SLUGS = new Set([
+  "toddler",
+  "maternity",
+  "motherhood-bundle",
+  "event",
+  "wedding",
+  "newborn",
+  "family",
+  "couple",
+  "individual-portrait",
+  "official-portrait",
+  "not-sure",
+]);
+
 export async function generateMetadata({ params }: SessionPageProps): Promise<Metadata> {
   const liveSessions = await getLiveSessionTypes();
   const session =
@@ -25,38 +40,38 @@ export async function generateMetadata({ params }: SessionPageProps): Promise<Me
     SESSION_TYPES[params.type as SessionTypeSlug];
 
   if (!session) {
-    return {
-      title: "Session Details | LamSparks Photography Abuja",
-    };
+    return buildPageMetadata({
+      title: "Session Details",
+      description:
+        "Explore tailored portrait and event photography collections at LamSparks Photography Studio in Maitama, Abuja.",
+      path: `/sessions/${params.type}`,
+      image: "/og/sessions.jpg",
+    });
   }
 
-  const title = `${session.title} | Bespoke Photography Session`;
-  const description = `${session.tagline} ${session.description}`.slice(0, 160);
-  const imageUrl = session.heroImage?.replace(/\.jpg$/, ".webp") || session.heroImage || "/images/client/weddings_1.webp";
+  const packages = await getLivePackages(session.slug);
+  const packagePrices = packages
+    .map((p) => (typeof p.price === "number" && p.price > 0 ? p.price : null))
+    .filter((p): p is number => p !== null);
+  const lowestPrice = packagePrices.length > 0 ? Math.min(...packagePrices) : session.fromPrice;
+  const priceText = lowestPrice
+    ? `Starting from ₦${lowestPrice.toLocaleString()}`
+    : "Bespoke Quote";
 
-  return {
-    title,
-    description,
-    openGraph: {
-      title: `${session.title} · LamSparks Photography Abuja`,
-      description,
-      images: [
-        {
-          url: imageUrl,
-          width: 1200,
-          height: 630,
-          alt: `${session.title} - LamSparks Atelier Abuja`,
-        },
-      ],
-      type: "article",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${session.title} · LamSparks Photography Abuja`,
-      description,
-      images: [imageUrl],
-    },
-  };
+  const ogImage = KNOWN_SESSION_OG_SLUGS.has(session.slug)
+    ? `/og/sessions/${session.slug}.jpg`
+    : "/og/sessions.jpg";
+
+  return buildPageMetadata({
+    title: `${session.title} · ${priceText}`,
+    description: `${session.tagline} ${session.description} (${priceText} · Delivery: ${session.standardDeliveryDays} · Private Abuja Studio).`.slice(
+      0,
+      240
+    ),
+    path: `/sessions/${session.slug}`,
+    image: ogImage,
+    imageAlt: `${session.title} at LamSparks Photography Abuja`,
+  });
 }
 
 export default async function SessionDetailPage({ params }: SessionPageProps) {

@@ -1,4 +1,6 @@
 import React from "react";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/metadata";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { HeroOverhaulSection } from "@/components/HeroOverhaulSection";
@@ -14,6 +16,15 @@ import type { EditorialTestimonial } from "@/lib/testimonials-data";
 import { neon } from "@neondatabase/serverless";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "LamSparks Photography | Bespoke Portrait & Event Studio in Abuja",
+  description:
+    "Private portrait & event studio in Maitama, Abuja by Osemene. Explore Toddler, Maternity, Newborn, Family, Executive & Wedding collections, view live calendar slots, and reserve your shoot online.",
+  path: "/",
+  image: "/og/home.jpg",
+  imageAlt: "LamSparks Photography · Bespoke Portrait & Event Studio in Abuja, Nigeria",
+});
 
 const sql = neon(process.env.DATABASE_URL!);
 

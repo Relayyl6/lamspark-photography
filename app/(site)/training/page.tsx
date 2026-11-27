@@ -1,8 +1,19 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, Camera, Award } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { buildPageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Photography Mentorship & Masterclasses",
+  description:
+    "Hands-on portrait and studio lighting mentorship in Abuja taught by Osemene — covering unhurried client pacing, toddler direction, and luxury photography operations.",
+  path: "/training",
+  image: "/og/training.jpg",
+  imageAlt: "LamSparks Photography Mentorship & Workshops · Abuja",
+});
 
 export default function TrainingPage() {
   return (

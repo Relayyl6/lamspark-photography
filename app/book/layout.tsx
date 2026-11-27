@@ -1,30 +1,14 @@
 import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "Reserve Your Private Session",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Reserve Your Private Session Online",
   description:
-    "Build your tailored session estimate, choose wardrobe outfits, and hold your shoot date on Osemene's private Maitama studio calendar.",
-  openGraph: {
-    title: "Reserve Your Private Session | LamSparks Photography Atelier Abuja",
-    description:
-      "Build your tailored session estimate, choose wardrobe outfits, and hold your shoot date on Osemene's private Maitama studio calendar.",
-    images: [
-      {
-        url: "/images/client/weddings_1.webp",
-        width: 1200,
-        height: 630,
-        alt: "Reserve Your Session with LamSparks Photography Abuja",
-      },
-    ],
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Reserve Your Private Session | LamSparks Atelier Abuja",
-    description: "Build your personal estimate and hold your session date on Osemene's studio calendar.",
-    images: ["/images/client/weddings_1.webp"],
-  },
-};
+    "Choose your photography collection, view live studio calendar openings in Maitama, Abuja, generate an instant itemised quote, and lock your shoot date online.",
+  path: "/book",
+  image: "/og/book.jpg",
+  imageAlt: "Reserve Your Shoot Date · LamSparks Photography Abuja",
+});
 
 export default function BookLayout({
   children,

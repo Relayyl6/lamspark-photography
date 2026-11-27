@@ -1,12 +1,23 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { TestimonialCard } from "@/components/TestimonialCard";
 import { neon } from "@neondatabase/serverless";
+import { buildPageMetadata } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Client Love Notes & Verified Reviews",
+  description:
+    "Read real client reviews from families, mothers, executives, and couples photographed by LamSparks in Abuja and worldwide (4.98★ rating across 1,200+ keepsakes).",
+  path: "/love-notes",
+  image: "/og/love-notes.jpg",
+  imageAlt: "Verified Client Reviews · LamSparks Photography Abuja",
+});
 
 export default async function LoveNotesPage() {
   let testimonials: Array<{

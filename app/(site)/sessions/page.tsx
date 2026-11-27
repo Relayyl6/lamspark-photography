@@ -6,34 +6,18 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { SessionCard } from "@/components/SessionCard";
 import { getLiveSessionTypes } from "@/lib/catalog/live";
+import { buildPageMetadata } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Bespoke Photography Sessions & Collections",
+export const metadata: Metadata = buildPageMetadata({
+  title: "Photography Sessions & Collections (From ₦85,000)",
   description:
-    "Explore our core session offerings at LamSparks Photography in Maitama, Abuja. From unhurried toddler and maternity sessions to executive portraits and luxury weddings.",
-  openGraph: {
-    title: "Bespoke Photography Sessions & Collections | LamSparks Abuja",
-    description:
-      "Explore core session offerings from LamSparks Photography in Maitama, Abuja. Inclusions, timelines, and transparent starting rates.",
-    images: [
-      {
-        url: "/images/client/weddings_1.webp",
-        width: 1200,
-        height: 630,
-        alt: "LamSparks Photography Collections Abuja",
-      },
-    ],
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Bespoke Photography Collections | LamSparks Abuja",
-    description: "Unhurried toddler, maternity, family, wedding, and executive portrait sessions.",
-    images: ["/images/client/weddings_1.webp"],
-  },
-};
+    "Browse all LamSparks Photography sessions in Maitama, Abuja: Toddler & Children, Maternity, Newborn, Family, Executive Portraits, Events & Weddings — complete with inclusions, delivery timelines & transparent rates.",
+  path: "/sessions",
+  image: "/og/sessions.jpg",
+  imageAlt: "LamSparks Photography Collections & Starting Rates · Abuja",
+});
 
 export default async function SessionsIndexPage() {
   const sessionTypes = await getLiveSessionTypes();
