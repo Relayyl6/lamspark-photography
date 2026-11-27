@@ -70,11 +70,14 @@ function buildBookingSummaryLines(ctx: BookingEmailContext): { label: string; va
   if (ctx.answers?.coupleNames) {
     details.push({ label: "Couple", value: String(ctx.answers.coupleNames) });
   }
-  if (ctx.purposeText) {
-    details.push({ label: "Purpose", value: ctx.purposeText });
-  }
-  if (ctx.answers?.notes) {
-    details.push({ label: "Notes / Requests", value: String(ctx.answers.notes) });
+  const singleNote = ctx.answers?.notes
+    ? String(ctx.answers.notes).trim()
+    : ctx.purposeText &&
+      !ctx.purposeText.toLowerCase().includes(ctx.sessionTitle.toLowerCase())
+    ? ctx.purposeText.trim()
+    : "";
+  if (singleNote) {
+    details.push({ label: "Notes", value: singleNote });
   }
   return details;
 }
@@ -233,15 +236,22 @@ export function buildCrispFinancialDocumentInner(
     </tbody>
   </table>
 
-  <!-- Additional Client Booking Notes -->
+  <!-- Additional Client Booking Note -->
   ${
-    ctx.purposeText || ctx.answers?.notes || ctx.feelingText
-      ? `<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11.5px;color:#4B5563;line-height:1.55;">
-          ${ctx.purposeText ? `<div><strong>Session Purpose:</strong> ${esc(ctx.purposeText)}</div>` : ""}
-          ${ctx.feelingText ? `<div><strong>Mood / Vision:</strong> ${esc(ctx.feelingText)}</div>` : ""}
-          ${ctx.answers?.notes ? `<div><strong>Client Notes:</strong> ${esc(ctx.answers.notes)}</div>` : ""}
-        </div>`
-      : ""
+    (() => {
+      const note = ctx.answers?.notes
+        ? String(ctx.answers.notes).trim()
+        : ctx.purposeText &&
+          !ctx.purposeText.toLowerCase().includes(ctx.sessionTitle.toLowerCase())
+        ? ctx.purposeText.trim()
+        : "";
+      return note || ctx.feelingText
+        ? `<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11.5px;color:#4B5563;line-height:1.55;">
+            ${note ? `<div><strong>Notes:</strong> ${esc(note)}</div>` : ""}
+            ${ctx.feelingText ? `<div><strong>Mood / Vision:</strong> ${esc(ctx.feelingText)}</div>` : ""}
+          </div>`
+        : "";
+    })()
   }
 
   <!-- Totals Block -->

@@ -363,6 +363,8 @@ export function BookingsTracker() {
         setSelectedBooking(null);
         setRescheduleDate("");
         setRescheduleSlot("");
+      } else {
+        alert(data.error || "Could not reschedule to this date & time.");
       }
     } catch (err) {
       console.error("Failed to reschedule:", err);

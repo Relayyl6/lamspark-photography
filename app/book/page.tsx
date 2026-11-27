@@ -462,7 +462,7 @@ function BookingWizard() {
   // Concise answers object feeding estimate engine & photographer shoot record
   const bookingAnswers: BookingAnswers = useMemo(
     () => ({
-      purpose: notes || `${liveSessions[sessionType]?.title || sessionType} Session`,
+      purpose: `${liveSessions[sessionType]?.title || sessionType} Session`,
       packageId: selectedPackage?.id,
       packageName: selectedPackage?.name,
       selectedDate,

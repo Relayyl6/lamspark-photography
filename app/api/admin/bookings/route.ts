@@ -114,6 +114,34 @@ export async function PUT(req: NextRequest) {
       [id]
     );
     const prev = prevRows[0];
+    const shootTimeChanged =
+      Boolean(shootStart) &&
+      (!prev?.shoot_start ||
+        new Date(shootStart).toISOString() !== new Date(prev.shoot_start).toISOString());
+
+    if (shootStart && shootTimeChanged) {
+      const targetIso = new Date(shootStart).toISOString();
+      const conflictRows = await sql.query(
+        `SELECT b.id, e.reference_code
+         FROM booking b
+         LEFT JOIN enquiry e ON b.enquiry_id = e.id
+         WHERE b.id != $1
+           AND b.status NOT IN ('cancelled', 'expired')
+           AND (b.status != 'held' OR b.updated_at >= NOW() - INTERVAL '20 hours')
+           AND ABS(EXTRACT(EPOCH FROM (b.shoot_start - $2::timestamptz))) < 3600
+         LIMIT 1`,
+        [id, targetIso]
+      ).catch(() => []);
+
+      if (conflictRows.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Selected date & time overlaps booking ${conflictRows[0].reference_code || "on calendar"}. Pick another slot.`,
+          },
+          { status: 409 }
+        );
+      }
+    }
 
     const updated = await sql.query(
       `UPDATE booking
@@ -123,8 +151,9 @@ export async function PUT(req: NextRequest) {
          shoot_end = COALESCE($3, shoot_end),
          location_type = COALESCE($4, location_type),
          location_detail = COALESCE($5, location_detail),
+         reschedule_count = CASE WHEN $6 THEN COALESCE(reschedule_count, 0) + 1 ELSE COALESCE(reschedule_count, 0) END,
          updated_at = NOW()
-       WHERE id = $6
+       WHERE id = $7
        RETURNING *`,
       [
         status || null,
@@ -132,6 +161,7 @@ export async function PUT(req: NextRequest) {
         shootEnd ? new Date(shootEnd).toISOString() : null,
         locationType || null,
         locationDetail || null,
+        shootTimeChanged,
         id,
       ]
     );
@@ -142,14 +172,10 @@ export async function PUT(req: NextRequest) {
 
     const bookingRow = updated[0];
     if (bookingRow.enquiry_id) {
-      const shootTimeChanged =
-        Boolean(shootStart) &&
-        (!prev?.shoot_start ||
-          new Date(shootStart).toISOString() !== new Date(prev.shoot_start).toISOString());
+      const newSlot = shootStart ? extractDateAndSlotWAT(shootStart) : null;
 
       if (shootStart && (status === "rescheduled" || shootTimeChanged)) {
-        const newSlot = extractDateAndSlotWAT(shootStart);
-        if (newSlot.date && newSlot.timeSlot) {
+        if (newSlot?.date && newSlot?.timeSlot) {
           await sql.query(
             `UPDATE enquiry
              SET answers = jsonb_set(
@@ -177,9 +203,14 @@ export async function PUT(req: NextRequest) {
         await dispatchBookingEmail(sql, "cancelled", { bookingId: id });
       } else if (status === "rescheduled" || shootTimeChanged) {
         const oldSlot = prev?.shoot_start ? extractDateAndSlotWAT(prev.shoot_start) : null;
-        const oldDateLabel = oldSlot?.date
-          ? `${formatReadableDateWAT(oldSlot.date)}${oldSlot.timeSlot ? ` at ${oldSlot.timeSlot}` : ""}`
-          : undefined;
+        const oldDiffersFromNew =
+          Boolean(shootTimeChanged) &&
+          Boolean(oldSlot?.date) &&
+          (oldSlot!.date !== newSlot?.date || oldSlot!.timeSlot !== newSlot?.timeSlot);
+        const oldDateLabel =
+          oldDiffersFromNew && oldSlot?.date
+            ? `${formatReadableDateWAT(oldSlot.date)}${oldSlot.timeSlot ? ` at ${oldSlot.timeSlot}` : ""}`
+            : undefined;
         await dispatchBookingEmail(sql, "rescheduled", { bookingId: id }, { oldDateLabel });
       } else if (status && status !== prev?.status) {
         if (status === "confirmed") {
