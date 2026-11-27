@@ -157,6 +157,9 @@ export default function PortfolioPage() {
   }, []);
 
   useEffect(() => {
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const requestedEvent = (params?.get("event") || params?.get("category") || "").trim().toLowerCase();
+
     async function loadPortfolio() {
       try {
         setLoading(true);
@@ -164,6 +167,19 @@ export default function PortfolioPage() {
         const data = await res.json();
         if (data.success && Array.isArray(data.galleries)) {
           setGalleries(data.galleries);
+
+          if (requestedEvent) {
+            const matched = data.galleries.find(
+              (gal: NeonGallery) =>
+                gal.slug.toLowerCase() === requestedEvent ||
+                gal.title.toLowerCase() === requestedEvent ||
+                gal.title.toLowerCase().includes(requestedEvent) ||
+                gal.sessionType.toLowerCase() === requestedEvent
+            );
+            if (matched) {
+              setSelectedCategory(matched.title);
+            }
+          }
 
           // Flatten gallery items into uniform GalleryImage format
           const flattened: GalleryImage[] = [];

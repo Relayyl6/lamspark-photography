@@ -79,22 +79,39 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
   const standardDelivery = session.standardDeliveryDays || "5 to 7 business days";
   const standardDepositPercent = (session as any).depositPercent ?? session.defaultDepositPercent ?? 70;
 
+  // Map each session type to its curated portfolio gallery slug for preselected navigation
+  const portfolioEventMap: Record<string, string> = {
+    wedding: "weddings",
+    couple: "weddings",
+    event: "events-portfolio",
+    "official-portrait": "woodhall-mou",
+    toddler: "studio-curated-archive",
+    maternity: "studio-curated-archive",
+    "motherhood-bundle": "studio-curated-archive",
+    newborn: "studio-curated-archive",
+    family: "studio-curated-archive",
+    "individual-portrait": "studio-curated-archive",
+  };
+  const portfolioEventSlug = portfolioEventMap[session.slug] || "studio-curated-archive";
+
   return (
     <>
       <Nav />
       <main className="flex-1 pb-24">
-        {/* 1. Hero Image & One-Line Promise */}
-        <div className="relative w-full bg-deep text-warm-white pt-28 pb-16 sm:pt-32 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-          <div className="absolute inset-0 opacity-25">
+        {/* 1. Tall Atmospheric Hero Banner with Portfolio Preselect CTA */}
+        <div className="relative w-full min-h-[430px] sm:min-h-[520px] lg:min-h-[580px] flex flex-col justify-center bg-deep text-warm-white pt-32 pb-20 sm:pt-40 sm:pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+          <div className="absolute inset-0 opacity-35">
             <img
               src={session.heroImage?.replace(/\.jpg$/, ".webp") || session.heroImage}
               alt={session.title}
               loading="eager"
               decoding="async"
-              className="w-full h-full object-cover object-center filter blur-sm"
+              className="w-full h-full object-cover object-center filter blur-[2px] scale-105"
             />
           </div>
-          <div className="relative max-w-4xl mx-auto text-center space-y-4 reveal-down">
+          <div className="absolute inset-0 bg-gradient-to-b from-deep/50 via-deep/35 to-deep/80 pointer-events-none" />
+
+          <div className="relative z-10 max-w-4xl mx-auto text-center space-y-5 reveal-down">
             <span className="font-body text-xs uppercase tracking-[0.26em] text-gold font-semibold block">
               {session.category === "studio" ? "Abuja Studio Session" : session.category === "events" ? "Event Coverage" : "Editorial Portraiture"}
             </span>
@@ -104,6 +121,22 @@ export default async function SessionDetailPage({ params }: SessionPageProps) {
             <p className="font-serif italic text-lg sm:text-2xl text-gold-light max-w-2xl mx-auto">
               {session.tagline}
             </p>
+            <div className="pt-3 flex items-center justify-center gap-3 flex-wrap">
+              <Link
+                href={`/portfolio?event=${encodeURIComponent(portfolioEventSlug)}`}
+                className="inline-flex items-center gap-2 rounded-full bg-warm-white/15 hover:bg-gold hover:text-deep border border-warm-white/30 hover:border-gold backdrop-blur-md text-warm-white px-6 py-3 font-body text-xs uppercase tracking-[0.2em] font-semibold transition-all shadow-sm"
+              >
+                <span>See Session Portfolio</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <Link
+                href={`/book?session=${session.slug}`}
+                className="inline-flex items-center gap-2 rounded-full bg-gold hover:bg-warm-white text-deep px-6 py-3 font-body text-xs uppercase tracking-[0.2em] font-semibold transition-all shadow-editorial"
+              >
+                <span>Book Now</span>
+                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+              </Link>
+            </div>
           </div>
         </div>
 

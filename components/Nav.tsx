@@ -176,7 +176,7 @@ export function Nav() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 sm:p-2 rounded-lg text-deep hover:bg-cream border border-line focus:outline-none shrink-0"
+            className="p-1.5 sm:p-2 rounded-lg text-deep hover:bg-cream/60 focus:outline-none shrink-0 transition-colors"
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
