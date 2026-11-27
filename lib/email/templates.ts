@@ -248,6 +248,12 @@ function wrapAtelierEmail({
 </html>`;
 }
 
+function getFirstName(fullName: unknown): string {
+  const clean = String(fullName ?? "").trim();
+  if (!clean) return "there";
+  return clean.split(/\s+/)[0] || clean;
+}
+
 export function renderBookingEmail(
   event: EmailPipelineEvent,
   ctx: BookingEmailContext,
@@ -259,6 +265,7 @@ export function renderBookingEmail(
   const dateLabel = formatReadableDateWAT(ctx.shootDateFormatted || ctx.answers?.selectedDate);
   const timeLabel = ctx.shootTimeSlot || ctx.answers?.timeSlot || "";
   const slotSummary = [dateLabel, timeLabel].filter(Boolean).join(" at ");
+  const firstName = getFirstName(ctx.client.name);
 
   switch (event) {
     case "hold_started": {
@@ -269,13 +276,13 @@ export function renderBookingEmail(
           eyebrow: "20-HOUR HOLD RESERVED",
           headlinePrefix: "YOUR DATE IS ",
           headlineAccent: "ON HOLD.",
-          introText: `Hi ${ctx.client.name}, we are holding ${slotSummary || "your preferred date"} on Osemene's private Abuja studio calendar for the next 20 hours while we await your deposit confirmation.`,
+          introText: `Hi ${firstName}, we are holding ${slotSummary || "your preferred date"} on Osemene's private Abuja studio calendar for the next 20 hours while we await your deposit confirmation.`,
           ctx,
           ctaLabel: "Complete Deposit & View Booking",
           ctaHref: bookingUrl,
           bankNotice: true,
         }),
-        text: `Hi ${ctx.client.name}, your ${ctx.sessionTitle} slot (${slotSummary}) is held for 20 hours (Ref: ${ctx.referenceCode}). Manage booking: ${bookingUrl}`,
+        text: `Hi ${firstName}, your ${ctx.sessionTitle} slot (${slotSummary}) is held for 20 hours (Ref: ${ctx.referenceCode}). Manage booking: ${bookingUrl}`,
       };
     }
 
@@ -287,7 +294,7 @@ export function renderBookingEmail(
           eyebrow: "HOLD ENDED",
           headlinePrefix: "YOUR HOLD ",
           headlineAccent: "HAS ENDED.",
-          introText: `Hi ${ctx.client.name}, we didn't receive a confirmed deposit for ${ctx.sessionTitle} (${slotSummary}) within the 20-hour window, so that studio time has reopened for other clients. If you have already made a transfer, WhatsApp Osemene with your receipt right away or pick a fresh slot below.`,
+          introText: `Hi ${firstName}, we didn't receive a confirmed deposit for ${ctx.sessionTitle} (${slotSummary}) within the 20-hour window, so that studio time has reopened for other clients. If you have already made a transfer, WhatsApp Osemene with your receipt right away or pick a fresh slot below.`,
           ctx,
           ctaLabel: "Book Another Time",
           ctaHref: rebookUrl,
@@ -304,7 +311,7 @@ export function renderBookingEmail(
           eyebrow: "CANCELLED",
           headlinePrefix: "YOUR SESSION IS ",
           headlineAccent: "CANCELLED.",
-          introText: `Hi ${ctx.client.name}, ${ctx.sessionTitle} scheduled for ${slotSummary || "your selected date"} has been released from Osemene's Abuja calendar${ctx.closedReason ? ` (${ctx.closedReason})` : ""}. Whenever you are ready to shoot, you can reserve another slot in seconds.`,
+          introText: `Hi ${firstName}, ${ctx.sessionTitle} scheduled for ${slotSummary || "your selected date"} has been released from Osemene's Abuja calendar${ctx.closedReason ? ` (${ctx.closedReason})` : ""}. Whenever you are ready to shoot, you can reserve another slot in seconds.`,
           ctx,
           ctaLabel: "Book Another Time",
           ctaHref: rebookUrl,
@@ -321,7 +328,7 @@ export function renderBookingEmail(
           eyebrow: "RESCHEDULED",
           headlinePrefix: "YOUR NEW DATE IS ",
           headlineAccent: "LOCKED.",
-          introText: `Hi ${ctx.client.name}, your ${ctx.sessionTitle} session has been moved${options?.oldDateLabel ? ` from ${options.oldDateLabel}` : ""} to ${slotSummary} on Osemene's studio calendar. Your updated calendar invitation is attached.`,
+          introText: `Hi ${firstName}, your ${ctx.sessionTitle} session has been moved${options?.oldDateLabel ? ` from ${options.oldDateLabel}` : ""} to ${slotSummary} on Osemene's studio calendar. Your updated calendar invitation is attached.`,
           ctx,
           ctaLabel: "View Updated Booking",
           ctaHref: bookingUrl,
@@ -344,7 +351,7 @@ export function renderBookingEmail(
           eyebrow: "HOLD CONFIRMED · INVOICE ISSUED",
           headlinePrefix: "YOUR DEPOSIT IS ",
           headlineAccent: "CONFIRMED.",
-          introText: `Thank you ${ctx.client.name}! Your deposit for ${ctx.sessionTitle} (${slotSummary}) is confirmed and your date is permanently reserved on Osemene's private Abuja calendar. Your full itemised invoice is below.`,
+          introText: `Thank you ${firstName}! Your deposit for ${ctx.sessionTitle} (${slotSummary}) is confirmed and your date is permanently reserved on Osemene's private Abuja calendar. Your full itemised invoice is below.`,
           ctx,
           ctaLabel: "Manage Booking & Wardrobe Prep",
           ctaHref: bookingUrl,
@@ -367,7 +374,7 @@ export function renderBookingEmail(
           eyebrow: "OFFICIAL RECEIPT",
           headlinePrefix: "YOUR SESSION IS ",
           headlineAccent: "COMPLETE.",
-          introText: `Thank you for creating memories with LamSparks Photography, ${ctx.client.name}! Your session is complete and settled — find your Official Receipt attached below.`,
+          introText: `Thank you for creating memories with LamSparks Photography, ${firstName}! Your session is complete and settled — find your Official Receipt attached below.`,
           ctx,
           ctaLabel: "View Booking Archive",
           ctaHref: bookingUrl,
@@ -425,7 +432,7 @@ export function renderBookingEmail(
           eyebrow: copy.eyebrow,
           headlinePrefix: copy.headlinePrefix,
           headlineAccent: copy.headlineAccent,
-          introText: `Hi ${ctx.client.name}, ${copy.message}`,
+          introText: `Hi ${firstName}, ${copy.message}`,
           ctx,
           ctaLabel: "Open Live Booking Link",
           ctaHref: bookingUrl,

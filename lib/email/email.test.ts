@@ -80,7 +80,8 @@ async function main() {
       oldDateLabel: "Friday, 4 December 2026 at 09:30 AM",
     });
     assert.ok(rendered.subject.includes("LS-VERIFY"), `Subject missing ref for ${ev}`);
-    assert.ok(rendered.html.includes("Adaeze Okafor"), `HTML missing client name for ${ev}`);
+    assert.ok(rendered.html.includes("Adaeze"), `HTML missing client first name for ${ev}`);
+    assert.ok(!rendered.html.includes("Hi Adaeze Okafor"), `HTML greeting used full name instead of first name for ${ev}`);
     assert.ok(rendered.html.includes("/book?ref=LS-VERIFY"), `HTML missing booking link for ${ev}`);
     assert.ok(rendered.html.includes("The Premium"), `HTML missing package name for ${ev}`);
 
